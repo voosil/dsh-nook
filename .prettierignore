@@ -1,0 +1,8 @@
+node_modules/
+**/node_modules/
+**/lib/
+.dsh-dev/
+.pnpm-store/
+.pack/
+coverage/
+pnpm-lock.yaml

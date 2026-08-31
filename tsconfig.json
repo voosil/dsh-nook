@@ -1,0 +1,19 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/capability-project" },
+    { "path": "packages/capability-browser" },
+    { "path": "packages/capability-artifact" },
+    { "path": "packages/provider-project-local" },
+    { "path": "packages/provider-artifact-local" },
+    { "path": "packages/adapter-browser-community" },
+    { "path": "packages/feature-project" },
+    { "path": "packages/feature-preview" },
+    { "path": "packages/dsh-compat" },
+    { "path": "packages/dsh-adapter" },
+    { "path": "packages/feature-agent" },
+    { "path": "packages/ui-project" },
+    { "path": "packages/ui-sidebar" },
+    { "path": "packages/app-all" }
+  ]
+}

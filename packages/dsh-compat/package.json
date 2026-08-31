@@ -1,0 +1,24 @@
+{
+  "name": "@nook-dsh/dsh-compat",
+  "version": "0.1.0",
+  "description": "Fail-closed DSH version guard for Nook",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+    "dsh-browser-playwright": "0.1.1"
+  }
+}

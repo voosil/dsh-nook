@@ -1,0 +1,25 @@
+{
+  "name": "@nook-dsh/provider-project-local",
+  "version": "0.1.0",
+  "description": "Filesystem-backed provider for the Nook project capability",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@nook-dsh/capability-project": "workspace:*"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/schemastery": "3.18.1"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "nook-dsh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nook: a standalone product profile composed from DeepSeek Harness plugins",
+  "type": "module",
+  "packageManager": "pnpm@12.1.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build": "tsc -b --pretty false && node scripts/build-client.mjs",
+    "typecheck": "tsc -b --pretty false",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node scripts/build-client.mjs && node --import tsx --test tests/contract/*.test.ts",
+    "test:integration": "node --import tsx --test tests/integration/*.test.ts",
+    "test:e2e": "node --import tsx --test tests/e2e/*.test.ts",
+    "dev": "node scripts/run-profile.mjs",
+    "dev:safe-ui": "node scripts/run-profile.mjs --safe-ui",
+    "dev:profile": "node scripts/dev-profile.mjs",
+    "verify:profile": "node scripts/verify-profile.mjs",
+    "verify:boundaries": "node scripts/verify-boundaries.mjs",
+    "verify:peers": "node scripts/verify-peers.mjs",
+    "verify:package": "node scripts/verify-package.mjs",
+    "verify": "prettier --check . && corepack pnpm@12.1.0 run verify:boundaries && corepack pnpm@12.1.0 run build && corepack pnpm@12.1.0 run test && corepack pnpm@12.1.0 run test:integration && corepack pnpm@12.1.0 run verify:profile && corepack pnpm@12.1.0 run test:e2e && corepack pnpm@12.1.0 run verify:peers"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-runtime": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+    "@deepseek-ai/schemastery": "3.18.1",
+    "@types/node": "24.10.2",
+    "@types/react": "18.3.31",
+    "dsh-browser-playwright": "0.1.1",
+    "esbuild": "0.28.2",
+    "prettier": "3.9.6",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tsx": "4.23.12",
+    "typescript": "6.0.3"
+  }
+}

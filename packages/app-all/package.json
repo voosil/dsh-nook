@@ -1,0 +1,43 @@
+{
+  "name": "@nook-dsh/app-all",
+  "version": "0.1.0",
+  "description": "Nook product Bundle and product composition root",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@nook-dsh/capability-artifact": "workspace:*",
+    "@nook-dsh/capability-browser": "workspace:*",
+    "@nook-dsh/capability-project": "workspace:*",
+    "@nook-dsh/dsh-adapter": "workspace:*",
+    "@nook-dsh/dsh-compat": "workspace:*",
+    "@nook-dsh/feature-agent": "workspace:*",
+    "@nook-dsh/feature-preview": "workspace:*",
+    "@nook-dsh/feature-project": "workspace:*",
+    "@nook-dsh/provider-artifact-local": "workspace:*",
+    "@nook-dsh/provider-project-local": "workspace:*",
+    "@nook-dsh/ui-project": "workspace:*",
+    "@nook-dsh/ui-sidebar": "workspace:*"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.1"
+  }
+}

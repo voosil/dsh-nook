@@ -1,0 +1,26 @@
+{
+  "name": "@nook-dsh/provider-artifact-local",
+  "version": "0.1.0",
+  "description": "Filesystem-backed provider for the Nook artifact capability",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@nook-dsh/capability-artifact": "workspace:*",
+    "@nook-dsh/capability-project": "workspace:*"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/schemastery": "3.18.1"
+  }
+}

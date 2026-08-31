@@ -1,0 +1,7 @@
+# Apply with: pnpm dev:safe-ui
+# Nook UI rows are additive, so disabling them restores the untouched official UI.
+- id: nook-ui-project
+  disabled: true
+
+- id: nook-ui-sidebar
+  disabled: true

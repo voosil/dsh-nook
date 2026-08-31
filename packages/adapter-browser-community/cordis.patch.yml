@@ -1,0 +1,29 @@
+# Nook's compatibility bundle for the public service/provider slice of
+# dsh-browser-playwright@0.1.1. Its Tool entry is intentionally not mounted.
+- insert:
+    - id: community-browser-runtime
+      name: 'dsh-browser-playwright/service'
+      config:
+        provider: playwright
+
+    - id: community-browser-playwright
+      name: 'dsh-browser-playwright/playwright'
+      config:
+        launch:
+          channel: chrome
+          headless: true
+          viewport:
+            width: 1280
+            height: 800
+          navigationTimeoutMs: 30000
+          ignoreHTTPSErrors: false
+        allowedDomains: []
+        idleTimeoutMs: 600000
+        maxSessions: 8
+        snapshot:
+          maxNodes: 500
+          maxNameLength: 120
+          maxTextLength: 300
+
+    - id: nook-browser-adapter
+      name: '@nook-dsh/adapter-browser-community'
