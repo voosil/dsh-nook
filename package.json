@@ -21,9 +21,10 @@
     "dev:profile": "node scripts/dev-profile.mjs",
     "verify:profile": "node scripts/verify-profile.mjs",
     "verify:boundaries": "node scripts/verify-boundaries.mjs",
-    "verify:peers": "node scripts/verify-peers.mjs",
     "verify:package": "node scripts/verify-package.mjs",
-    "verify": "prettier --check . && corepack pnpm@12.1.0 run verify:boundaries && corepack pnpm@12.1.0 run build && corepack pnpm@12.1.0 run test && corepack pnpm@12.1.0 run test:integration && corepack pnpm@12.1.0 run verify:profile && corepack pnpm@12.1.0 run test:e2e && corepack pnpm@12.1.0 run verify:peers"
+    "docs:check": "node scripts/check-docs.mjs",
+    "verify": "prettier --check . && corepack pnpm@12.1.0 run docs:check && corepack pnpm@12.1.0 run verify:boundaries && corepack pnpm@12.1.0 run build && corepack pnpm@12.1.0 run test && corepack pnpm@12.1.0 run test:integration && corepack pnpm@12.1.0 run verify:profile && corepack pnpm@12.1.0 run test:e2e && corepack pnpm@12.1.0 run verify:peers",
+    "verify:peers": "node scripts/verify-peers.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",

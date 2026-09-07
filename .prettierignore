@@ -6,3 +6,4 @@ node_modules/
 .pack/
 coverage/
 pnpm-lock.yaml
+.notes/wip/
