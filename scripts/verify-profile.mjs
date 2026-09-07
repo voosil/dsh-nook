@@ -9,6 +9,8 @@ for (const artifact of [
   'packages/app-all/lib/index.js',
   'packages/ui-project/lib/client.js',
   'packages/ui-sidebar/lib/client.js',
+  'packages/ui-notes/lib/client.js',
+  'packages/ui-knowledge/lib/client.js',
 ]) {
   if (!(await exists(resolve(artifact)))) throw new Error(`missing build artifact: ${artifact}; run pnpm build`)
 }
@@ -31,13 +33,24 @@ const requiredRows = [
   'nook-agent-feature',
   'nook-ui-project',
   'nook-ui-sidebar',
+  'nook-notebook-provider',
+  'nook-notes-feature',
+  'nook-notes-rpc',
+  'nook-ui-notes',
+  'nook-intelligence-adapter',
+  'nook-reflection-feature',
+  'nook-video-source',
+  'nook-video-editor',
+  'nook-video-feature',
+  'nook-knowledge-adapter',
+  'nook-ui-knowledge',
 ]
 for (const row of requiredRows) {
   if (!stdout.includes(`id: ${row}`)) throw new Error(`final composition is missing row ${row}`)
 }
 
 const safeUi = await readFile(resolve('dev/patches/safe-ui.cordis.yml'), 'utf8')
-for (const row of ['nook-ui-project', 'nook-ui-sidebar']) {
+for (const row of ['nook-ui-project', 'nook-ui-sidebar', 'nook-ui-notes', 'nook-ui-knowledge']) {
   if (!safeUi.includes(`id: ${row}`) || !safeUi.includes('disabled: true')) {
     throw new Error(`safe UI patch does not disable ${row}`)
   }
@@ -52,7 +65,7 @@ const { stdout: safeComposition } = await run(
     capture: true,
   },
 )
-for (const row of ['nook-ui-project', 'nook-ui-sidebar']) {
+for (const row of ['nook-ui-project', 'nook-ui-sidebar', 'nook-ui-notes', 'nook-ui-knowledge']) {
   const start = safeComposition.indexOf(`- id: ${row}\n`)
   if (start === -1) throw new Error(`safe UI composition is missing row ${row}`)
   const next = safeComposition.indexOf('\n- id: ', start + 1)

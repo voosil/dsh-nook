@@ -35,9 +35,41 @@
     "@nook-dsh/provider-artifact-local": "workspace:*",
     "@nook-dsh/provider-project-local": "workspace:*",
     "@nook-dsh/ui-project": "workspace:*",
-    "@nook-dsh/ui-sidebar": "workspace:*"
+    "@nook-dsh/ui-sidebar": "workspace:*",
+    "@nook-dsh/capability-note": "workspace:*",
+    "@nook-dsh/capability-knowledge": "workspace:*",
+    "@nook-dsh/provider-notebook-local": "workspace:*",
+    "@nook-dsh/feature-notes": "workspace:*",
+    "@nook-dsh/adapter-notes-dsh": "workspace:*",
+    "@nook-dsh/ui-notes": "workspace:*",
+    "@nook-dsh/capability-generation": "workspace:*",
+    "@nook-dsh/adapter-intelligence-dsh": "workspace:*",
+    "@nook-dsh/feature-reflection": "workspace:*",
+    "@nook-dsh/capability-video": "workspace:*",
+    "@nook-dsh/adapter-video-platform": "workspace:*",
+    "@nook-dsh/provider-video-editor": "workspace:*",
+    "@nook-dsh/feature-video": "workspace:*",
+    "@nook-dsh/adapter-knowledge-dsh": "workspace:*",
+    "@nook-dsh/ui-knowledge": "workspace:*"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.1"
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+    "@deepseek-ai/dsh": "0.1.1-rc.2",
+    "dsh-browser-playwright": "0.1.1",
+    "@deepseek-ai/schemastery": "3.18.1",
+    "@deepseek-ai/dsh-client-runtime": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.1-rc.2",
+    "react": "18.3.1",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-typert-registry": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-layout": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-api-gateway": "0.1.1-rc.2",
+    "react-dom": "18.3.1",
+    "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-agent": "0.1.1-rc.2"
   }
 }

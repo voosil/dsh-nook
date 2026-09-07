@@ -1,0 +1,699 @@
+.nook-workspace {
+  --nook-bg: #fbfaf7;
+  --nook-nav: #f1f0e9;
+  --nook-ink: #293a32;
+  --nook-muted: #859087;
+  --nook-border: #e6e8df;
+  --nook-accent: #42674e;
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: flex;
+  background: var(--nook-bg);
+  color: var(--nook-ink);
+  font:
+    14px/1.6 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'PingFang SC',
+    sans-serif;
+  pointer-events: auto;
+  outline: none;
+  text-align: left;
+}
+.nook-workspace * {
+  box-sizing: border-box;
+}
+.nook-workspace button,
+.nook-workspace input,
+.nook-workspace select,
+.nook-workspace textarea {
+  font: inherit;
+  color: inherit;
+}
+.nook-workspace button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  padding: 6px 10px;
+  transition: background 0.15s;
+}
+.nook-workspace button:hover {
+  background: #e9ece4;
+}
+.nook-workspace button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.nook-workspace :focus-visible {
+  outline: 2px solid #73917a;
+  outline-offset: 2px;
+}
+.nook-workspace input,
+.nook-workspace select,
+.nook-workspace textarea {
+  border: 1px solid var(--nook-border);
+  border-radius: 7px;
+  background: #fffefb;
+  padding: 8px 10px;
+  min-width: 0;
+}
+.nook-workspace input[type='search'] {
+  width: 100%;
+}
+.nook-workspace h1,
+.nook-workspace h2,
+.nook-workspace p {
+  margin: 0;
+}
+.nook-workspace small {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.nook-muted {
+  color: var(--nook-muted);
+  font-size: 12px;
+}
+.nook-nav {
+  width: 224px;
+  flex-shrink: 0;
+  padding: 30px 18px 18px;
+  background: var(--nook-nav);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--nook-border);
+}
+.nook-brand {
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -1px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nook-brand > span {
+  width: 31px;
+  height: 31px;
+  background: var(--nook-accent);
+  color: #fff;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 26px;
+  font-weight: 400;
+}
+.nook-tagline {
+  font-size: 11px;
+  color: var(--nook-muted);
+  margin: 8px 0 30px !important;
+  letter-spacing: 0.14em;
+}
+.nook-workspace .nook-new {
+  background: var(--nook-accent);
+  color: white;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.nook-workspace .nook-new:hover {
+  background: #36563e;
+}
+.nook-new kbd {
+  font: 10px sans-serif;
+  opacity: 0.6;
+  margin-left: 18px;
+}
+.nook-nav nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 24px;
+}
+.nook-nav nav button {
+  text-align: left;
+  padding: 9px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nook-nav button.active {
+  background: #e2e7da;
+  color: #294e35;
+  font-weight: 600;
+}
+.nook-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 29px 8px 0;
+  font-size: 11px;
+  color: var(--nook-muted);
+}
+.nook-nav .nook-project-nav {
+  margin-top: 5px;
+  overflow: auto;
+  min-height: 40px;
+}
+.nook-project-nav p {
+  padding: 10px;
+}
+.nook-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a989;
+  flex-shrink: 0;
+}
+.nook-nav-bottom {
+  margin-top: auto;
+  padding-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.nook-nav-bottom button {
+  text-align: left;
+}
+.nook-nav-bottom p {
+  border-top: 1px solid var(--nook-border);
+  margin-top: 15px;
+  padding: 16px 8px 0;
+  font-size: 10px;
+}
+.nook-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.nook-notes-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.nook-list {
+  width: 304px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--nook-border);
+  display: flex;
+  flex-direction: column;
+}
+.nook-list-heading {
+  padding: 28px 22px 5px;
+}
+.nook-list-heading > small {
+  color: var(--nook-muted);
+  font-size: 10px;
+}
+.nook-list-heading h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin: 3px 0 22px;
+}
+.nook-list-heading h1 span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--nook-muted);
+  margin-left: 5px;
+}
+.nook-list-heading input {
+  font-size: 12px;
+  background: #f5f5ef;
+}
+.nook-list-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 0 6px;
+}
+.nook-list-sort select {
+  font-size: 11px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--nook-muted);
+}
+.nook-note-items {
+  overflow: auto;
+  flex: 1;
+  padding: 0 10px;
+}
+.nook-workspace .nook-note-card {
+  width: 100%;
+  padding: 17px 13px;
+  text-align: left;
+  border-radius: 8px;
+  border-bottom: 1px solid var(--nook-border);
+  margin: 2px 0;
+}
+.nook-note-card.selected {
+  background: #edf0e7;
+  border-color: transparent;
+}
+.nook-note-card strong {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nook-note-card p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #849087;
+  margin-top: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.nook-note-card footer {
+  font-size: 10px;
+  color: #9ba39c;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 14px;
+}
+.nook-pin {
+  color: #72885f;
+}
+.nook-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px;
+  font-size: 11px;
+}
+.nook-welcome {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 35px;
+  min-width: 0;
+}
+.nook-welcome-mark {
+  font:
+    60px Georgia,
+    serif;
+  color: #a7b69a;
+  margin-bottom: 25px;
+}
+.nook-welcome small {
+  font-size: 9px;
+  color: #9ca692;
+  letter-spacing: 0.25em;
+}
+.nook-welcome h2 {
+  font-size: 29px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  margin: 17px 0;
+}
+.nook-welcome p {
+  font-size: 13px;
+  line-height: 2.2;
+  color: var(--nook-muted);
+  margin-bottom: 26px;
+}
+.nook-welcome-foot {
+  margin-top: 80px;
+  font-size: 11px;
+  color: #a3aba1;
+}
+.nook-editor {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+.nook-editor-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 25px;
+  border-bottom: 1px solid var(--nook-border);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.nook-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.nook-actions button {
+  font-size: 11px;
+}
+.nook-paper {
+  max-width: 850px;
+  margin: auto;
+  padding: 45px 45px 100px;
+}
+.nook-workspace .nook-title {
+  font-size: 30px;
+  line-height: 1.5;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-weight: 600;
+  outline: none;
+}
+.nook-title::placeholder {
+  color: #b5bcb0;
+}
+.nook-meta {
+  font-size: 10px;
+  color: #95a08f;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 18px 0 32px;
+}
+.nook-meta select {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: #f2f3ec;
+  max-width: 200px;
+}
+.nook-meta button {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.nook-toolbar {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--nook-border);
+  padding-bottom: 9px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.nook-toolbar button {
+  font-size: 12px;
+  color: #7b8976;
+  min-width: 30px;
+  padding: 4px 7px;
+}
+.nook-paper .tiptap {
+  outline: none;
+  min-height: 350px;
+  font-size: 15px;
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.nook-paper .tiptap p {
+  margin: 0 0 12px;
+}
+.nook-paper .tiptap h1 {
+  font-size: 29px;
+  margin: 28px 0 15px;
+}
+.nook-paper .tiptap h2 {
+  font-size: 23px;
+  margin: 25px 0 13px;
+}
+.nook-paper .tiptap h3 {
+  font-size: 18px;
+  margin: 22px 0 12px;
+}
+.nook-paper .tiptap ul,
+.nook-paper .tiptap ol {
+  padding-left: 24px;
+  margin: 14px 0;
+}
+.nook-paper .tiptap li p {
+  margin: 0;
+}
+.nook-paper .tiptap ul[data-type='taskList'] {
+  list-style: none;
+  padding: 0;
+}
+.nook-paper .tiptap ul[data-type='taskList'] li {
+  display: flex;
+  gap: 10px;
+}
+.nook-paper .tiptap ul[data-type='taskList'] li > div {
+  flex: 1;
+}
+.nook-paper .tiptap blockquote {
+  border-left: 3px solid #c1ccb5;
+  margin: 18px 0;
+  padding: 4px 18px;
+  color: #718368;
+}
+.nook-paper .tiptap pre {
+  background: #f0f1ea;
+  padding: 18px;
+  border-radius: 8px;
+  overflow: auto;
+}
+.nook-paper .tiptap code {
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+}
+.nook-paper a {
+  color: #587842;
+  text-decoration: underline;
+}
+.nook-source {
+  font-size: 12px;
+  margin-bottom: 20px !important;
+}
+.nook-empty {
+  padding: 35px 22px;
+  color: var(--nook-muted);
+  text-align: center;
+  font-size: 12px;
+}
+.nook-error {
+  background: #fff2e8;
+  color: #975a36;
+  padding: 12px 20px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.nook-error-text {
+  color: #975a36;
+  font-size: 11px;
+}
+.nook-projects {
+  padding: 40px 48px;
+  overflow: auto;
+}
+.nook-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 36px;
+}
+.nook-heading small {
+  color: var(--nook-muted);
+}
+.nook-heading h1 {
+  font-size: 28px;
+  font-weight: 500;
+  margin-top: 6px;
+}
+.nook-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: 20px;
+}
+.nook-project-grid article {
+  background: #fffefb;
+  border: 1px solid var(--nook-border);
+  border-radius: 12px;
+  padding: 25px;
+}
+.nook-project-grid article > small {
+  color: #a8b39d;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+}
+.nook-project-grid h2 {
+  font-size: 21px;
+  margin: 10px 0;
+}
+.nook-project-grid h2 button {
+  padding: 0;
+  text-align: left;
+}
+.nook-project-grid p {
+  font-size: 12px;
+  color: var(--nook-muted);
+  margin: 12px 0 20px;
+  white-space: pre-wrap;
+}
+.nook-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: #293a3244;
+  display: grid;
+  place-items: center;
+  z-index: 5;
+}
+.nook-modal {
+  background: var(--nook-bg);
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 440px;
+  width: calc(100% - 32px);
+  box-shadow: 0 15px 65px #20302022;
+}
+.nook-modal h2 {
+  font-size: 21px;
+  margin-bottom: 20px;
+}
+.nook-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 18px;
+  font-size: 12px;
+}
+.nook-modal .nook-actions {
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+.nook-modal button[type='submit'] {
+  background: var(--nook-accent);
+  color: white;
+}
+@media (max-width: 1050px) {
+  .nook-nav {
+    width: 185px;
+    padding: 25px 12px;
+  }
+  .nook-list {
+    width: 255px;
+  }
+  .nook-paper {
+    padding: 30px 25px;
+  }
+  .nook-editor-top {
+    padding: 12px;
+  }
+  .nook-new kbd {
+    display: none;
+  }
+  .nook-meta {
+    gap: 6px;
+  }
+}
+@media (max-width: 760px) {
+  .nook-workspace {
+    flex-direction: column;
+  }
+  .nook-nav {
+    width: 100%;
+    padding: 10px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--nook-border);
+  }
+  .nook-brand {
+    font-size: 17px;
+  }
+  .nook-nav .nook-tagline,
+  .nook-section-label,
+  .nook-nav .nook-project-nav,
+  .nook-nav-bottom p {
+    display: none;
+  }
+  .nook-nav nav {
+    margin: 0;
+    flex-direction: row;
+    font-size: 11px;
+    gap: 0;
+  }
+  .nook-nav nav button {
+    padding: 6px;
+  }
+  .nook-nav-bottom {
+    margin: 0 0 0 auto;
+    padding: 0;
+  }
+  .nook-nav-bottom button {
+    font-size: 10px;
+    padding: 4px;
+  }
+  .nook-nav-bottom button:first-child {
+    display: none;
+  }
+  .nook-nav .nook-new {
+    font-size: 11px;
+    padding: 7px;
+  }
+  .nook-list {
+    width: 220px;
+  }
+  .nook-paper {
+    padding: 24px 20px;
+  }
+  .nook-title {
+    font-size: 23px !important;
+  }
+  .nook-workspace:has(.nook-editor) .nook-list {
+    display: none;
+  }
+  .nook-workspace:not(:has(.nook-editor)) .nook-list {
+    width: 100%;
+    border: 0;
+  }
+  .nook-welcome {
+    display: none;
+  }
+  .nook-editor-top {
+    font-size: 11px;
+  }
+  .nook-projects {
+    padding: 25px;
+  }
+  .nook-brand > span {
+    display: none;
+  }
+}
+.nook-modal.nook-summary {
+  max-width: 780px;
+  max-height: 90vh;
+  overflow: auto;
+}
+.nook-summary .nook-heading {
+  margin-bottom: 5px;
+}
+.nook-summary-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-top: 15px;
+}
+.nook-summary > input,
+.nook-summary > textarea {
+  width: 100%;
+  margin: 8px 0;
+}
+.nook-summary > textarea {
+  font:
+    13px/1.8 ui-monospace,
+    monospace;
+}
+.nook-summary .nook-actions {
+  margin: 10px 0;
+}

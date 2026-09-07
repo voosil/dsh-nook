@@ -1,0 +1,35 @@
+{
+  "extends": "../../tsconfig.package.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "lib/.tsbuildinfo",
+    "rootDir": "src",
+    "outDir": "lib"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    {
+      "path": "../feature-notes"
+    },
+    {
+      "path": "../capability-note"
+    },
+    {
+      "path": "../capability-knowledge"
+    },
+    {
+      "path": "../capability-project"
+    },
+    {
+      "path": "../feature-reflection"
+    },
+    {
+      "path": "../capability-generation"
+    },
+    {
+      "path": "../feature-video"
+    },
+    {
+      "path": "../capability-video"
+    }
+  ]
+}

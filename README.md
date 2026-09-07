@@ -1,6 +1,6 @@
 # Nook
 
-Nook is a standalone application profile built on DeepSeek Harness (DSH). It composes official bundles, one pinned community browser provider, and product-owned Cordis plugins without modifying DSH or installed packages.
+Nook is a local notebook and knowledge workspace, delivered as a standalone application profile built on DeepSeek Harness (DSH). It composes official bundles, one pinned community browser provider, and product-owned Cordis plugins without modifying DSH or installed packages.
 
 ```text
 Product features
@@ -27,6 +27,8 @@ pnpm dev
 ```
 
 `pnpm dev` prepares the isolated Profile when needed, terminates any process already listening on port 3080, and then serves `http://127.0.0.1:3080`. Override the target port with `pnpm dev -- --port 4000`; port `0` asks the OS for a free port and skips cleanup.
+
+The notes workspace opens by default. Record ideas, assign an optional project, and return to AI conversations from the sidebar. See the [notebook guide](packages/feature-notes/README.md), [conversation knowledge guide](packages/adapter-knowledge-dsh/README.md), and [video setup and writing guide](packages/feature-video/README.md). Summaries and writing use models configured in DSH.
 
 Common commands:
 

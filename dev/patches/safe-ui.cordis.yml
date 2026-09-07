@@ -5,3 +5,9 @@
 
 - id: nook-ui-sidebar
   disabled: true
+
+- id: nook-ui-notes
+  disabled: true
+
+- id: nook-ui-knowledge
+  disabled: true

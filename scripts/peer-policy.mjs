@@ -7,7 +7,11 @@ export function assertKnownPeerWarnings(output) {
     .map(line => line.trim())
     .filter(line => line.startsWith('✕ unmet peer '))
     .map(line => line.slice('✕ unmet peer '.length))
-  if (found.length !== EXPECTED_STALE_PEERS.size || found.some(name => !EXPECTED_STALE_PEERS.has(name))) {
+  if (
+    /✕ missing peer /.test(output) ||
+    found.length !== EXPECTED_STALE_PEERS.size ||
+    found.some(name => !EXPECTED_STALE_PEERS.has(name))
+  ) {
     throw new Error(`unexpected peer dependency result\n${output}`)
   }
   if (!output.includes('dsh-browser-playwright@0.1.1')) {

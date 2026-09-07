@@ -37,3 +37,40 @@
 
     - id: nook-ui-sidebar
       name: '@nook-dsh/ui-sidebar'
+
+- insert:
+    - id: nook-notebook-provider
+      name: '@nook-dsh/provider-notebook-local'
+      config:
+        file: !!js dshHomePath('nook/notebook.sqlite')
+    - id: nook-notes-feature
+      name: '@nook-dsh/feature-notes'
+    - id: nook-notes-rpc
+      name: '@nook-dsh/adapter-notes-dsh'
+    - id: nook-ui-notes
+      name: '@nook-dsh/ui-notes'
+
+- insert:
+    - id: nook-intelligence-adapter
+      name: '@nook-dsh/adapter-intelligence-dsh'
+    - id: nook-reflection-feature
+      name: '@nook-dsh/feature-reflection'
+
+- insert:
+    - id: nook-video-source
+      name: '@nook-dsh/adapter-video-platform'
+      config:
+        root: !!js dshHomePath('nook/videos')
+        python: python3
+    - id: nook-video-editor
+      name: '@nook-dsh/provider-video-editor'
+      config:
+        cache: !!js dshHomePath('nook/video-editor-cache')
+    - id: nook-video-feature
+      name: '@nook-dsh/feature-video'
+
+- insert:
+    - id: nook-knowledge-adapter
+      name: '@nook-dsh/adapter-knowledge-dsh'
+    - id: nook-ui-knowledge
+      name: '@nook-dsh/ui-knowledge'

@@ -22,6 +22,7 @@
     "@nook-dsh/feature-preview": "workspace:*"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.1"
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-tools": "0.1.1-rc.2"
   }
 }

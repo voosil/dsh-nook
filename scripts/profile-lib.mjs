@@ -1,7 +1,7 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { spawn } from 'node:child_process'
-import { resolve } from 'node:path'
+import { resolve, delimiter } from 'node:path'
 
 export const ROOT = resolve(import.meta.dirname, '..')
 export const DEV_HOME = resolve(ROOT, '.dsh-dev')
@@ -12,6 +12,25 @@ export const COMMUNITY_BROWSER_VERSION = '0.1.1'
 export const PNPM_VERSION = '12.1.0'
 
 export const LOCAL_PACKAGES = [
+  'adapter-knowledge-dsh',
+  'ui-knowledge',
+
+  'capability-video',
+  'adapter-video-platform',
+  'provider-video-editor',
+  'feature-video',
+
+  'capability-generation',
+  'adapter-intelligence-dsh',
+  'feature-reflection',
+
+  'capability-note',
+  'capability-knowledge',
+  'provider-notebook-local',
+  'feature-notes',
+  'adapter-notes-dsh',
+  'ui-notes',
+
   'capability-project',
   'capability-browser',
   'capability-artifact',
@@ -42,6 +61,20 @@ export async function exists(file) {
   }
 }
 
+/** Fresh Profiles must use the same verified external runtime as the repository lockfile. */
+export async function pinnedRuntimeOverrides() {
+  const lock = await readFile(resolve(ROOT, 'pnpm-lock.yaml'), 'utf8')
+  const overrides = {}
+  for (const match of lock.matchAll(/^  '(@deepseek-ai\/[^@']+)@(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)':$/gm)) {
+    const [, name, version] = match
+    if (overrides[name] && overrides[name] !== version) throw new Error(`ambiguous runtime pin: ${name}`)
+    overrides[name] = version
+  }
+  if (overrides['@deepseek-ai/dsh'] !== DSH_VERSION || overrides['@deepseek-ai/cordis'] !== '4.0.1')
+    throw new Error('runtime lockfile does not match the verified DSH/Cordis baseline')
+  return overrides
+}
+
 export async function writeDevProfile() {
   assertIsolatedHome(DEV_HOME)
   await mkdir(PROFILE_DIR, { recursive: true })
@@ -51,6 +84,9 @@ export async function writeDevProfile() {
     [
       'packages:',
       '  - profiles/*',
+      '',
+      'overrides:',
+      ...Object.entries(await pinnedRuntimeOverrides()).map(([name, version]) => `  '${name}': '${version}'`),
       '',
       'allowBuilds:',
       "  '@deepseek-ai/dsh-subprocess-local': true",
@@ -140,6 +176,7 @@ export function dshBin() {
 
 export function devRuntimeEnv() {
   return {
+    PATH: `${resolve(DEV_HOME, 'video-runtime', process.platform === 'win32' ? 'Scripts' : 'bin')}${delimiter}${process.env.PATH ?? ''}`,
     DSH_HOME: DEV_HOME,
     DSH_AGENTS_HOME: DEV_AGENTS_HOME,
     DSH_TELEMETRY_MODE: 'DISABLED',

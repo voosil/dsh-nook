@@ -30,7 +30,7 @@ for (const file of manifests) {
   }
 }
 
-for (const directory of ['capability-project', 'capability-browser', 'capability-artifact']) {
+for (const directory of LOCAL_PACKAGES.filter(name => name.startsWith('capability-'))) {
   for (const file of await filesBelow(resolve(ROOT, 'packages', directory, 'src'))) {
     const source = await readFile(file, 'utf8')
     if (/from\s+['"](?:node:|@deepseek-ai\/|dsh-browser-playwright)/.test(source)) {
@@ -39,7 +39,7 @@ for (const directory of ['capability-project', 'capability-browser', 'capability
   }
 }
 
-for (const directory of ['feature-project', 'feature-agent', 'feature-preview']) {
+for (const directory of LOCAL_PACKAGES.filter(name => name.startsWith('feature-'))) {
   for (const file of await filesBelow(resolve(ROOT, 'packages', directory, 'src'))) {
     const source = await readFile(file, 'utf8')
     if (/from\s+['"](?:@nook-dsh\/provider-|dsh-browser-playwright)/.test(source)) {

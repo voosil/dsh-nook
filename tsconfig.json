@@ -1,19 +1,92 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/capability-project" },
-    { "path": "packages/capability-browser" },
-    { "path": "packages/capability-artifact" },
-    { "path": "packages/provider-project-local" },
-    { "path": "packages/provider-artifact-local" },
-    { "path": "packages/adapter-browser-community" },
-    { "path": "packages/feature-project" },
-    { "path": "packages/feature-preview" },
-    { "path": "packages/dsh-compat" },
-    { "path": "packages/dsh-adapter" },
-    { "path": "packages/feature-agent" },
-    { "path": "packages/ui-project" },
-    { "path": "packages/ui-sidebar" },
-    { "path": "packages/app-all" }
+    {
+      "path": "packages/capability-note"
+    },
+    {
+      "path": "packages/capability-knowledge"
+    },
+    {
+      "path": "packages/provider-notebook-local"
+    },
+    {
+      "path": "packages/feature-notes"
+    },
+    {
+      "path": "packages/adapter-notes-dsh"
+    },
+    {
+      "path": "packages/ui-notes"
+    },
+    {
+      "path": "packages/capability-project"
+    },
+    {
+      "path": "packages/capability-browser"
+    },
+    {
+      "path": "packages/capability-artifact"
+    },
+    {
+      "path": "packages/provider-project-local"
+    },
+    {
+      "path": "packages/provider-artifact-local"
+    },
+    {
+      "path": "packages/adapter-browser-community"
+    },
+    {
+      "path": "packages/feature-project"
+    },
+    {
+      "path": "packages/feature-preview"
+    },
+    {
+      "path": "packages/dsh-compat"
+    },
+    {
+      "path": "packages/dsh-adapter"
+    },
+    {
+      "path": "packages/feature-agent"
+    },
+    {
+      "path": "packages/ui-project"
+    },
+    {
+      "path": "packages/ui-sidebar"
+    },
+    {
+      "path": "packages/app-all"
+    },
+    {
+      "path": "packages/capability-generation"
+    },
+    {
+      "path": "packages/adapter-intelligence-dsh"
+    },
+    {
+      "path": "packages/feature-reflection"
+    },
+    {
+      "path": "packages/capability-video"
+    },
+    {
+      "path": "packages/adapter-video-platform"
+    },
+    {
+      "path": "packages/provider-video-editor"
+    },
+    {
+      "path": "packages/feature-video"
+    },
+    {
+      "path": "packages/adapter-knowledge-dsh"
+    },
+    {
+      "path": "packages/ui-knowledge"
+    }
   ]
 }

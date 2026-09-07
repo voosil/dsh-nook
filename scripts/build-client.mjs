@@ -3,6 +3,8 @@ import { resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
 const clients = [
+  { id: '@nook-dsh/ui-knowledge', directory: 'ui-knowledge' },
+  { id: '@nook-dsh/ui-notes', directory: 'ui-notes' },
   { id: '@nook-dsh/ui-project', directory: 'ui-project' },
   { id: '@nook-dsh/ui-sidebar', directory: 'ui-sidebar' },
 ]
@@ -17,6 +19,7 @@ for (const client of clients) {
     platform: 'browser',
     target: 'es2022',
     jsx: 'automatic',
+    loader: { '.css': 'text' },
     sourcemap: true,
     external: [
       'react',

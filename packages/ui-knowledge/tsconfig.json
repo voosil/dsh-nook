@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.package.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "lib/.tsbuildinfo",
+    "rootDir": "src",
+    "outDir": "lib",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    {
+      "path": "../adapter-knowledge-dsh"
+    }
+  ]
+}
