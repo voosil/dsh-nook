@@ -12,6 +12,9 @@
     },
     {
       "path": "../capability-knowledge"
+    },
+    {
+      "path": "../storage-backup"
     }
   ]
 }

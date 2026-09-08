@@ -568,6 +568,9 @@ importers:
       '@nook-dsh/capability-project':
         specifier: workspace:*
         version: link:../capability-project
+      '@nook-dsh/storage-backup':
+        specifier: workspace:*
+        version: link:../storage-backup
 
   packages/provider-notebook-local:
     dependencies:
@@ -583,6 +586,9 @@ importers:
       '@nook-dsh/capability-note':
         specifier: workspace:*
         version: link:../capability-note
+      '@nook-dsh/storage-backup':
+        specifier: workspace:*
+        version: link:../storage-backup
 
   packages/provider-project-local:
     dependencies:
@@ -595,6 +601,9 @@ importers:
       '@nook-dsh/capability-project':
         specifier: workspace:*
         version: link:../capability-project
+      '@nook-dsh/storage-backup':
+        specifier: workspace:*
+        version: link:../storage-backup
 
   packages/provider-video-editor:
     dependencies:
@@ -608,6 +617,7 @@ importers:
         specifier: workspace:*
         version: link:../capability-video
 
+  packages/storage-backup: {}
   packages/ui-knowledge:
     dependencies:
       '@deepseek-ai/cordis':

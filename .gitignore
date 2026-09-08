@@ -3,6 +3,7 @@ node_modules/
 lib/
 *.tsbuildinfo
 .dsh-dev/
+.nook-backups/
 .pack/
 coverage/
 .DS_Store

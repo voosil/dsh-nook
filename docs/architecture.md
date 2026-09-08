@@ -16,6 +16,8 @@ The runnable Nook application is the `nook` Profile. Its ordered layers are the 
 
 Capability packages contain DTOs, errors, events and interfaces. Features depend on these contracts. The notebook provider shares one transaction owner between note persistence and retrieval indexing. Reflection and video orchestrate capabilities; the knowledge conversation adapter can operate without either feature.
 
+Local persistence providers share a [backup library](../packages/storage-backup/src/index.ts) for durable recovery records. The same library supports offline snapshots and recovery commands; it contributes no runtime service. Behavior and scope belong in the [backup guide](backup.md).
+
 ## Host and Client
 
 Host plugins own persistence, subprocesses, model requests and workflow lifetimes. Client plugins contribute through additive official Slots. The notes workspace uses the shell overlay and sidebar footer; the knowledge toggle uses session header actions. Nook-owned, schema-validated JSON DTOs cross the verified DSH Typert Gateway. No Session, Cordis service or React element crosses the boundary.

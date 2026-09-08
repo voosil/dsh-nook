@@ -44,6 +44,8 @@ pnpm dev:profile     # force-refresh Profile dependencies after composition chan
 
 Runtime data stays in the repository or disposable temporary homes as described in the [runtime guide](docs/development.md). `verify:package` uses packed tarballs in a fresh temporary Profile.
 
+See the [backup and recovery guide](docs/backup.md) for data protection and the `pnpm backup` commands.
+
 The Nook launcher sets `CHOKIDAR_USEPOLLING=1` for DSH's Profile/Home patch watcher. This is a development-runtime compatibility setting for linked pnpm Profiles on the verified macOS environment; it does not disable any official Service watcher.
 
 See [docs/architecture.md](docs/architecture.md) and [docs/discovery.md](docs/discovery.md).

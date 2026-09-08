@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { Context, Service, type Logger } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
+import { writeRecoveryRecord } from '@nook-dsh/storage-backup'
 import {
   ProjectError,
   type CreateProjectRequest,
@@ -79,6 +80,7 @@ export default class LocalProjectProvider extends Service implements ProjectServ
     ctx.effect(
       () => () => {
         this.listeners.clear()
+        return this.writeQueue
       },
       'nook-projects: clear subscribers',
     )
@@ -127,15 +129,11 @@ export default class LocalProjectProvider extends Service implements ProjectServ
   }
 
   async delete(projectId: ProjectId): Promise<void> {
-    let removed = false
-    await this.mutate(projects =>
-      projects.filter(project => {
-        if (project.id !== projectId) return true
-        removed = true
-        return false
-      }),
-    )
-    if (!removed) throw new ProjectError('PROJECT_NOT_FOUND', `project ${projectId} does not exist`)
+    await this.mutate(projects => {
+      if (!projects.some(project => project.id === projectId))
+        throw new ProjectError('PROJECT_NOT_FOUND', `project ${projectId} does not exist`)
+      return projects.filter(project => project.id !== projectId)
+    }, 'delete-project')
     this.publish({ type: 'project.deleted', projectId })
   }
 
@@ -179,12 +177,17 @@ export default class LocalProjectProvider extends Service implements ProjectServ
     }
   }
 
-  private async mutate(change: (projects: readonly ProjectDto[]) => readonly ProjectDto[]): Promise<void> {
+  private async mutate(
+    change: (projects: readonly ProjectDto[]) => readonly ProjectDto[],
+    backupReason?: string,
+  ): Promise<void> {
     const operation = this.writeQueue.then(async () => {
-      const next: ProjectStore = { version: 1, projects: change((await this.readStore()).projects) }
+      const previous = await this.readStore()
+      const next: ProjectStore = { version: 1, projects: change(previous.projects) }
       await mkdir(dirname(this.file), { recursive: true })
       const temporary = `${this.file}.${process.pid}.${randomUUID()}.tmp`
       try {
+        if (backupReason) writeRecoveryRecord(`${this.file}.backups`, backupReason, previous)
         await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 })
         await rename(temporary, this.file)
       } catch (error: unknown) {

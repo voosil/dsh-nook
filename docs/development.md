@@ -13,7 +13,7 @@ The development launcher builds before boot and polls package sources, assets an
 
 Client HMR remounts the changed plugin. Local React state in that plugin can reset; it is not React Fast Refresh. Save content before editing its UI code. Other plugins and the browser document remain mounted during a Client-only update.
 
-`pnpm dev:safe-ui` uses the same watcher with Nook UI contributions disabled. After adding dependencies or changing Profile membership, run `pnpm install` and `pnpm dev:profile`, then restart development. Changes to launcher/build scripts also require restarting the command.
+`pnpm dev:safe-ui` uses the same watcher with Nook UI contributions disabled. After adding dependencies or changing Profile membership, run `pnpm install` and `pnpm dev:profile`, then restart development. Profile refresh preserves existing user patch files. Changes to launcher/build scripts also require restarting the command.
 
 Development starts with fresh data and credentials. Configure development models in that temporary instance when needed. The temporary directory is printed at startup and remains available through automatic Host restarts. It is removed when the launcher exits. The real user DSH home is never used.
 
@@ -22,6 +22,8 @@ Development starts with fresh data and credentials. Configure development models
 `pnpm start` builds the workspace, packs Nook packages and installs them with pinned external dependencies in a separate temporary installation. Its Profile links to that installation, not workspace packages. The runtime runs with the repository as its working directory so it can edit the project while serving its fixed build. Rebuilding or changing source in another terminal does not change this instance, even when its browser is refreshed.
 
 Application data and credentials stay under `.dsh-dev`; the existing Nook Profile patch is copied into the snapshot. Dependency installation makes startup slower than development. Stopping the command removes the temporary installation and Profile link, preserving application data. Relaunch `pnpm start` when the new build is ready to use. Runtime configuration still follows DSH's own lifecycle; this mode disables source watching and Client HMR.
+
+Usage startup holds the data lock and creates a verified backup before boot. Backup scope, failure behavior and recovery commands are described in the [backup guide](backup.md).
 
 ## Verification
 

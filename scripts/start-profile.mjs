@@ -11,6 +11,7 @@ const profileName = basename(temporaryRoot)
 const profileLink = resolve(DEV_HOME, 'profiles', profileName)
 const processes = new ProcessScope()
 let stopped = false
+let releaseDataLock
 const stop = () => {
   stopped = true
   void processes.dispose()
@@ -29,6 +30,13 @@ try {
   await runPnpm(['run', 'build'])
   const { profile, bin } = await createPackedProfile(temporaryRoot, { runPnpm })
   if (!stopped) {
+    const { acquireDataLock, createBackup } = await import('../packages/storage-backup/lib/index.js')
+    const data = resolve(DEV_HOME, 'nook')
+    releaseDataLock = acquireDataLock(data)
+    if (await exists(data)) {
+      const backup = createBackup(data, resolve(ROOT, '.nook-backups'), 'before-start')
+      console.log(`[nook start] Verified data backup: ${backup}`)
+    }
     const patch = resolve(PROFILE_DIR, 'cordis.patch.yml')
     if (await exists(patch)) await copyFile(patch, resolve(profile, 'cordis.patch.yml'))
     await mkdir(resolve(DEV_HOME, 'profiles'), { recursive: true })
@@ -43,6 +51,7 @@ try {
   if (!stopped) throw error
 } finally {
   await processes.dispose()
+  releaseDataLock?.()
   await rm(profileLink, { force: true })
   await rm(temporaryRoot, { recursive: true, force: true })
   process.removeListener('SIGINT', stop)

@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
+import { writeRecoveryRecord } from '@nook-dsh/storage-backup'
 import {
   ArtifactError,
   type ArtifactContentDto,
@@ -132,6 +133,7 @@ export default class LocalArtifactProvider extends Service implements ArtifactSe
     const found = await this.read(artifactId)
     if (found === undefined) throw new ArtifactError('ARTIFACT_NOT_FOUND', `artifact ${artifactId} does not exist`)
     try {
+      writeRecoveryRecord(`${this.root}.backups`, 'delete-artifact', found)
       await rm(join(this.root, found.projectId, `${artifactId}.json`))
     } catch (error: unknown) {
       throw new ArtifactError('ARTIFACT_STORAGE_FAILED', 'failed to delete artifact', { cause: error })

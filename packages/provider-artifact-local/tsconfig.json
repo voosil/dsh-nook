@@ -1,6 +1,20 @@
 {
   "extends": "../../tsconfig.package.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "lib", "tsBuildInfoFile": "lib/.tsbuildinfo" },
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib",
+    "tsBuildInfoFile": "lib/.tsbuildinfo"
+  },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../capability-project" }, { "path": "../capability-artifact" }]
+  "references": [
+    {
+      "path": "../capability-project"
+    },
+    {
+      "path": "../capability-artifact"
+    },
+    {
+      "path": "../storage-backup"
+    }
+  ]
 }

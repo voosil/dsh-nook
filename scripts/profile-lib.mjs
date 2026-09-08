@@ -12,6 +12,7 @@ export const COMMUNITY_BROWSER_VERSION = '0.1.1'
 export const PNPM_VERSION = '12.1.0'
 
 export const LOCAL_PACKAGES = [
+  'storage-backup',
   'adapter-knowledge-dsh',
   'ui-knowledge',
 
@@ -126,7 +127,10 @@ export async function writeDevProfile() {
     },
   }
   await writeFile(resolve(PROFILE_DIR, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`)
-  await writeFile(resolve(PROFILE_DIR, 'cordis.patch.yml'), '[]\n')
+  // Profile patches are user configuration, even in the repository's usage home.
+  if (!(await exists(resolve(PROFILE_DIR, 'cordis.patch.yml')))) {
+    await writeFile(resolve(PROFILE_DIR, 'cordis.patch.yml'), '[]\n', { flag: 'wx' })
+  }
   if (!(await exists(resolve(DEV_HOME, 'cordis.patch.yml')))) {
     await writeFile(resolve(DEV_HOME, 'cordis.patch.yml'), '[]\n')
   }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -9,6 +9,7 @@ import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { ROOT, runPnpm } from '../../scripts/profile-lib.mjs'
 import { dismissOnboarding } from '../../scripts/notebook-smoke.mjs'
+import { verifyBackup } from '../../packages/storage-backup/src/index.ts'
 
 const require = createRequire(import.meta.url)
 const { chromium } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
@@ -60,6 +61,8 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   }
   await runPnpm(['install', '--frozen-lockfile'], { cwd: root, capture: true })
   await runPnpm(['run', 'dev:profile'], { cwd: root, capture: true })
+  await mkdir(resolve(root, '.dsh-dev/nook'), { recursive: true })
+  await writeFile(resolve(root, '.dsh-dev/nook/backup-acceptance.txt'), 'preserve before startup')
   const launch = (script: string) => {
     let output = ''
     const urls: string[] = []
@@ -81,6 +84,11 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   }
   const stable = launch('start-profile.mjs')
   await until(() => stable.urls.length === 1, stable.logs)
+  const backups = await readdir(resolve(root, '.nook-backups'))
+  assert.equal(backups.length, 1)
+  const backup = resolve(root, '.nook-backups', backups[0]!)
+  assert.equal(verifyBackup(backup).reason, 'before-start')
+  assert.equal(await readFile(resolve(backup, 'data/backup-acceptance.txt'), 'utf8'), 'preserve before startup')
   const dev = launch('run-profile.mjs')
   await until(() => dev.urls.length === 1, dev.logs)
   const browser = await chromium.launch({ channel: 'chrome', headless: true })
@@ -146,6 +154,7 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   const stableOrigin = new URL(stable.urls[0]!).origin
   await stop(dev.child)
   await stop(stable.child)
+  await assert.rejects(readFile(resolve(root, '.dsh-dev/nook.lock/owner.json')), { code: 'ENOENT' })
   await assert.rejects(fetch(devOrigin))
   await assert.rejects(fetch(stableOrigin))
 })

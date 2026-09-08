@@ -3,6 +3,7 @@
 - Never fork, edit, or patch DeepSeek Harness source.
 - Never edit `node_modules/@deepseek-ai/*` or any other installed package.
 - Never use the real `~/.dsh` for development or verification. Set `DSH_HOME` to this repository's `.dsh-dev` or to a clean temporary directory.
+- Never delete user data without first creating and verifying a recoverable backup; abort deletion if backup fails. Only disposable development/test data is exempt; data used by `pnpm start` is user data regardless of its directory name. See [backup and recovery](docs/backup.md).
 - Never guess DSH APIs, service names, Slot keys or props, event payloads, Tool schemas, RPC contracts, Bundle metadata, or Client metadata. Verify the pinned runtime/source first and record unresolved facts as `UNKNOWN`.
 - Business features depend on Nook Capability contracts, not concrete Providers. Package dependencies do not imply active Cordis services.
 - Third-party private or unstable APIs belong behind a dedicated Adapter. Do not import private third-party modules from Feature packages.

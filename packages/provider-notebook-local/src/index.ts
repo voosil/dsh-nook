@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path'
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
 import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
+import { writeRecoveryRecord } from '@nook-dsh/storage-backup'
 import {
   NoteError,
   noteTitle,
@@ -75,7 +76,9 @@ function fromRow(row: Row): NoteDto {
 
 class Notebook {
   readonly db: DatabaseSync
+  readonly backups: string
   constructor(file: string) {
+    this.backups = `${resolve(file)}.backups`
     mkdirSync(dirname(resolve(file)), { recursive: true })
     this.db = new DatabaseSync(resolve(file))
     try {
@@ -227,6 +230,7 @@ class LocalNotes extends Service implements NoteService {
   async setDeleted(id: string, revision: number, deleted: boolean): Promise<NoteDto> {
     return this.store.transaction(() => {
       const previous = this.requireRevision(id, revision)
+      if (deleted) writeRecoveryRecord(this.store.backups, 'trash-note', { notes: [previous], sessions: [] })
       const now = new Date().toISOString()
       const note = { ...previous, deletedAt: deleted ? now : null, updatedAt: now, revision: previous.revision + 1 }
       this.store.db
@@ -238,6 +242,10 @@ class LocalNotes extends Service implements NoteService {
   }
   async detachProject(projectId: string): Promise<void> {
     this.store.transaction(() => {
+      const notes = this.store.db.prepare('SELECT * FROM notes WHERE project_id=?').all(projectId).map(fromRow)
+      const sessions = this.store.db.prepare('SELECT * FROM knowledge_sessions WHERE project_id=?').all(projectId)
+      if (notes.length || sessions.length)
+        writeRecoveryRecord(this.store.backups, 'detach-project', { projectId, notes, sessions })
       this.store.db
         .prepare('UPDATE notes SET project_id=NULL, revision=revision+1, updated_at=? WHERE project_id=?')
         .run(new Date().toISOString(), projectId)
