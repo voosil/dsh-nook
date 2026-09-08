@@ -17,6 +17,7 @@
     "test:integration": "node --import tsx --test tests/integration/*.test.ts",
     "test:e2e": "node --import tsx --test tests/e2e/*.test.ts",
     "dev": "node scripts/run-profile.mjs",
+    "start": "node scripts/start-profile.mjs",
     "dev:safe-ui": "node scripts/run-profile.mjs --safe-ui",
     "dev:profile": "node scripts/dev-profile.mjs",
     "verify:profile": "node scripts/verify-profile.mjs",

@@ -1,8 +1,8 @@
 # Nook product Bundle. Providers and features are separate rows so runtime
 # injection, replacement, and diagnostics stay explicit.
 - id: client-hmr
-  # Client HMR is not verified for pinned DSH 0.1.1-rc.2. Nook uses build +
-  # runtime restart until that contract is proven reliable.
+  # Usage serves a fixed build. The development launcher enables the verified
+  # official Client HMR chain through its own overlay.
   disabled: true
 
 - insert:

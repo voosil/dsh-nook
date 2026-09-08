@@ -1,5 +1,6 @@
 import { build } from 'esbuild'
 import { resolve } from 'node:path'
+import { mkdir, rename, writeFile } from 'node:fs/promises'
 
 const root = resolve(import.meta.dirname, '..')
 const clients = [
@@ -9,9 +10,11 @@ const clients = [
   { id: '@nook-dsh/ui-sidebar', directory: 'ui-sidebar' },
 ]
 
+const output = []
 for (const client of clients) {
   const directory = resolve(root, 'packages', client.directory)
-  await build({
+  const result = await build({
+    write: false,
     entryPoints: [resolve(directory, 'src/client/index.tsx')],
     outfile: resolve(directory, 'lib/client.js'),
     bundle: true,
@@ -37,4 +40,14 @@ for (const client of clients) {
     footer: { js: 'return module.exports; } });' },
     logLevel: 'info',
   })
+  output.push(...result.outputFiles)
+}
+
+// Failed bundles publish nothing. Atomic replacements keep the HMR poll from
+// reading half-written JavaScript during successful builds.
+for (const file of output) {
+  await mkdir(resolve(file.path, '..'), { recursive: true })
+  const temporary = `${file.path}.${process.pid}.tmp`
+  await writeFile(temporary, file.contents)
+  await rename(temporary, file.path)
 }

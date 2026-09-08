@@ -26,13 +26,14 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` builds the Host packages and Client bundles, prepares the isolated Profile when needed, terminates any process already listening on port 3080, and then serves `http://127.0.0.1:3080`. `pnpm dev:safe-ui` uses the same build step. A failed build stops startup before port cleanup. Override the target port with `pnpm dev -- --port 4000`; port `0` asks the OS for a free port and skips cleanup.
+Use `pnpm dev` for hot-reloading development on port 3080, or `pnpm start` for a fixed build on port 3081 while editing the code. Open the complete URL printed in the terminal. See [development and usage runtimes](docs/development.md) for data isolation, update behavior and port options.
 
 The notes workspace opens by default. Record ideas, assign an optional project, and return to AI conversations from the sidebar. See the [notebook guide](packages/feature-notes/README.md), [conversation knowledge guide](packages/adapter-knowledge-dsh/README.md), and [video setup and writing guide](packages/feature-video/README.md). Summaries and writing use models configured in DSH.
 
 Common commands:
 
 ```bash
+pnpm start           # compile and run a fixed build with existing application data
 pnpm format          # format the workspace
 pnpm test            # fast contract tests
 pnpm verify          # full development verification
@@ -41,7 +42,7 @@ pnpm dev:safe-ui     # boot the official UI without Nook Client plugins
 pnpm dev:profile     # force-refresh Profile dependencies after composition changes
 ```
 
-All DSH runtime data is isolated under `.dsh-dev/`. `verify:package` uses a fresh temporary `DSH_HOME` and packed tarballs rather than workspace links.
+Runtime data stays in the repository or disposable temporary homes as described in the [runtime guide](docs/development.md). `verify:package` uses packed tarballs in a fresh temporary Profile.
 
 The Nook launcher sets `CHOKIDAR_USEPOLLING=1` for DSH's Profile/Home patch watcher. This is a development-runtime compatibility setting for linked pnpm Profiles on the verified macOS environment; it does not disable any official Service watcher.
 

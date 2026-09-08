@@ -8,7 +8,7 @@ The development Profile links Nook packages whose entry points target ignored bu
 
 ## Decision
 
-The [shared development launcher](../../../scripts/run-profile.mjs) awaits the repository build before preparing the Profile, releasing the target port, or starting DSH. Both normal and Safe UI startup use this path. A build failure prevents boot and preserves an existing listener. The [quick start](../../../README.md#quick-start) describes the startup behavior.
+The [shared development launcher](../../../scripts/run-profile.mjs) awaits the repository build before preparing the Profile or starting DSH. The [runtime modes](../feature/2026-09-08-development-modes.md) define subsequent watching and port ownership. Both normal and Safe UI startup use this path. A build failure prevents boot. The [quick start](../../../README.md#quick-start) describes the startup behavior.
 
 ## Alternatives considered
 
@@ -22,4 +22,4 @@ The [launcher integration tests](../../../tests/integration/dev-startup.test.ts)
 
 ## Consequences
 
-Each dev launch includes build time and reports compiler or bundler errors before runtime startup. This does not add a watcher; source changes require restarting dev. DSH source, installed packages, and the real user DSH home are unaffected.
+Each dev launch includes build time and reports compiler or bundler errors before runtime startup. The [development mode](../feature/2026-09-08-development-modes.md) owns subsequent source watching and rebuilding. DSH source, installed packages, and the real user DSH home are unaffected.

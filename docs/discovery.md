@@ -43,9 +43,20 @@ Fresh development and packed-install Profiles constrain all `@deepseek-ai/*` res
 
 ## UNKNOWN
 
-- Client HMR reliability for DSH `0.1.1-rc.2` remains `UNKNOWN`; Host development uses build and runtime restart.
 - DSH app boot unconditionally watches Profile and Home patches. Native watching failed for the linked development Profile on the verified macOS environment, so Nook's launcher and verification scripts set Chokidar's documented `CHOKIDAR_USEPOLLING=1` compatibility mode. Product Services and their own watch settings remain untouched.
 - The next published DSH release and its migration requirements remain `UNKNOWN`; `dsh-compat` fails closed outside the pinned release.
+
+## Client hot reload
+
+The pinned `@deepseek-ai/dsh-client-hmr` Host polls Client bundle files and emits `rebuilt` frames over `/plugins/events`. Its Client invalidates the module revision, prefetches the new bundle, disposes the old fiber and refreshes the plugin through the official Loader. This is plugin remounting, not React Fast Refresh. Nook enables it only through the development overlay. Repeated sidebar and notebook CSS updates, Slot cleanup and build-failure recovery are covered by [mode acceptance](../tests/e2e/dev-modes.test.ts).
+
+## Browser boot and Client composition
+
+The [release source](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.1.3-alpha.2) uses Cordis `4.0.2` and Schemastery `3.18.2`. Client plugins use Cordis `Context`; `@deepseek-ai/dsh-client-ui-renderer/client` owns the `slots` context augmentation. The former `dsh-client-runtime` package is absent from this release. Nook declares the renderer as a Client injection and imports its public types.
+
+The Web startup URL contains a process token. A GET to that URL exchanges the token for a cookie and redirects to `/`; unauthenticated index requests return HTTP 401. Browser and HTTP acceptance use this flow, and diagnostic logs redact token values. Open the complete URL printed by the launcher to establish a browser session. Signed cookies use the persistent credential secret and survive Host restarts in the same home.
+
+Session JSONL persistence depends on `fs-ext@2.1.1` for POSIX file locks. Workspace, development Profile and packed Profile installs permit its native build. Nook's model adapter and knowledge assembly hook do not configure persona; the release's persona prefix/suffix migration does not change those contracts.
 
 ## Product RPC and Client contracts
 

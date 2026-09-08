@@ -24,10 +24,16 @@ function parsePort(value) {
   return port >= 0 && port <= 65_535 ? port : undefined
 }
 
-export function createProfileArgs(bin, root, inputArgs) {
+export function createProfileArgs(
+  bin,
+  root,
+  inputArgs,
+  { profile = 'nook', defaultPort = DEFAULT_DEV_PORT, patches = [] } = {},
+) {
   const appArgs = normalizedArgs(inputArgs)
   const safeUi = appArgs.indexOf('--safe-ui')
-  const dshArgs = [bin, '--profile', 'nook']
+  const dshArgs = [bin, '--profile', profile]
+  for (const patch of patches) dshArgs.push('--patch', patch)
 
   if (safeUi !== -1) {
     appArgs.splice(safeUi, 1)
@@ -36,7 +42,7 @@ export function createProfileArgs(bin, root, inputArgs) {
 
   dshArgs.push('--no-open')
   if (!appArgs.some(argument => argument === '--port' || argument.startsWith('--port='))) {
-    dshArgs.push('--port', DEFAULT_DEV_PORT)
+    dshArgs.push('--port', String(defaultPort))
   }
   return [...dshArgs, ...appArgs]
 }

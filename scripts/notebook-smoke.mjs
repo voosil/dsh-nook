@@ -91,7 +91,7 @@ export async function notebookSmoke(url, screenshot) {
   }
 }
 
-async function dismissOnboarding(page) {
+export async function dismissOnboarding(page) {
   for (const name of ['继续', '稍后配置']) {
     const button = page.getByRole('button', { name, exact: true })
     try {

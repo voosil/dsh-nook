@@ -24,6 +24,7 @@ async function launcherFixture(t: TestContext) {
       await writeFile('lib/client.js', source)
     `,
     '.dsh-dev/profiles/nook/package.json': '{}',
+    '.dsh-dev/profiles/nook/cordis.patch.yml': '[]',
     // A consumer of Host and Client output keeps this test focused on the real
     // launcher's preparation; profile-boot.test.ts covers the pinned DSH runtime.
     'node_modules/@deepseek-ai/dsh/lib/bin.js': `
@@ -43,7 +44,14 @@ async function launcherFixture(t: TestContext) {
   }
   await mkdir(resolve(root, '.dsh-dev/profiles/nook/node_modules'))
   await mkdir(resolve(root, 'scripts'))
-  for (const script of ['run-profile.mjs', 'profile-lib.mjs', 'run-profile-args.mjs', 'release-port.mjs']) {
+  for (const script of [
+    'run-profile.mjs',
+    'profile-lib.mjs',
+    'run-profile-args.mjs',
+    'process-scope.mjs',
+    'dev-watch.mjs',
+    'dev-sandbox.mjs',
+  ]) {
     await copyFile(resolve(ROOT, 'scripts', script), resolve(root, 'scripts', script))
   }
 
