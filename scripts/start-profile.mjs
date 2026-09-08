@@ -1,59 +1,91 @@
-import { copyFile, mkdir, mkdtemp, rm, symlink } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join, resolve, basename } from 'node:path'
-import { createPackedProfile } from './pack-profile.mjs'
-import { createProfileArgs } from './run-profile-args.mjs'
-import { DEV_HOME, PROFILE_DIR, ROOT, PNPM_VERSION, devRuntimeEnv, exists } from './profile-lib.mjs'
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { parseArgs } from 'node:util'
+import { DEV_HOME, ROOT, PNPM_VERSION, exists } from './profile-lib.mjs'
 import { ProcessScope } from './process-scope.mjs'
+import { stageDesktop } from './stage-desktop.mjs'
 
-const temporaryRoot = await mkdtemp(join(tmpdir(), 'nook-start-'))
-const profileName = basename(temporaryRoot)
-const profileLink = resolve(DEV_HOME, 'profiles', profileName)
+const { values } = parseArgs({
+  args: process.argv.slice(2).filter(arg => arg !== '--'),
+  options: {
+    port: { type: 'string' },
+    'no-open': { type: 'boolean', default: true },
+    'test-state': { type: 'string' },
+  },
+})
+const port = Number(values.port ?? '3081')
+if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid Nook port')
 const processes = new ProcessScope()
+let runtime
+let temporary
 let stopped = false
-let releaseDataLock
+let resolveStop
+const ended = new Promise(resolve => {
+  resolveStop = resolve
+})
 const stop = () => {
   stopped = true
+  resolveStop()
   void processes.dispose()
+  void runtime?.stop()
 }
 process.once('SIGINT', stop)
 process.once('SIGTERM', stop)
 try {
-  const runPnpm = (args, options = {}) => {
-    if (stopped) throw new Error('startup cancelled')
-    return processes.run('corepack', [`pnpm@${PNPM_VERSION}`, ...args], {
-      cwd: ROOT,
-      ...options,
-      env: { ...process.env, CI: 'true', ...options.env },
-    })
+  await processes.run('corepack', [`pnpm@${PNPM_VERSION}`, 'run', 'build'], {
+    cwd: ROOT,
+    env: { ...process.env, CI: 'true' },
+  })
+  const { SharedRuntime, sharedRuntimeRunning } = await import('../apps/desktop/dist/shared-client.mjs')
+  const { userState, testState } = await import('../apps/desktop/dist/shared-paths.mjs')
+  const { migrateData, migrationComplete } = await import('../packages/storage-backup/lib/migration.js')
+  const state = values['test-state'] ? testState(values['test-state']) : userState()
+  const source = join(DEV_HOME, 'nook')
+  const backups = join(state, 'backups')
+  if ((await exists(source)) && !migrationComplete(source, backups)) {
+    if (await sharedRuntimeRunning(state))
+      throw new Error('Close Nook desktop and other pnpm start terminals once before importing the old Web data.')
+    const receipt = migrateData(source, join(state, 'harness/nook'), backups)
+    if (receipt) console.log(`[nook start] Verified migration; original data retained at ${source}`)
   }
-  await runPnpm(['run', 'build'])
-  const { profile, bin } = await createPackedProfile(temporaryRoot, { runPnpm })
   if (!stopped) {
-    const { acquireDataLock, createBackup } = await import('../packages/storage-backup/lib/index.js')
-    const data = resolve(DEV_HOME, 'nook')
-    releaseDataLock = acquireDataLock(data)
-    if (await exists(data)) {
-      const backup = createBackup(data, resolve(ROOT, '.nook-backups'), 'before-start')
-      console.log(`[nook start] Verified data backup: ${backup}`)
-    }
-    const patch = resolve(PROFILE_DIR, 'cordis.patch.yml')
-    if (await exists(patch)) await copyFile(patch, resolve(profile, 'cordis.patch.yml'))
-    await mkdir(resolve(DEV_HOME, 'profiles'), { recursive: true })
-    await symlink(profile, profileLink, 'junction')
-    const args = createProfileArgs(bin, ROOT, process.argv.slice(2), { profile: profileName, defaultPort: 3081 })
-    console.log(
-      '[nook start] Running a fixed build on port 3081 (unless overridden). Source edits take effect on the next start.',
+    runtime = new SharedRuntime(
+      state,
+      async () => {
+        await mkdir(join(ROOT, '.pack'), { recursive: true })
+        temporary = await mkdtemp(join(ROOT, '.pack/web-start-'))
+        const seed = await stageDesktop({ destination: join(temporary, 'runtime') })
+        return {
+          node: join(seed, 'payload/node/bin/node'),
+          broker: join(seed, 'payload/boot/shared-broker.mjs'),
+          options: { state, seed, port },
+        }
+      },
+      line => {
+        if (!line.startsWith('dsh web: ')) console.log(line)
+      },
+      error => {
+        if (!stopped) {
+          console.error(error.message)
+          process.exitCode = 1
+          stop()
+        }
+      },
     )
-    await processes.run(process.execPath, args, { cwd: ROOT, env: { ...process.env, ...devRuntimeEnv() } })
+    const url = await runtime.ready
+    // This interactive terminal URL is the authentication handoff, not a disk log.
+    console.log(`dsh web: ${url}`)
+    console.log(
+      `[nook start] Shared data: ${join(state, 'harness/nook')}. Close all Web/desktop launchers to apply a new build.`,
+    )
+    await ended
   }
 } catch (error) {
   if (!stopped) throw error
 } finally {
+  await runtime?.stop()
   await processes.dispose()
-  releaseDataLock?.()
-  await rm(profileLink, { force: true })
-  await rm(temporaryRoot, { recursive: true, force: true })
-  process.removeListener('SIGINT', stop)
-  process.removeListener('SIGTERM', stop)
+  if (temporary) await rm(temporary, { recursive: true, force: true })
+  process.off('SIGINT', stop)
+  process.off('SIGTERM', stop)
 }

@@ -28,7 +28,7 @@ pnpm install
 pnpm dev
 ```
 
-Use `pnpm dev` for hot-reloading development on port 3080, or `pnpm start` for a fixed build on port 3081 while editing the code. Open the complete URL printed in the terminal. See [development and usage runtimes](docs/development.md) for data isolation, update behavior and port options.
+Use `pnpm dev` for hot-reloading development on port 3080, or `pnpm start` for the [shared Web/desktop runtime](docs/runtime.md). Open the complete URL printed in the terminal. See [development and usage runtimes](docs/development.md) for data isolation, update behavior and port options.
 
 The notes workspace opens by default. Record ideas, assign an optional project, and return to AI conversations from the sidebar. See the [notebook guide](packages/feature-notes/README.md), [conversation knowledge guide](packages/adapter-knowledge-dsh/README.md), and [video setup and writing guide](packages/feature-video/README.md). Summaries and writing use models configured in DSH.
 
@@ -44,7 +44,7 @@ pnpm dev:safe-ui     # boot the official UI without Nook Client plugins
 pnpm dev:profile     # force-refresh Profile dependencies after composition changes
 ```
 
-Runtime data stays in the repository or disposable temporary homes as described in the [runtime guide](docs/development.md). `verify:package` uses packed tarballs in a fresh temporary Profile.
+Formal data is shared by Web and desktop as described in the [usage guide](docs/runtime.md); development uses disposable temporary homes. `verify:package` uses packed tarballs in a fresh temporary Profile.
 
 See the [backup and recovery guide](docs/backup.md) for data protection and the `pnpm backup` commands.
 

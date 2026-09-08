@@ -8,7 +8,7 @@ import { assertKnownPeerWarnings } from './peer-policy.mjs'
 
 export const DESKTOP_SEED = resolve(ROOT, 'apps/desktop/resources/runtime')
 
-export async function stageDesktop() {
+export async function stageDesktop({ destination = DESKTOP_SEED } = {}) {
   const { inventory } = await import('../apps/desktop/dist/payload.mjs')
   const node = await desktopNode()
   const stagingParent = resolve(ROOT, '.pack')
@@ -31,6 +31,7 @@ export async function stageDesktop() {
     await rm(join(payload, 'home', 'agents'), { recursive: true })
     await copyDesktopNode(join(payload, 'node'))
     await cp(resolve(ROOT, 'apps/desktop/dist/supervisor.mjs'), join(payload, 'boot/supervisor.mjs'))
+    await cp(resolve(ROOT, 'apps/desktop/dist/shared-broker.mjs'), join(payload, 'boot/shared-broker.mjs'))
     const appManifest = JSON.parse(await readFile(resolve(ROOT, 'apps/desktop/package.json'), 'utf8'))
     const manifest = {
       schemaVersion: 1,
@@ -41,12 +42,12 @@ export async function stageDesktop() {
       entries: await inventory(payload),
     }
     await writeFile(join(seed, 'manifest.json'), JSON.stringify(manifest) + '\n')
-    await mkdir(resolve(DESKTOP_SEED, '..'), { recursive: true })
+    await mkdir(resolve(destination, '..'), { recursive: true })
     // This directory is exclusively a generated build artifact, never app data.
-    await rm(DESKTOP_SEED, { recursive: true, force: true })
-    await rename(seed, DESKTOP_SEED)
+    await rm(destination, { recursive: true, force: true })
+    await rename(seed, destination)
     console.log(`Staged desktop runtime (${manifest.entries.length} verified entries).`)
-    return DESKTOP_SEED
+    return destination
   } finally {
     await rm(temporary, { recursive: true, force: true })
   }

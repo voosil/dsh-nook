@@ -79,7 +79,7 @@ async function supervise() {
     }
     child = spawn(
       process.execPath,
-      [config.bin, '--profile', config.profile, '--no-open', '--host', '127.0.0.1', '--port', '0'],
+      [config.bin, '--profile', config.profile, '--no-open', '--host', '127.0.0.1', '--port', String(config.port ?? 0)],
       { cwd: config.cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
     )
     send({ type: 'pid', pid: child.pid })

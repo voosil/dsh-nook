@@ -77,3 +77,20 @@ test('corrupt payload or escaping links fail before user state is created', asyn
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('runtime symlink integrity is independent of a restrictive process umask', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nook-payload-mask-'))
+  const oldMask = process.umask()
+  try {
+    const item = await seed(root, 'v1')
+    await symlink('node', join(item.payload, 'node-alias'))
+    item.manifest.entries = await inventory(item.payload)
+    await writeFile(join(item.seed, 'manifest.json'), JSON.stringify(item.manifest))
+    process.umask(0o077)
+    const config = await installPayload(item.seed, join(root, 'state'))
+    assert.equal(await readFile(config.node, 'utf8'), 'v1')
+  } finally {
+    process.umask(oldMask)
+    await rm(root, { recursive: true, force: true })
+  }
+})

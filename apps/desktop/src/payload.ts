@@ -38,6 +38,7 @@ export interface RuntimeConfig {
   supervisor: string
   cwd: string
   profile: string
+  port?: number
 }
 
 export async function inventory(root: string, signal?: AbortSignal): Promise<TreeEntry[]> {
@@ -61,7 +62,9 @@ export async function inventory(root: string, signal?: AbortSignal): Promise<Tre
       for await (const chunk of createReadStream(path)) hash.update(chunk)
       digest = hash.digest('hex')
     } else throw new Error(`Unsupported runtime file: ${part}`)
-    entries.push({ path: part, kind, digest, executable: stat.mode & 0o111 })
+    // Symlink inode permissions vary with umask on macOS and do not control
+    // execution. The target string and the target file's actual mode are checked.
+    entries.push({ path: part, kind, digest, executable: kind === 'link' ? 0 : stat.mode & 0o111 })
     if (kind === 'directory')
       for (const name of (await readdir(path)).sort()) await visit(part ? `${part}/${name}` : name)
   }
@@ -77,8 +80,12 @@ export async function verifyPayload(root: string, manifest: PayloadManifest, sig
     !Array.isArray(manifest.entries)
   )
     throw new Error('Desktop runtime platform or manifest is incompatible')
-  if (JSON.stringify(await inventory(root, signal)) !== JSON.stringify(manifest.entries))
-    throw new Error('Desktop runtime integrity check failed')
+  const actual = await inventory(root, signal)
+  if (JSON.stringify(actual) !== JSON.stringify(manifest.entries)) {
+    const index = actual.findIndex((entry, index) => JSON.stringify(entry) !== JSON.stringify(manifest.entries[index]))
+    const path = actual[index]?.path ?? manifest.entries[actual.length]?.path ?? '(root)'
+    throw new Error(`Desktop runtime integrity check failed at ${path}`)
+  }
 }
 
 async function createOnce(path: string, content: string) {

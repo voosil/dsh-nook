@@ -6,6 +6,9 @@ for (const [name, extension] of [
   ['main', 'js'],
   ['supervisor', 'mjs'],
   ['payload', 'mjs'],
+  ['shared-client', 'mjs'],
+  ['shared-broker', 'mjs'],
+  ['shared-paths', 'mjs'],
 ]) {
   await build({
     entryPoints: [resolve(ROOT, 'apps/desktop/src', `${name}.ts`)],

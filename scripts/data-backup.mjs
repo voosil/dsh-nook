@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util'
 import { resolve } from 'node:path'
-import { DEV_HOME, ROOT } from './profile-lib.mjs'
+import { userState } from '../apps/desktop/src/shared-paths.ts'
 import { acquireDataLock, createBackup, restoreBackup, verifyBackup } from '../packages/storage-backup/src/index.ts'
 
 const { positionals, values } = parseArgs({
@@ -18,17 +18,17 @@ const usage = `Nook data backup (stop Nook before creating a backup)
   pnpm backup create [--source <data-directory>] [--output <backup-directory>]
   pnpm backup verify --from <backup>
   pnpm backup restore --from <backup> --to <new-directory>
-Defaults: source=${resolve(DEV_HOME, 'nook')}, output=${resolve(ROOT, '.nook-backups')}
+Defaults: source=${resolve(userState(), 'harness/nook')}, output=${resolve(userState(), 'backups')}
 Restore refuses existing destinations. Recovery records extract as record.json.
 `
 try {
   const [command, extra] = positionals
   if (values.help || !command) console.log(usage)
   else if (command === 'create' && !extra && !values.from && !values.to) {
-    const source = resolve(values.source ?? resolve(DEV_HOME, 'nook'))
+    const source = resolve(values.source ?? resolve(userState(), 'harness/nook'))
     const release = acquireDataLock(source)
     try {
-      console.log(createBackup(source, values.output ?? resolve(ROOT, '.nook-backups')))
+      console.log(createBackup(source, values.output ?? resolve(userState(), 'backups')))
     } finally {
       release()
     }

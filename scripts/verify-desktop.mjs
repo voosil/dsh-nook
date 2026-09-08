@@ -8,7 +8,7 @@ import { dismissOnboarding, notebookSmoke } from './notebook-smoke.mjs'
 import { ROOT, run, runPnpm } from './profile-lib.mjs'
 
 const require = createRequire(import.meta.url)
-const { _electron } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
+const { _electron, chromium } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
 if (!process.argv.includes('--skip-package')) await runPnpm(['run', 'desktop:package'])
 const temporary = await mkdtemp(join(tmpdir(), 'nook-desktop-verify-'))
 const movedApp = join(temporary, '搬移 app', 'Nook.app')
@@ -26,6 +26,8 @@ async function waitForWorkspace(page) {
   ])
 }
 let desktop
+let web
+let browser
 let url
 try {
   await mkdir(join(temporary, '搬移 app'))
@@ -101,9 +103,59 @@ try {
   assert.ok((await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()).includes('劳动异化'))
   const backupNames = (await readdir(join(state, 'backups'))).filter(name => !name.startsWith('.'))
   assert.equal(backupNames.length, 1, 'Second launch must create a verified data backup')
+  // The Web launcher uses this same client. It must join the desktop's backend
+  // without installing or spawning another runtime, and own an independent lease.
+  const { SharedRuntime } = await import('../apps/desktop/dist/shared-client.mjs')
+  web = new SharedRuntime(
+    state,
+    async () => {
+      throw new Error('Web must reuse the desktop backend')
+    },
+    () => {},
+    () => {},
+  )
+  const webUrl = await web.ready
+  assert.equal(new URL(webUrl).origin, url)
+  browser = await chromium.launch({ channel: 'chrome', headless: true })
+  const webPage = await browser.newPage()
+  webPage.setDefaultTimeout(30_000)
+  await webPage.goto(webUrl)
+  await waitForWorkspace(webPage)
+  await dismissOnboarding(webPage)
+  const webWorkspace = webPage.getByRole('dialog', { name: 'Nook 笔记工作区', exact: true })
+  await webWorkspace.getByRole('button', { name: '回收站', exact: true }).click()
+  await webWorkspace.locator('.nook-note-card').filter({ hasText: title }).click()
+  await webWorkspace.getByRole('button', { name: '恢复笔记', exact: true }).click()
+  await webWorkspace.getByRole('button', { name: '所有笔记', exact: true }).click()
+  await webWorkspace.locator('.nook-note-card').filter({ hasText: title }).click()
+  const sharedTitle = `${title} 网页修改`
+  await webWorkspace.getByRole('textbox', { name: '笔记标题', exact: true }).fill(sharedTitle)
+  await webWorkspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+  await desktop.close()
+  desktop = undefined
+  assert.equal((await fetch(url)).status, 401, 'Web lease must keep the authenticated backend running')
+  await webPage.reload()
+  await waitForWorkspace(webPage)
+  desktop = await _electron.launch(launchOptions)
+  const shared = await desktop.firstWindow()
+  shared.setDefaultTimeout(30_000)
+  await waitForWorkspace(shared)
+  assert.equal(new URL(shared.url()).origin, url)
+  await dismissOnboarding(shared)
+  const sharedWorkspace = shared.getByRole('dialog', { name: 'Nook 笔记工作区', exact: true })
+  await sharedWorkspace.getByRole('button', { name: '所有笔记', exact: true }).click()
+  await sharedWorkspace.locator('.nook-note-card').filter({ hasText: sharedTitle }).click()
+  assert.equal(await sharedWorkspace.getByRole('textbox', { name: '笔记标题', exact: true }).inputValue(), sharedTitle)
+  await shared.screenshot({ path: resolve(ROOT, '.pack/desktop/nook-shared-window.png') })
+  await web.stop()
+  web = undefined
+  await browser.close()
+  browser = undefined
+  assert.equal((await fetch(url)).status, 401, 'Desktop lease must keep the backend running after Web closes')
   await desktop.close()
   desktop = undefined
   await assert.rejects(fetch(url, { signal: AbortSignal.timeout(2000) }))
+  console.log('Web and desktop share data and one backend; either can close independently.')
 
   // Corrupt only this disposable installation, then repair it and exercise retry
   // in the same real window that presents the integrity error.
@@ -144,6 +196,8 @@ try {
   throw error
 } finally {
   await desktop?.close()
+  await web?.stop()
+  await browser?.close()
   await delay(100)
   await rm(temporary, { recursive: true, force: true })
 }

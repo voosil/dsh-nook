@@ -1,11 +1,11 @@
 # Development and usage runtimes
 
-| Command      | Default port | Code updates                                                           | Application data                           |
-| ------------ | ------------ | ---------------------------------------------------------------------- | ------------------------------------------ |
-| `pnpm dev`   | 3080         | Watches packages; rebuilds Client plugins and restarts Host code       | A fresh temporary home, removed on exit    |
-| `pnpm start` | 3081         | Builds and installs a fixed snapshot; changes apply on the next launch | Existing `.dsh-dev` data and configuration |
+| Command      | Default port | Code updates                                                           | Application data                            |
+| ------------ | ------------ | ---------------------------------------------------------------------- | ------------------------------------------- |
+| `pnpm dev`   | 3080         | Watches packages; rebuilds Client plugins and restarts Host code       | A fresh temporary home, removed on exit     |
+| `pnpm start` | 3081         | Builds and installs a fixed snapshot; changes apply on the next launch | Shared formal data; see [usage](runtime.md) |
 
-Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port. Development keeps that selected port across Host restarts. An occupied port fails startup; neither launcher terminates another application's listener.
+Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port when creating a backend. An already-running shared backend keeps its existing port. Development keeps that selected port across Host restarts. An occupied port fails startup; neither launcher terminates another application's listener.
 
 ## Development
 
@@ -21,11 +21,9 @@ Development starts with fresh data and credentials. Configure development models
 
 ## Usage while editing
 
-`pnpm start` builds the workspace, packs Nook packages and installs them with pinned external dependencies in a separate temporary installation. Its Profile links to that installation, not workspace packages. The runtime runs with the repository as its working directory so it can edit the project while serving its fixed build. Rebuilding or changing source in another terminal does not change this instance, even when its browser is refreshed.
+`pnpm start` builds the workspace and connects to the [formal shared runtime](runtime.md). If no backend is running, it packs a fixed installation with pinned dependencies and installs it into a versioned directory. Source edits do not change that running snapshot; all formal launchers must exit before a new build becomes active.
 
-Application data and credentials stay under `.dsh-dev`; the existing Nook Profile patch is copied into the snapshot. Dependency installation makes startup slower than development. Stopping the command removes the temporary installation and Profile link, preserving application data. Relaunch `pnpm start` when the new build is ready to use. Runtime configuration still follows DSH's own lifecycle; this mode disables source watching and Client HMR.
-
-Usage startup holds the data lock and creates a verified backup before boot. Backup scope, failure behavior and recovery commands are described in the [backup guide](backup.md).
+Usage data, migration, working directory and shutdown behavior belong to the [formal runtime guide](runtime.md). Both Web and desktop use the same data lock and verified pre-start backup. Backup scope and recovery commands are described in the [backup guide](backup.md).
 
 ## Verification
 

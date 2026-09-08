@@ -101,7 +101,7 @@ function within(parent: string, child: string): boolean {
 }
 
 // Resolve existing ancestors as well, so a symlink cannot hide a nested destination.
-function physicalPath(path: string): string {
+export function physicalPath(path: string): string {
   const absolute = resolve(path)
   if (existsSync(absolute)) return realpathSync(absolute)
   return join(physicalPath(dirname(absolute)), basename(absolute))

@@ -67,11 +67,20 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   const launch = (script: string) => {
     let output = ''
     const urls: string[] = []
-    const child = spawn(process.execPath, [resolve(root, 'scripts', script), '--port', '0'], {
-      cwd: root,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, DSH_HOME: resolve(root, '.dsh-dev') },
-    })
+    const child = spawn(
+      process.execPath,
+      [
+        resolve(root, 'scripts', script),
+        '--port',
+        '0',
+        ...(script === 'start-profile.mjs' ? ['--test-state', resolve(root, 'user-state')] : []),
+      ],
+      {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, DSH_HOME: resolve(root, '.dsh-dev') },
+      },
+    )
     children.push(child)
     const consume = (chunk: Buffer) => {
       output += chunk.toString()
@@ -85,10 +94,12 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   }
   const stable = launch('start-profile.mjs')
   await until(() => stable.urls.length === 1, stable.logs)
-  const backups = await readdir(resolve(root, '.nook-backups'))
-  assert.equal(backups.length, 1)
-  const backup = resolve(root, '.nook-backups', backups[0]!)
-  assert.equal(verifyBackup(backup).reason, 'before-start')
+  const backupRoot = resolve(root, 'user-state/backups')
+  const backups = (await readdir(backupRoot)).filter(name => name !== 'migrations' && !name.startsWith('.'))
+  const backup = backups
+    .map(name => resolve(backupRoot, name))
+    .find(path => verifyBackup(path).reason === 'before-desktop-start')!
+  assert.ok(backup)
   assert.equal(await readFile(resolve(backup, 'data/backup-acceptance.txt'), 'utf8'), 'preserve before startup')
   const dev = launch('run-profile.mjs')
   await until(() => dev.urls.length === 1, dev.logs)
@@ -155,7 +166,7 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   const stableOrigin = new URL(stable.urls[0]!).origin
   await stop(dev.child)
   await stop(stable.child)
-  await assert.rejects(readFile(resolve(root, '.dsh-dev/nook.lock/owner.json')), { code: 'ENOENT' })
+  await assert.rejects(readFile(resolve(root, 'user-state/harness/nook.lock/owner.json')), { code: 'ENOENT' })
   await assert.rejects(fetch(devOrigin))
   await assert.rejects(fetch(stableOrigin))
 })

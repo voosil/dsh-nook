@@ -4,9 +4,11 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { app, BrowserWindow, Menu, shell } from 'electron'
-import { installPayload, type RuntimeConfig } from './payload.js'
+import type { RuntimeConfig } from './payload.js'
 import { canonicalPath, externalUrl, redact, sameRuntimeUrl, within } from './policy.js'
 import { DesktopRuntime } from './runtime.js'
+import { SharedRuntime } from './shared-client.js'
+import { userState } from './shared-paths.js'
 
 async function startDesktop() {
   if (process.platform !== 'darwin' || process.arch !== 'arm64')
@@ -14,7 +16,7 @@ async function startDesktop() {
   app.setName('Nook')
   const devConfigPath = !app.isPackaged ? process.env.NOOK_DESKTOP_DEV_CONFIG : undefined
   const testRoot = process.argv.includes('--test-mode') ? process.env.NOOK_DESKTOP_TEST_ROOT : undefined
-  let state = join(app.getPath('appData'), 'Nook')
+  let state = userState()
   if (testRoot || devConfigPath) {
     state = canonicalPath(testRoot ?? join(resolve(devConfigPath!, '..'), 'electron'))
     if (!within(canonicalPath(tmpdir()), state) && !within(canonicalPath('/private/tmp'), state))
@@ -30,7 +32,7 @@ async function startDesktop() {
     ? join(process.resourcesPath, 'status', 'index.html')
     : fileURLToPath(new URL('../src/status/index.html', import.meta.url))
   let window: BrowserWindow | undefined
-  let runtime: DesktopRuntime | undefined
+  let runtime: DesktopRuntime | SharedRuntime | undefined
   let log: WriteStream | undefined
   let attempt: Promise<void> | undefined
   let origin: string | undefined
@@ -85,15 +87,26 @@ async function startDesktop() {
         log.on('error', error => {
           process.stderr.write(`Desktop log unavailable: ${redact(error.message)}\n`)
         })
-        const config = devConfigPath
-          ? (JSON.parse(await readFile(devConfigPath, 'utf8')) as RuntimeConfig)
-          : await installPayload(join(process.resourcesPath, 'runtime'), state, startupAbort.signal)
-        if (quitting) return
-        const current = new DesktopRuntime(config, writeLog, error => {
+        const failed = (error: Error) => {
           if (runtime !== current || quitting) return
           window?.webContents.stop()
           void fail(error).catch(error => process.stderr.write(redact(String(error)) + '\n'))
-        })
+        }
+        const current = devConfigPath
+          ? new DesktopRuntime(JSON.parse(await readFile(devConfigPath, 'utf8')) as RuntimeConfig, writeLog, failed)
+          : new SharedRuntime(
+              state,
+              async () => {
+                const seed = join(process.resourcesPath, 'runtime')
+                return {
+                  node: join(seed, 'payload/node/bin/node'),
+                  broker: join(seed, 'payload/boot/shared-broker.mjs'),
+                  options: { state, seed },
+                }
+              },
+              writeLog,
+              failed,
+            )
         runtime = current
         const url = await current.ready
         if (quitting || runtime !== current) return
@@ -211,7 +224,7 @@ async function startDesktop() {
         label: '窗口',
         submenu: [
           {
-            label: '重新启动本地服务',
+            label: '重新连接本地服务',
             accelerator: 'CmdOrCtrl+Shift+R',
             click: () => {
               void launch()

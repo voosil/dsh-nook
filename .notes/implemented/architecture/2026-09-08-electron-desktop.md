@@ -14,7 +14,8 @@ Nook 的桌面交付需要双击启动、独立窗口、持久化数据、确定
 
 ```mermaid
 flowchart LR
-  Main[Electron 主进程] -->|IPC 生命周期| Supervisor[独立 Node 监督进程]
+  Main[Electron 主进程] -->|共享连接| Broker[独立 Node broker]
+  Broker -->|IPC 生命周期| Supervisor[独立 Node 监督进程]
   Supervisor -->|启动与进程组清理| CLI[标准 Node 执行 DSH CLI]
   CLI --> Web[随机 loopback 端口]
   Main --> Window[受限 BrowserWindow]
@@ -64,7 +65,7 @@ ABI 实验使用参考 Electron `44.0.0` 的 `ELECTRON_RUN_AS_NODE` 模式，并
 
 [stage](../../../scripts/stage-desktop.mjs)复用现有 tarball 安装流水线，生成可搬移的依赖闭包；不维护第二套产品包或 Bundle 清单，不修改安装后的第三方包。Electron 主进程进入 ASAR，Node、DSH 和原生文件使用 extraResources。
 
-运行时按内容指纹安装到独立版本目录，校验覆盖文件、链接和可执行位。写入临时目录后再次校验，再以同文件系统 rename 发布；旧版本保留。可写 Profile 使用逐包链接连接应用运行时，因此 DSH 的 fallback 链接修复不会修改完整性清单覆盖的内容。用户 manifest、patch、会话、凭据与业务数据保持在版本目录之外，不执行自动迁移或旧数据删除。
+运行时按内容指纹安装到独立版本目录，校验覆盖文件、链接和可执行位。写入临时目录后再次校验，再以同文件系统 rename 发布；旧版本保留。可写 Profile 使用逐包链接连接应用运行时，因此 DSH 的 fallback 链接修复不会修改完整性清单覆盖的内容。用户 manifest、patch、会话、凭据与业务数据保持在版本目录之外；网页数据合并由[共享运行环境决策](2026-09-08-shared-runtime.md)定义，旧数据不删除。
 
 打包器会省略空目录。空的 seed `home/agents` 因而不进入清单，由可写 home 创建；[打包门禁](../../../scripts/package-desktop.mjs)核对 electron-builder 实际产物，防止只验证打包前目录而遗漏分发变化。
 
@@ -74,7 +75,7 @@ ABI 实验使用参考 Electron `44.0.0` 的 `ELECTRON_RUN_AS_NODE` 模式，并
 
 CLI 输出解析与日志分离，完整 token URL 只交给受限窗口完成官方 cookie 交换；磁盘日志按完整行脱敏并限制缓冲区及单次日志大小。导航限制在当前实例 origin，权限 request/check 均拒绝，没有通用 preload。相关边界依据 [Electron 安全指南](https://www.electronjs.org/docs/latest/tutorial/security)。
 
-主进程退出等待共享的停止 promise，启动过程接受取消信号。独立监督进程观察 IPC 断开，因此主进程崩溃也能回收其拥有的 DSH 进程组。先发送 TERM，超时后 KILL，并等待退出；不承诺跨越第三方自行脱离进程组后的完整 OS 级进程容器。错误处理共用一次清理，防止启动拒绝与异步退出同时加载错误页。
+主进程退出等待共享的停止 promise，启动过程接受取消信号。独立监督进程观察 broker IPC 断开并回收其拥有的 DSH 进程组；前端连接的生命周期见[共享运行环境决策](2026-09-08-shared-runtime.md)。先发送 TERM，超时后 KILL，并等待退出；不承诺跨越第三方自行脱离进程组后的完整 OS 级进程容器。错误处理共用一次清理，防止启动拒绝与异步退出同时加载错误页。
 
 ## Alternatives considered
 

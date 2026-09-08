@@ -1,22 +1,22 @@
 # 数据备份与恢复
 
-备份覆盖 Nook 数据目录中的笔记、回收站、检索索引、知识会话偏好、项目、产物、视频资料、缓存和删除恢复记录。默认数据目录是仓库下的 `.dsh-dev/nook`，完整备份保存在独立的 `.nook-backups` 中。DSH 对话、凭据、模型配置及浏览器中尚未保存的草稿不在此范围内。自定义 Provider 存储位置时，分别通过 `--source` 指定对应目录。
+备份覆盖 Nook 数据目录中的笔记、回收站、检索索引、知识会话偏好、项目、产物、视频资料、缓存和删除恢复记录。默认数据和备份位置由[正式运行环境](runtime.md#数据位置)定义，网页和桌面使用同一份数据。DSH 对话、凭据、模型配置及浏览器中尚未保存的草稿不在此范围内。自定义 Provider 存储位置时，分别通过 `--source` 指定对应目录。
 
 ## 创建与校验
 
-停止 Nook 后，在仓库根目录运行：
+停止所有正式网页启动命令和桌面应用后，在仓库根目录运行：
 
 ```bash
 pnpm backup create
-pnpm backup verify --from .nook-backups/<备份目录>
+pnpm backup verify --from "<备份目录>"
 ```
 
-创建成功会打印备份目录。`pnpm start` 在启动 Host 前也执行完整备份，备份失败则停止启动。首次运行尚无数据目录时不创建快照。开发模式的临时数据生命周期见[运行指南](development.md)。
+创建成功会打印备份目录。共享后端在启动 Host 前也执行完整备份，加入已有后端不重复备份，备份失败则停止启动。首次运行尚无数据目录时不创建快照。开发模式的临时数据生命周期见[运行指南](development.md)。
 
 手动备份可以指定源目录与保存位置，例如备份到另一块磁盘：
 
 ```bash
-pnpm backup create --source .dsh-dev/nook --output /Volumes/Backup/Nook
+pnpm backup create --output /Volumes/Backup/Nook
 ```
 
 备份包含版本化清单、创建时间、原因、文件大小和 SHA-256 校验值。文件写入、刷盘、校验完成后才发布备份目录；失败留下的 `.partial-*` 不代表成功备份。SQLite 使用一致性快照包含已提交的 WAL 内容，并检查数据库完整性；不把 WAL 和共享内存文件作为独立恢复文件。来源依据见 [SQLite 文档](https://www.sqlite.org/lang_vacuum.html)。其他文件逐字节复制，备份期间发现源文件变化会报错。备份拒绝符号链接、特殊文件以及相互嵌套的源目录和目标目录。
@@ -28,10 +28,10 @@ pnpm backup create --source .dsh-dev/nook --output /Volumes/Backup/Nook
 恢复先校验全部文件，再写入一个不存在的新目录；即使目标是空目录也拒绝覆盖：
 
 ```bash
-pnpm backup restore --from .nook-backups/<备份目录> --to .dsh-dev/nook-restored
+pnpm backup restore --from "<备份目录>" --to ~/Nook-restored
 ```
 
-恢复完成后，停止 Nook，为当前数据执行一次完整备份并校验。保留当前数据目录，例如将 `.dsh-dev/nook` 重命名为一个未使用的保留目录，再将 `.dsh-dev/nook-restored` 重命名为 `.dsh-dev/nook`，随后启动 Nook 检查笔记、项目和产物。不要只替换数据库主文件而遗留旧 WAL 文件。
+恢复完成后，停止 Nook，为当前数据执行一次完整备份并校验。保留当前数据目录，例如将正式 `harness/nook` 重命名为一个未使用的保留目录，再将恢复出的目录放到原数据位置，随后启动 Nook 检查笔记、项目和产物。不要只替换数据库主文件而遗留旧 WAL 文件。
 
 损坏、缺文件、多文件、不支持的版本或路径越界都会导致恢复失败。写入中断产生的恢复目录保留在原处，重试时使用另一个新目录。SHA-256 用于发现意外损坏，不是对外部备份来源的身份认证。
 
