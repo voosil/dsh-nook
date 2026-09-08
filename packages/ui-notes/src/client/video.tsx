@@ -1,3 +1,4 @@
+import { ExternalLink } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Api } from './index.js'
 import type { Value } from '@nook-dsh/adapter-notes-dsh/rpc'
@@ -202,7 +203,7 @@ export function VideoPanel({
             <div className="nook-actions">
               {job.noteIds.map((id, i) => (
                 <button key={id} onClick={() => openNote(id)}>
-                  打开已保存资料 {i + 1} ↗
+                  打开已保存资料 {i + 1} <ExternalLink size={14} aria-hidden="true" />
                 </button>
               ))}
             </div>

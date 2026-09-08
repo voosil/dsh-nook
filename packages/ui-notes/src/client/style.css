@@ -100,10 +100,6 @@
   border-radius: 9px;
   display: grid;
   place-items: center;
-  font-family: Georgia, serif;
-  font-style: italic;
-  font-size: 26px;
-  font-weight: 400;
 }
 .nook-tagline {
   font-size: 11px;
@@ -162,13 +158,6 @@
 }
 .nook-project-nav p {
   padding: 10px;
-}
-.nook-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #94a989;
-  flex-shrink: 0;
 }
 .nook-nav-bottom {
   margin-top: auto;
@@ -287,6 +276,7 @@
 }
 .nook-pin {
   color: #72885f;
+  margin-right: 5px;
 }
 .nook-pagination {
   display: flex;
@@ -306,9 +296,6 @@
   min-width: 0;
 }
 .nook-welcome-mark {
-  font:
-    60px Georgia,
-    serif;
   color: #a7b69a;
   margin-bottom: 25px;
 }
@@ -696,4 +683,18 @@
 }
 .nook-summary .nook-actions {
   margin: 10px 0;
+}
+
+.nook-workspace .lucide {
+  display: inline-block;
+  vertical-align: -0.2em;
+  flex-shrink: 0;
+}
+.nook-toolbar button,
+.nook-meta button,
+.nook-nav-bottom button,
+.nook-workspace .nook-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }

@@ -1,3 +1,4 @@
+import { NotebookPen } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -23,7 +24,7 @@ const CHIP_STYLE: CSSProperties = {
 function NookProjectContext(_props: PropsRuntime<'conversation.session.header.actions'>) {
   return (
     <span style={CHIP_STYLE} title="This session can use Nook project and preview tools">
-      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 2, background: 'oklch(70% 0.13 55)' }} />
+      <NotebookPen size={14} aria-hidden="true" style={{ flexShrink: 0, color: 'oklch(70% 0.13 55)' }} />
       Nook
     </span>
   )

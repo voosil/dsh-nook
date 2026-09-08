@@ -22,6 +22,8 @@ Host plugins own persistence, subprocesses, model requests and workflow lifetime
 
 The [notes contract](../packages/feature-notes/README.md), [knowledge contract](../packages/adapter-knowledge-dsh/README.md) and [video contract](../packages/feature-video/README.md) own configuration and behavior. The [decision note](../.notes/implemented/feature/2026-09-07-minimal-nook.md) records scope and alternatives. External runtime contracts belong in [discovery](discovery.md).
 
+Nook UI icons use named `lucide-react` SVG components bundled into each contributing Client. Decorative icons are hidden from assistive technology; icon-only buttons expose a descriptive accessible name. The [icon decision](../.notes/implemented/feature/2026-09-08-ui-icons.md) records the choice and validation.
+
 ## External boundaries
 
 The browser adapter consumes `dsh-browser-playwright` through its public service contract. Its Agent-facing Tool plugin is not a business API. The video platform adapter owns third-party collection details and a Python process boundary. Both expose Nook capabilities to features. The generation and knowledge adapters own DSH model and prompt contracts.

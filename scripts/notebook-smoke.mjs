@@ -16,7 +16,7 @@ export async function notebookSmoke(url, screenshot) {
     await workspace.waitFor()
     await dismissOnboarding(page)
     for (let attempt = 0; attempt < 2; attempt++) {
-      await workspace.getByRole('button', { name: '↗ 返回 AI 对话', exact: true }).click()
+      await workspace.getByRole('button', { name: '返回 AI 对话', exact: true }).click()
       await workspace.waitFor({ state: 'hidden' })
       assert.equal(await page.getByRole('button', { name: '打开 Nook 笔记', exact: true }).count(), 0)
       const entry = page.getByRole('button', { name: '打开 Nook', exact: true })
@@ -27,7 +27,7 @@ export async function notebookSmoke(url, screenshot) {
     const suffix = Date.now().toString(36)
     const title = `Nook 验收 ${suffix}`
     const project = `验收项目 ${suffix}`
-    await workspace.getByRole('button', { name: '＋', exact: true }).click()
+    await workspace.getByRole('button', { name: '新建项目', exact: true }).click()
     await workspace.getByLabel('项目名称', { exact: true }).fill(project)
     await workspace.getByLabel('描述', { exact: true }).fill('仅用于自动化验收')
     await workspace.getByRole('button', { name: '保存项目', exact: true }).click()
@@ -42,7 +42,7 @@ export async function notebookSmoke(url, screenshot) {
       .fill('劳动异化与自由实践：今天学习了新的概念。\n保留完整的思考过程。')
     await workspace.getByRole('combobox', { name: '笔记所属项目' }).selectOption({ label: project })
     await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
-    await workspace.getByRole('button', { name: '☆ 置顶', exact: true }).click()
+    await workspace.getByRole('button', { name: '置顶', exact: true }).click()
     await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
     assert.ok((await workspace.innerText()).includes('创建于'))
     assert.ok((await workspace.innerText()).includes('更新于'))
@@ -57,10 +57,10 @@ export async function notebookSmoke(url, screenshot) {
       (await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()).includes('劳动异化'),
     )
     await workspace.getByRole('button', { name: '移到回收站', exact: true }).click()
-    await workspace.getByRole('button', { name: '♲ 回收站', exact: true }).click()
+    await workspace.getByRole('button', { name: '回收站', exact: true }).click()
     await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
     await workspace.getByRole('button', { name: '恢复笔记', exact: true }).click()
-    await workspace.getByRole('button', { name: '▦ 项目', exact: true }).click()
+    await workspace.getByRole('button', { name: '项目', exact: true }).click()
     const card = workspace.locator('.nook-project-grid article').filter({ hasText: project })
     await card.getByRole('button', { name: '删除项目', exact: true }).click()
     await workspace
@@ -68,17 +68,17 @@ export async function notebookSmoke(url, screenshot) {
       .getByRole('button', { name: '删除项目', exact: true })
       .click()
     await workspace.getByRole('alertdialog', { name: '删除项目' }).waitFor({ state: 'hidden' })
-    await workspace.getByRole('button', { name: '◌ 未分类', exact: true }).click()
+    await workspace.getByRole('button', { name: '未分类', exact: true }).click()
     await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
     assert.equal(await workspace.getByRole('combobox', { name: '笔记所属项目' }).inputValue(), '')
     await workspace.getByRole('button', { name: '移到回收站', exact: true }).click()
-    await workspace.getByRole('button', { name: '☷ 日 / 周总结', exact: true }).click()
+    await workspace.getByRole('button', { name: '日 / 周总结', exact: true }).click()
     await workspace.getByRole('dialog', { name: '笔记总结', exact: true }).waitFor()
     await workspace
       .getByRole('dialog', { name: '笔记总结', exact: true })
       .getByRole('button', { name: '关闭', exact: true })
       .click()
-    await workspace.getByRole('button', { name: '▷ 视频转文稿', exact: true }).click()
+    await workspace.getByRole('button', { name: '视频转文稿', exact: true }).click()
     await workspace.getByRole('dialog', { name: '视频转文稿', exact: true }).waitFor()
     await workspace
       .getByRole('dialog', { name: '视频转文稿', exact: true })

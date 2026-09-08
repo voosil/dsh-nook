@@ -700,6 +700,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: 3.31.3
         version: 3.31.3
+      lucide-react:
+        specifier: 1.41.0
+        version: 1.41.0(react@18.3.1)
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -721,6 +724,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      lucide-react:
+        specifier: 1.41.0
+        version: 1.41.0(react@18.3.1)
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -739,6 +745,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      lucide-react:
+        specifier: 1.41.0
+        version: 1.41.0(react@18.3.1)
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -4070,6 +4079,11 @@ packages:
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
+
+  lucide-react@1.41.0:
+    resolution: {integrity: sha512-6lksP35l6KszDKUeRTi4LV7i6DEe0Yzl2ALJm9j4c5xEYN91GdW1xGsawGMOg2mgjF5GHBVX8pKX9kP+cWsP3Q==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   marked@17.0.6:
     resolution: {integrity: sha512-gB0gkNafnonOw0obSTEGZTT86IuhILt2Wfx0mWH/1Au83kybTayroZ/V6nS25mN7u8ASy+5fMhgB3XPNrOZdmA==}
@@ -8276,6 +8290,10 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
+
+  lucide-react@1.41.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
 
   marked@17.0.6: {}
 

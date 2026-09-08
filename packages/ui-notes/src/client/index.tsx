@@ -1,3 +1,26 @@
+import {
+  ArrowUpRight,
+  Bold,
+  Code,
+  ExternalLink,
+  FileText,
+  Folder,
+  FolderOpen,
+  Heading2,
+  Inbox,
+  Italic,
+  List,
+  ListChecks,
+  NotebookPen,
+  Plus,
+  Quote,
+  Redo2,
+  Sprout,
+  Star,
+  Trash2,
+  Undo2,
+  Video,
+} from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
@@ -60,7 +83,14 @@ function Button({
   title?: string
 }) {
   return (
-    <button type="button" title={title} className={active ? 'active' : ''} onClick={onClick} disabled={disabled}>
+    <button
+      type="button"
+      aria-label={title}
+      title={title}
+      className={active ? 'active' : ''}
+      onClick={onClick}
+      disabled={disabled}
+    >
       {children}
     </button>
   )
@@ -104,7 +134,7 @@ function RichEditor({
               editor?.chain().focus().toggleHeading({ level: 2 }).run()
             }}
           >
-            H2
+            <Heading2 size={16} aria-hidden="true" />
           </Button>
           <Button
             title="粗体"
@@ -112,7 +142,7 @@ function RichEditor({
               editor?.chain().focus().toggleBold().run()
             }}
           >
-            <b>B</b>
+            <Bold size={16} aria-hidden="true" />
           </Button>
           <Button
             title="斜体"
@@ -120,7 +150,7 @@ function RichEditor({
               editor?.chain().focus().toggleItalic().run()
             }}
           >
-            <i>I</i>
+            <Italic size={16} aria-hidden="true" />
           </Button>
           <Button
             title="无序列表"
@@ -128,7 +158,7 @@ function RichEditor({
               editor?.chain().focus().toggleBulletList().run()
             }}
           >
-            • 列表
+            <List size={16} aria-hidden="true" /> 列表
           </Button>
           <Button
             title="待办清单"
@@ -136,7 +166,7 @@ function RichEditor({
               editor?.chain().focus().toggleTaskList().run()
             }}
           >
-            ☑ 待办
+            <ListChecks size={16} aria-hidden="true" /> 待办
           </Button>
           <Button
             title="引用"
@@ -144,7 +174,7 @@ function RichEditor({
               editor?.chain().focus().toggleBlockquote().run()
             }}
           >
-            ❞ 引用
+            <Quote size={16} aria-hidden="true" /> 引用
           </Button>
           <Button
             title="代码块"
@@ -152,7 +182,7 @@ function RichEditor({
               editor?.chain().focus().toggleCodeBlock().run()
             }}
           >
-            &lt;/&gt;
+            <Code size={16} aria-hidden="true" />
           </Button>
           <Button
             title="撤销"
@@ -160,7 +190,7 @@ function RichEditor({
               editor?.chain().focus().undo().run()
             }}
           >
-            ↶
+            <Undo2 size={16} aria-hidden="true" />
           </Button>
           <Button
             title="重做"
@@ -168,7 +198,7 @@ function RichEditor({
               editor?.chain().focus().redo().run()
             }}
           >
-            ↷
+            <Redo2 size={16} aria-hidden="true" />
           </Button>
         </div>
       )}
@@ -387,13 +417,14 @@ function NoteEditor({
             active={input.pinned}
             onClick={() => change({ ...input, pinned: !input.pinned })}
           >
-            {input.pinned ? '★ 已置顶' : '☆ 置顶'}
+            <Star size={14} fill={input.pinned ? 'currentColor' : 'none'} aria-hidden="true" />
+            {input.pinned ? '已置顶' : '置顶'}
           </Button>
         </div>
         {note.source.url && /^https?:\/\//i.test(note.source.url) && (
           <p className="nook-source">
             <a href={note.source.url} target="_blank" rel="noreferrer">
-              查看原视频 / 来源 ↗
+              查看原视频 / 来源 <ExternalLink size={14} aria-hidden="true" />
             </a>
             {note.source.author && <span> · {note.source.author}</span>}
           </p>
@@ -615,18 +646,21 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
       <style>{css}</style>
       <aside className="nook-nav">
         <div className="nook-brand">
-          <span>n.</span> Nook
+          <span>
+            <NotebookPen size={21} aria-hidden="true" />
+          </span>{' '}
+          Nook
         </div>
         <p className="nook-tagline">记下此刻，慢慢生长。</p>
         <button className="nook-new" disabled={busy} onClick={() => void create()}>
-          ＋ 写一条笔记 <kbd>新建</kbd>
+          <Plus size={16} aria-hidden="true" /> 写一条笔记 <kbd>新建</kbd>
         </button>
         <nav aria-label="笔记导航">
           <Button active={mode === 'notes' && !trash && projectId === undefined} onClick={() => view(undefined)}>
-            ▤ 所有笔记
+            <FileText size={16} aria-hidden="true" /> 所有笔记
           </Button>
           <Button active={mode === 'notes' && !trash && projectId === null} onClick={() => view(null)}>
-            ◌ 未分类
+            <Inbox size={16} aria-hidden="true" /> 未分类
           </Button>
           <Button
             active={mode === 'projects'}
@@ -637,13 +671,13 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
               })
             }
           >
-            ▦ 项目
+            <FolderOpen size={16} aria-hidden="true" /> 项目
           </Button>
         </nav>
         <div className="nook-section-label">
           我的项目{' '}
           <Button title="新建项目" onClick={() => setProjectForm({ name: '', description: '' })}>
-            ＋
+            <Plus size={16} aria-hidden="true" />
           </Button>
         </div>
         <nav className="nook-project-nav">
@@ -653,20 +687,25 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
               active={projectId === project.id && mode === 'notes' && !trash}
               onClick={() => view(project.id)}
             >
-              <span className="nook-dot" />
+              <Folder size={16} aria-hidden="true" />
               {project.name}
             </Button>
           ))}
           {!projects.length && <p className="nook-muted">想法可以先不分类。</p>}
         </nav>
         <div className="nook-nav-bottom">
-          <Button onClick={() => void navigate(() => setVideoOpen(true))}>▷ 视频转文稿</Button>
-          <Button onClick={() => void navigate(() => setSummaryOpen(true))}>☷ 日 / 周总结</Button>
-          <Button active={trash} onClick={() => view(undefined, true)}>
-            ♲ 回收站
+          <Button onClick={() => void navigate(() => setVideoOpen(true))}>
+            <Video size={16} aria-hidden="true" /> 视频转文稿
           </Button>
-          <Button onClick={() => void navigate(close)}>↗ 返回 AI 对话</Button>
-          <p className="nook-muted">本地保存 · 自动知识入库</p>
+          <Button onClick={() => void navigate(() => setSummaryOpen(true))}>
+            <ListChecks size={16} aria-hidden="true" /> 日 / 周总结
+          </Button>
+          <Button active={trash} onClick={() => view(undefined, true)}>
+            <Trash2 size={16} aria-hidden="true" /> 回收站
+          </Button>
+          <Button onClick={() => void navigate(close)}>
+            <ArrowUpRight size={16} aria-hidden="true" /> 返回 AI 对话
+          </Button>
         </div>
       </aside>
       <main className="nook-main">
@@ -690,7 +729,9 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
                 <small>为长期的事情留一处空间</small>
                 <h1>项目</h1>
               </div>
-              <Button onClick={() => setProjectForm({ name: '', description: '' })}>＋ 新建项目</Button>
+              <Button onClick={() => setProjectForm({ name: '', description: '' })}>
+                <Plus size={16} aria-hidden="true" /> 新建项目
+              </Button>
             </div>
             <div className="nook-project-grid">
               {projects.map(project => (
@@ -768,7 +809,11 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
                     onClick={() => void openNote(note)}
                   >
                     <strong>
-                      {note.pinned && <span className="nook-pin">★ </span>}
+                      {note.pinned && (
+                        <span className="nook-pin" role="img" aria-label="已置顶">
+                          <Star size={14} fill="currentColor" aria-hidden="true" />
+                        </span>
+                      )}
                       {noteTitle(note)}
                     </strong>
                     <p>{note.markdown.replace(/[#*`>]/g, '').slice(0, 120) || '还没有正文，继续写下去…'}</p>
@@ -821,7 +866,7 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
               />
             ) : (
               <section className="nook-welcome">
-                <span className="nook-welcome-mark">✳</span>
+                <Sprout className="nook-welcome-mark" size={60} strokeWidth={1.5} aria-hidden="true" />
                 <small>A LITTLE SPACE FOR YOUR MIND</small>
                 <h2>让想法，有处安放。</h2>
                 <p>
@@ -830,7 +875,7 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
                   不必先整理，开始写就好。
                 </p>
                 <button className="nook-new" disabled={busy} onClick={() => void create()}>
-                  ＋ 写一条笔记
+                  <Plus size={16} aria-hidden="true" /> 写一条笔记
                 </button>
                 <div className="nook-welcome-foot">选择左侧笔记，继续上一次的思考。</div>
               </section>
