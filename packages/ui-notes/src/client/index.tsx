@@ -741,7 +741,6 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
                   <h2>
                     <button onClick={() => view(project.id)}>{project.name}</button>
                   </h2>
-                  <p>{project.description || '从一条笔记开始。'}</p>
                   <p className="nook-muted">
                     创建于 {fullDate(project.createdAt)}
                     <br />
