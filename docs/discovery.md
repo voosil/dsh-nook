@@ -43,7 +43,7 @@ Fresh development and packed-install Profiles constrain all `@deepseek-ai/*` res
 
 ## UNKNOWN
 
-- DSH app boot unconditionally watches Profile and Home patches. Native watching failed for the linked development Profile on the verified macOS environment, so Nook's launcher and verification scripts set Chokidar's documented `CHOKIDAR_USEPOLLING=1` compatibility mode. Product Services and their own watch settings remain untouched.
+- Native patch watching failed for the linked development Profile on the verified macOS environment, so Nook's launcher and verification scripts set Chokidar's documented `CHOKIDAR_USEPOLLING=1` compatibility mode. The root cause remains `UNKNOWN`. Product Services and their own watch settings remain untouched; Profile patch lifecycle is described below.
 - The next published DSH release and its migration requirements remain `UNKNOWN`; `dsh-compat` fails closed outside the pinned release.
 
 ## Client hot reload
@@ -57,6 +57,16 @@ The [release source](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0
 The Web startup URL contains a process token. A GET to that URL exchanges the token for a cookie and redirects to `/`; unauthenticated index requests return HTTP 401. Browser and HTTP acceptance use this flow, and diagnostic logs redact token values. Open the complete URL printed by the launcher to establish a browser session. Signed cookies use the persistent credential secret and survive Host restarts in the same home.
 
 Session JSONL persistence depends on `fs-ext@2.1.1` for POSIX file locks. Workspace, development Profile and packed Profile installs permit its native build. Nook's model adapter and knowledge assembly hook do not configure persona; the release's persona prefix/suffix migration does not change those contracts.
+
+## Desktop launcher discovery
+
+The installed DSH manifest declares `bin.dsh = lib/bin.js`. That entry exports `runCli` but invokes it automatically only under `if (import.meta.main)`. Direct Node execution with `--version` prints the pinned version; dynamically importing the entry with the same argument does not run the CLI. A desktop launcher can execute the manifest-declared CLI in a separate Node process without importing internal boot chunks.
+
+The installed Web Bundle's startup parser accepts `--no-open --host 127.0.0.1 --port 0`; the OS chooses the port at bind time. Launcher flags such as `--profile` and `--patch` precede Web flags. After Loader settlement, the Web Bundle announces the authenticated URL through `dsh web: ...`. Its authentication handoff follows the [browser boot contract](#browser-boot-and-client-composition). DSH subprocess-local launches its packaged runner through `process.execPath`, so the executable hosting DSH must also support ordinary Node child execution.
+
+The installed app-boot validates `dsh.profile.patchReload` as `live` or `startup`; omitted values on custom Profiles default to `live`. Profile boot watches Profile/Home patch files only for `live`. `startup` is a verified option for a desktop Profile that applies configuration at the next launch; it does not disable unrelated plugin timers or storage watchers.
+
+Profile names are resolved beneath `DSH_HOME/profiles` and reject path separators. CLI boot rewrites its generated root configuration and heals module fallback links. A whole Profile cannot be assumed to work directly inside read-only application resources. The CLI handles `SIGTERM` and `SIGINT` through root disposal. Forced termination and cleanup of every descendant still require platform acceptance.
 
 ## Product RPC and Client contracts
 

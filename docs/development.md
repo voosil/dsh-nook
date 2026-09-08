@@ -9,6 +9,8 @@ Open the complete URL printed by the command to establish [browser authenticatio
 
 ## Development
 
+The [desktop development entry](../apps/desktop/README.md#开发与打包) builds a fixed snapshot and opens Electron with a disposable home. Its lifecycle and packaged data are separate from both browser modes described here.
+
 The development launcher builds before boot and polls package sources, assets and manifests plus root TypeScript/workspace configuration. Client-only changes rebuild bundles and activate the [verified official HMR chain](discovery.md#client-hot-reload). Host output or other package changes rebuild and restart the development runtime. Builds run serially; edits made during a build trigger another pass. A failed rebuild leaves the running Host and previous Client bundles available and retries on the next edit.
 
 Client HMR remounts the changed plugin. Local React state in that plugin can reset; it is not React Fast Refresh. Save content before editing its UI code. Other plugins and the browser document remain mounted during a Client-only update.

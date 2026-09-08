@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { basename, resolve } from 'node:path'
 import {
   COMMUNITY_BROWSER_VERSION,
   DSH_VERSION,
@@ -15,9 +15,9 @@ const SCHEMASTERY_VERSION = '3.18.2'
 const REACT_VERSION = '18.3.1'
 
 /** Build an independent installation from already compiled Nook packages. */
-export async function createPackedProfile(temporaryRoot, { runPnpm = defaultRunPnpm } = {}) {
-  const packs = resolve(temporaryRoot, 'packs')
+export async function createPackedProfile(temporaryRoot, { runPnpm = defaultRunPnpm, portable = false } = {}) {
   const home = resolve(temporaryRoot, 'dsh-home')
+  const packs = portable ? resolve(home, 'packs') : resolve(temporaryRoot, 'packs')
   const profile = resolve(home, 'profiles', 'nook')
   await mkdir(packs, { recursive: true })
   const localDependencies = {}
@@ -33,7 +33,9 @@ export async function createPackedProfile(temporaryRoot, { runPnpm = defaultRunP
     if (packed.name !== manifest.name || packed.version !== manifest.version) {
       throw new Error(`pnpm packed an unexpected manifest for ${manifest.name}`)
     }
-    localDependencies[manifest.name] = `file:${packed.filename}`
+    localDependencies[manifest.name] = portable
+      ? `file:../../packs/${basename(packed.filename)}`
+      : `file:${packed.filename}`
   }
 
   await mkdir(profile, { recursive: true })
@@ -45,9 +47,15 @@ export async function createPackedProfile(temporaryRoot, { runPnpm = defaultRunP
       '  - profiles/*',
       '',
       'overrides:',
-      ...Object.entries({ ...(await pinnedRuntimeOverrides()), ...localDependencies }).map(
-        ([name, tarball]) => `  '${name}': '${tarball}'`,
-      ),
+      ...Object.entries({
+        ...(await pinnedRuntimeOverrides()),
+        ...Object.fromEntries(
+          Object.entries(localDependencies).map(([name, value]) => [
+            name,
+            portable ? value.replace('file:../../packs/', 'file:./packs/') : value,
+          ]),
+        ),
+      }).map(([name, tarball]) => `  '${name}': '${tarball}'`),
       '',
       'allowBuilds:',
       "  '@deepseek-ai/dsh-subprocess-local': true",

@@ -46,6 +46,7 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   for (const name of [
     'scripts',
     'packages',
+    'apps',
     'dev',
     'package.json',
     'pnpm-workspace.yaml',
@@ -56,7 +57,7 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   ]) {
     await cp(resolve(ROOT, name), resolve(root, name), {
       recursive: true,
-      filter: path => !path.split('/').some(part => part === 'node_modules' || part === 'lib'),
+      filter: path => !path.split('/').some(part => ['node_modules', 'lib', 'dist', 'resources'].includes(part)),
     })
   }
   await runPnpm(['install', '--frozen-lockfile'], { cwd: root, capture: true })

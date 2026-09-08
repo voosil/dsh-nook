@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nook</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="status.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true">N</div>
+      <h1>正在打开 Nook</h1>
+      <p id="message">正在准备你的本地工作区，首次启动需要一点时间。</p>
+      <a id="retry" href="?action=retry" hidden>重试</a>
+    </main>
+  </body>
+</html>

@@ -7,3 +7,5 @@ node_modules/
 coverage/
 pnpm-lock.yaml
 .notes/wip/
+apps/desktop/dist/
+apps/desktop/resources/

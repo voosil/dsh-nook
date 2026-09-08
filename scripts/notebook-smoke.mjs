@@ -5,12 +5,13 @@ const require = createRequire(import.meta.url)
 const { chromium } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
 
 /** Exercise the shipped Client against the actual Host, including packed installs. */
-export async function notebookSmoke(url, screenshot) {
-  const browser = await chromium.launch({ channel: 'chrome', headless: true })
+export async function notebookSmoke(url, screenshot, providedPage) {
+  const browser = providedPage ? undefined : await chromium.launch({ channel: 'chrome', headless: true })
   const errors = []
+  const page = providedPage ?? (await browser.newPage({ viewport: { width: 1440, height: 1000 } }))
+  const onError = error => errors.push(error.message)
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
-    page.on('pageerror', error => errors.push(error.message))
+    page.on('pageerror', onError)
     await page.goto(url)
     const workspace = page.getByRole('dialog', { name: 'Nook 笔记工作区', exact: true })
     await workspace.waitFor()
@@ -87,7 +88,8 @@ export async function notebookSmoke(url, screenshot) {
     assert.deepEqual(errors, [])
     return { title, errors }
   } finally {
-    await browser.close()
+    page.off('pageerror', onError)
+    await browser?.close()
   }
 }
 

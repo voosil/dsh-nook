@@ -1,0 +1,19 @@
+appId: io.nook.desktop
+productName: Nook
+asar: true
+npmRebuild: false
+directories:
+  output: ../../.pack/desktop
+files:
+  - dist/main.js
+  - package.json
+extraResources:
+  - from: resources/runtime
+    to: runtime
+  - from: src/status
+    to: status
+mac:
+  category: public.app-category.productivity
+  minimumSystemVersion: '13.0'
+  target:
+    - dir

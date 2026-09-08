@@ -20,6 +20,8 @@ Official, community, or owned plugins
 
 ## Quick start
 
+For the macOS desktop application, build with `pnpm desktop:package` and open `.pack/desktop/mac-arm64/Nook.app`. See the [desktop guide](apps/desktop/README.md) for isolated development, data locations and verification.
+
 ```bash
 corepack enable
 pnpm install

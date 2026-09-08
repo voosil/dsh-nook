@@ -1,7 +1,10 @@
 packages:
   - packages/*
+  - apps/*
 
 allowBuilds:
+  electron: true
+  electron-winstaller: false
   '@deepseek-ai/dsh-subprocess-local': true
   '@google/genai': true
   esbuild: true

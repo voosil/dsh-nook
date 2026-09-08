@@ -28,4 +28,6 @@ Nook UI icons use named `lucide-react` SVG components bundled into each contribu
 
 ## External boundaries
 
+The [desktop application](../apps/desktop/README.md) supervises a bundled standard Node runtime and loads the existing authenticated Web UI in a sandboxed Electron window. A Node supervisor owns DSH's process group and stops it when desktop IPC disconnects. The writable Profile projects package links into a versioned runtime installation, preserving user patches and data across application builds. Business features retain the same Capability and Host/Client boundaries.
+
 The browser adapter consumes `dsh-browser-playwright` through its public service contract. Its Agent-facing Tool plugin is not a business API. The video platform adapter owns third-party collection details and a Python process boundary. Both expose Nook capabilities to features. The generation and knowledge adapters own DSH model and prompt contracts.

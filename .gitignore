@@ -9,3 +9,5 @@ coverage/
 .DS_Store
 *.log
 __pycache__/
+apps/desktop/dist/
+apps/desktop/resources/
