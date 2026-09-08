@@ -7,10 +7,13 @@ import {
   PROFILE_DIR,
   ROOT,
   run,
+  runPnpm,
   writeDevProfile,
 } from './profile-lib.mjs'
 import { releasePort } from './release-port.mjs'
 import { createProfileArgs, resolveDevPort } from './run-profile-args.mjs'
+
+await runPnpm(['run', 'build'])
 
 if (!(await exists(resolve(PROFILE_DIR, 'package.json')))) {
   await writeDevProfile()
