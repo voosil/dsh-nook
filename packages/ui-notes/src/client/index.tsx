@@ -869,11 +869,6 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
                 <Sprout className="nook-welcome-mark" size={60} strokeWidth={1.5} aria-hidden="true" />
                 <small>A LITTLE SPACE FOR YOUR MIND</small>
                 <h2>让想法，有处安放。</h2>
-                <p>
-                  随手记下学习、工作和生活中的片刻。
-                  <br />
-                  不必先整理，开始写就好。
-                </p>
                 <button className="nook-new" disabled={busy} onClick={() => void create()}>
                   <Plus size={16} aria-hidden="true" /> 写一条笔记
                 </button>
