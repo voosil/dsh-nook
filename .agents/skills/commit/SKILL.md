@@ -1,24 +1,13 @@
 ---
 name: commit
-description: Summarize uncommitted changes and commit them, deciding whether mixed modifications must be split into multiple logical commits.
+description: Commit intended changes using task context; split only clearly independent changes. Use when asked to commit or split commits.
 ---
 
 # Commit 工作流
 
-## 取证
-
-1. 一次看全:`git status --porcelain`、`git diff HEAD`、`git log --oneline -10`。只看文件名不算取证:必须读 diff 内容判断每处改动的动机;untracked 文件先读内容再归类。
-2. 若用户已暂存部分改动,视作其分组意图:先按暂存集提交,再对剩余改动分组。
-
-## 分组
-
-3. 按"为什么改"分组,不按文件类型。一个 commit 只承载一个动机;写 message 时若需要"另外还改了…",就该拆。
-4. 必拆:互不相关的 feature / fix / refactor;源码 vs 文档、构建配置等杂务。
-5. 不拆:同一改动的伴生物——实现 + 对应测试 + 文档 + lockfile 原子提交,lockfile 跟随触发它的 package.json。
-6. 归属拿不准的文件不猜测:问用户,或留在工作区并在汇报中说明。
-7. 发现疑似 secrets、调试残留、构建产物:不提交,单独报告。
-
-## 提交
-
-8. 逐组 `git add <具体路径>`(拆分时禁止 `-A` / `.`),message 遵循仓库历史风格(`type(scope): subject`,正文只在需要解释"为什么"时写),不用 `--no-verify`。
-9. 完成后用 `git log` + `git status` 验证:每个 commit 主题覆盖其文件;工作区应干净,或只剩用户暂留/报告项。
+1. 用 `git status --short` 确定范围:用户指定优先;未指定时,有暂存只提交暂存集,否则处理当前变更。只看范围内的一份 `git diff --stat`(暂存集加 `--cached`)。
+2. 优先依据本轮任务与修改记录写 message,已理解的改动不重新逐项取证。只有陌生变更、后续编辑或部分暂存影响判断时才补读对应 diff,将相关路径合并到一次调用;陌生新文件单独读内容。信息足以确定提交范围和主题就继续,不设行数预算或逐文件覆盖流程。
+3. 只拆已明确独立的改动;同一任务的实现、测试、文档、配置与 lockfile 一起提交。尊重已有暂存分组,不为文件多或跨目录而寻找拆分理由。归属不明或疑似 secrets、调试残留、意外产物不提交并报告;已暂存时暂停受影响组。
+4. 使用具体路径暂存,不用 `git add -A` / `git add .`。部分暂存以 `git diff --cached -- <路径>` 为准,不整文件覆盖;需要拆同文件改动时按 hunk 暂存。
+5. 提交阶段不额外做代码审查,不重复已适用的验证;缺少仓库要求的验证时补齐,不用 `--no-verify`。message 沿用已知历史风格,未知才读最近 5 条;正文仅在动机或影响需要解释时写。
+6. 提交后核对 commit 输出与一次 `git status --short`,简报 hash、主题和未提交项。
