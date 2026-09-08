@@ -770,7 +770,6 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
           <div className="nook-notes-layout">
             <section className="nook-list" aria-label="笔记列表">
               <div className="nook-list-heading">
-                <small>你的想法，都在这里</small>
                 <h1>
                   {heading} <span>{total}</span>
                 </h1>
