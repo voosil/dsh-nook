@@ -29,7 +29,7 @@ for (const client of clients) {
       '@deepseek-ai/cordis',
       '@deepseek-ai/dsh-client-ui-slots',
       '@deepseek-ai/dsh-client-ui-primitives',
-      '@deepseek-ai/dsh-client-runtime/client',
+      '@deepseek-ai/dsh-client-ui-renderer/client',
     ],
     banner: {
       js: `window.__ModuleLoader__.load({ id: ${JSON.stringify(client.id)}, factory: (require) => { var module = { exports: {} }; var exports = module.exports;`,

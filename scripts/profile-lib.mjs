@@ -7,7 +7,7 @@ export const ROOT = resolve(import.meta.dirname, '..')
 export const DEV_HOME = resolve(ROOT, '.dsh-dev')
 export const DEV_AGENTS_HOME = resolve(DEV_HOME, 'agents')
 export const PROFILE_DIR = resolve(DEV_HOME, 'profiles', 'nook')
-export const DSH_VERSION = '0.1.1-rc.2'
+export const DSH_VERSION = '0.1.3-alpha.2'
 export const COMMUNITY_BROWSER_VERSION = '0.1.1'
 export const PNPM_VERSION = '12.1.0'
 
@@ -70,7 +70,7 @@ export async function pinnedRuntimeOverrides() {
     if (overrides[name] && overrides[name] !== version) throw new Error(`ambiguous runtime pin: ${name}`)
     overrides[name] = version
   }
-  if (overrides['@deepseek-ai/dsh'] !== DSH_VERSION || overrides['@deepseek-ai/cordis'] !== '4.0.1')
+  if (overrides['@deepseek-ai/dsh'] !== DSH_VERSION || overrides['@deepseek-ai/cordis'] !== '4.0.2')
     throw new Error('runtime lockfile does not match the verified DSH/Cordis baseline')
   return overrides
 }
@@ -91,6 +91,7 @@ export async function writeDevProfile() {
       'allowBuilds:',
       "  '@deepseek-ai/dsh-subprocess-local': true",
       "  '@google/genai': true",
+      '  fs-ext: true',
       '  koffi: true',
       '  node-pty: true',
       '  protobufjs: true',

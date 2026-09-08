@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import type { Context } from '@deepseek-ai/cordis'
 
-export const DSH_VERSION = '0.1.1-rc.2' as const
-export const CORDIS_VERSION = '4.0.1' as const
+export const DSH_VERSION = '0.1.3-alpha.2' as const
+export const CORDIS_VERSION = '4.0.2' as const
 export const COMMUNITY_BROWSER_VERSION = '0.1.1' as const
 
 const require = createRequire(import.meta.url)

@@ -14,8 +14,8 @@ import {
   pinnedRuntimeOverrides,
 } from './profile-lib.mjs'
 
-const CORDIS_VERSION = '4.0.1'
-const SCHEMASTERY_VERSION = '3.18.1'
+const CORDIS_VERSION = '4.0.2'
+const SCHEMASTERY_VERSION = '3.18.2'
 const REACT_VERSION = '18.3.1'
 
 function runtimeEnv(home) {
@@ -112,7 +112,7 @@ try {
     '@deepseek-ai/cordis': CORDIS_VERSION,
     '@deepseek-ai/dsh': DSH_VERSION,
     '@deepseek-ai/dsh-base': DSH_VERSION,
-    '@deepseek-ai/dsh-client-runtime': DSH_VERSION,
+    '@deepseek-ai/dsh-client-ui-renderer': DSH_VERSION,
     '@deepseek-ai/dsh-client-ui-conversation': DSH_VERSION,
     '@deepseek-ai/dsh-client-ui-sidebar': DSH_VERSION,
     '@deepseek-ai/dsh-client-ui-slots': DSH_VERSION,

@@ -1,11 +1,11 @@
 # DSH discovery baseline
 
-Runtime baseline verified on 2026-08-28; external RPC, prompt, model and workspace Slot contracts verified on 2026-09-07 against the same pinned installed source.
+Runtime, external RPC, prompt, model and workspace Slot contracts verified on 2026-09-08 against the pinned installed release and its source tag.
 
 | Fact                         | Verified value                                                                  |
 | ---------------------------- | ------------------------------------------------------------------------------- |
-| Published DSH runtime        | `@deepseek-ai/dsh@0.1.1-rc.2`                                                   |
-| Release source               | tag commit `b150a551b8dac790f04a78b39ae600d0601a9af3`                           |
+| Published DSH runtime        | `@deepseek-ai/dsh@0.1.3-alpha.2`                                                |
+| Release source               | tag commit `82a5fd61a7cf5c293cec4bdff68f455398d685e9`                           |
 | Required Node                | `^22.19.0` or `>=24.0.0`                                                        |
 | Upstream package manager     | pnpm `11.7.0`                                                                   |
 | Nook package manager         | pnpm `12.1.0`                                                                   |
@@ -18,9 +18,9 @@ Runtime baseline verified on 2026-08-28; external RPC, prompt, model and workspa
 
 ## Published official Bundles
 
-- `@deepseek-ai/dsh-base@0.1.1-rc.2`: Host services and headless foundations.
-- `@deepseek-ai/dsh-headless@0.1.1-rc.2`: runnable headless composition; available but not selected by Nook.
-- `@deepseek-ai/dsh-web-app@0.1.1-rc.2`: Web Host plus Browser Client shell selected by Nook.
+- `@deepseek-ai/dsh-base@0.1.3-alpha.2`: Host services and headless foundations.
+- `@deepseek-ai/dsh-headless@0.1.3-alpha.2`: runnable headless composition; available but not selected by Nook.
+- `@deepseek-ai/dsh-web-app@0.1.3-alpha.2`: Web Host plus Browser Client shell selected by Nook.
 
 The verified extension chain is Bundle `dsh.bundle.patch` metadata → Profile `dsh.profile.bundles` ordering → Profile/Home patch files → repeatable CLI `--patch` overlays. Nook uses each layer explicitly and never relies on transitive activation.
 
@@ -35,7 +35,7 @@ Client extensions use the verified `ctx.slots.inject(...)` + `ctx.slots.register
 
 ## Compatibility decisions
 
-The community browser package declares DSH peer ranges ending before `0.1.0-rc.7`, while Nook pins `0.1.1-rc.2`. Nook therefore never mounts its Tool plugin. The public Cordis service/provider slice has no value imports from DSH Tool or LLM packages and is guarded by a real provider smoke test. This is a narrow, evidence-based compatibility exception, not a claim that the whole community bundle is compatible.
+The community browser package declares DSH peer ranges ending before `0.1.0-rc.7`, while Nook pins `0.1.3-alpha.2`. Nook therefore never mounts its Tool plugin. The public Cordis service/provider slice has no value imports from DSH Tool or LLM packages and is guarded by a real provider smoke test. This is a narrow, evidence-based compatibility exception, not a claim that the whole community bundle is compatible.
 
 `pnpm peers check` consequently reports the community package's stale `@deepseek-ai/dsh-tools` and `@deepseek-ai/dsh-llm` peer ranges. These two known warnings are accepted only for the isolated service/provider slice above; any additional peer warning is a release failure.
 

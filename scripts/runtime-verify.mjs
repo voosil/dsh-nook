@@ -2,7 +2,8 @@ import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { notebookSmoke } from './notebook-smoke.mjs'
 
-const URL_PATTERN = /dsh web:\s*(http:\/\/127\.0\.0\.1:\d+)/
+const URL_PATTERN = /dsh web:\s*(http:\/\/127\.0\.0\.1:\d+\/\?token=[^\s]+)(?=\s)/
+const redact = logs => logs.replace(/([?&]token=)[^\s&]+/g, '$1<REDACTED>')
 
 async function stop(child) {
   if (child.exitCode !== null || child.signalCode !== null) return
@@ -42,9 +43,9 @@ export async function bootAndVerifyWeb({
   let logs = ''
 
   try {
-    const url = await new Promise((resolve, reject) => {
+    const launchUrl = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error(`timed out waiting for DSH web runtime\n${logs}`))
+        reject(new Error(`timed out waiting for DSH web runtime\n${redact(logs)}`))
       }, timeoutMs)
       timer.unref()
       const consume = chunk => {
@@ -63,11 +64,15 @@ export async function bootAndVerifyWeb({
       })
       child.once('exit', (code, signal) => {
         clearTimeout(timer)
-        reject(new Error(`DSH exited before listening (${code ?? signal})\n${logs}`))
+        reject(new Error(`DSH exited before listening (${code ?? signal})\n${redact(logs)}`))
       })
     })
 
-    const response = await fetch(`${url}/`)
+    const url = new URL(launchUrl).origin
+    const exchange = await fetch(launchUrl, { redirect: 'manual' })
+    const cookie = exchange.headers.get('set-cookie')?.split(';', 1)[0]
+    if (exchange.status !== 303 || !cookie) throw new Error('DSH launch URL did not establish browser authentication')
+    const response = await fetch(`${url}/`, { headers: { cookie } })
     const html = await response.text()
     if (!response.ok) throw new Error(`Nook shell returned HTTP ${response.status}`)
     for (const packageName of expectedPackages) {
@@ -76,7 +81,7 @@ export async function bootAndVerifyWeb({
     for (const packageName of excludedPackages) {
       if (html.includes(packageName)) throw new Error(`Nook shell unexpectedly loaded ${packageName}`)
     }
-    if (expectedPackages.includes('@nook-dsh/ui-notes')) await notebookSmoke(url)
+    if (expectedPackages.includes('@nook-dsh/ui-notes')) await notebookSmoke(launchUrl)
     return { url, status: response.status, html }
   } finally {
     await stop(child)
