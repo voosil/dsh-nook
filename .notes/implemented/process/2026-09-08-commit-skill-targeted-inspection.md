@@ -10,7 +10,7 @@ Status: implemented
 
 取证、分组与执行规则统一由 [commit skill](../../../.agents/skills/commit/SKILL.md) 承载。常规提交以本轮任务上下文为依据,优先减少重复确认和串行补读;仅在具体信息缺口影响范围或主题时读取额外内容。
 
-参考 [GitHub git-commit](https://github.com/github/awesome-copilot/blob/main/skills/git-commit/SKILL.md) 的暂存区优先策略。保持单一简短流程,不引入固定行数预算、逐文件覆盖或额外脚本。
+参考 [GitHub git-commit](https://github.com/github/awesome-copilot/blob/main/skills/git-commit/SKILL.md) 的暂存区优先策略。保持单一简短分析流程,不引入固定行数预算、逐文件覆盖或额外脚本。并发编辑时的内容边界见 [冻结批次决策](2026-09-08-commit-skill-frozen-batches.md),取证仍复用本轮上下文。
 
 ## Alternatives considered
 
