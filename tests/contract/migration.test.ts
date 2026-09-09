@@ -151,3 +151,122 @@ test('migration preserves a complete sync library and refuses to combine distinc
   await create(other)
   assert.throws(() => migrateData(other, target, join(root, 'backups')), /Cannot automatically merge/)
 })
+
+async function initializeSyncNotebook(directory: string) {
+  const ctx = new Context()
+  await ctx.plugin(Notebook, {
+    file: join(directory, 'notebook.sqlite'),
+    projectsFile: join(directory, 'projects.json'),
+  })
+  return ctx
+}
+
+test('legacy Web data migrates into an initialized empty sync notebook and upgrades on boot', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'nook-empty-sync-migration-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const source = join(root, 'web'),
+    target = join(root, 'desktop'),
+    output = join(root, 'backups')
+  const web = await populate(source, '旧网页笔记')
+  await (await initializeSyncNotebook(target)).fiber.dispose()
+  writeFileSync(join(target, 'desktop-bytes'), 'keep target files')
+  const before = readFileSync(join(source, 'notebook.sqlite'))
+  const receipt = migrateData(source, target, output)!
+  for (const backup of [receipt.sourceBackup, receipt.targetBackup!, receipt.mergedBackup]) verifyBackup(backup)
+  assert.equal(migrationComplete(source, output), true)
+  assert.deepEqual(readFileSync(join(source, 'notebook.sqlite')), before)
+  assert.equal(readFileSync(join(target, 'desktop-bytes'), 'utf8'), 'keep target files')
+  const retained = new DatabaseSync(join(receipt.retained, 'notebook.sqlite'), { readOnly: true })
+  assert.equal(retained.prepare('SELECT count(*) AS count FROM notes').get()!.count, 0)
+  retained.close()
+  const ctx = await initializeSyncNotebook(target)
+  try {
+    for (const note of [web.note, web.trash])
+      assert.deepEqual(await ctx.nookNotes.get(note.id), {
+        ...note,
+        versionId: ctx.nookSyncReplica.records('note').find(item => item.value.id === note.id)!.hash,
+      })
+    assert.deepEqual(await ctx.nookProjects.get(web.project.id), web.project)
+    assert.equal((await ctx.nookKnowledge.search({ query: web.note.title }))[0]?.documentId, web.note.id)
+    assert.equal((await ctx.nookKnowledge.session(web.note.title)).projectId, web.project.id)
+    assert.ok(ctx.nookSyncReplica.records('project').some(item => item.value.id === web.project.id))
+    assert.ok(ctx.nookSyncReplica.records('note').some(item => item.value.id === web.note.id))
+    assert.deepEqual(migrateData(source, target, output), receipt)
+  } finally {
+    await ctx.fiber.dispose()
+  }
+})
+
+test('complete sync history and binding can migrate into an initialized empty target', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'nook-empty-sync-history-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const source = join(root, 'source'),
+    target = join(root, 'target')
+  const incoming = await initializeSyncNotebook(source)
+  await incoming.nookProjects.create({ name: 'synced project' })
+  incoming.nookSyncReplica.bind('https://example.com/dav/', randomUUID())
+  const snapshot = incoming.nookSyncReplica.snapshot(),
+    binding = incoming.nookSyncReplica.binding()
+  await incoming.fiber.dispose()
+  await (await initializeSyncNotebook(target)).fiber.dispose()
+  migrateData(source, target, join(root, 'backups'))
+  const current = await initializeSyncNotebook(target)
+  try {
+    assert.deepEqual(current.nookSyncReplica.snapshot(), snapshot)
+    assert.deepEqual(current.nookSyncReplica.binding(), binding)
+  } finally {
+    await current.fiber.dispose()
+  }
+})
+
+test('an empty legacy notebook does not permit replacing projects held outside SQLite', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'nook-legacy-target-migration-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const source = join(root, 'source'),
+    target = join(root, 'target'),
+    output = join(root, 'backups')
+  await (await initializeSyncNotebook(source)).fiber.dispose()
+  const ctx = new Context()
+  try {
+    await ctx.plugin(Projects, { file: join(target, 'projects.json') })
+    await ctx.plugin(Notebook, { file: join(target, 'notebook.sqlite') })
+    await ctx.nookProjects.create({ name: 'legacy target project' })
+  } finally {
+    await ctx.fiber.dispose()
+  }
+  const before = readFileSync(join(target, 'projects.json'))
+  assert.throws(() => migrateData(source, target, output), /Cannot automatically merge/)
+  assert.deepEqual(readFileSync(join(target, 'projects.json')), before)
+  assert.equal(migrationComplete(source, output), false)
+})
+
+for (const [name, sql] of Object.entries({
+  binding: "INSERT INTO sync_state VALUES('binding','{}')",
+  history: "INSERT INTO sync_versions VALUES('retained','{}',0)",
+  heads: "INSERT INTO sync_heads VALUES('retained','hash')",
+  working: "INSERT INTO sync_working VALUES('retained','hash')",
+  preferences: "INSERT INTO knowledge_sessions VALUES('session',1,NULL)",
+  project: "INSERT INTO projects VALUES('retained','{}',1)",
+  unknownState: "INSERT INTO sync_state VALUES('future-state','1')",
+  nullState: "INSERT INTO sync_state VALUES(NULL,'1')",
+  unfinishedProjectImport: "DELETE FROM sync_state WHERE key='projects-migrated'",
+  unknownTable: 'CREATE TABLE future_user_data(value TEXT)',
+})) {
+  test(`empty-target migration refuses a target with ${name}`, async t => {
+    const root = mkdtempSync(join(tmpdir(), 'nook-not-empty-migration-'))
+    t.after(() => rmSync(root, { recursive: true, force: true }))
+    const source = join(root, 'source'),
+      target = join(root, 'target'),
+      output = join(root, 'backups')
+    await populate(source, 'legacy')
+    await (await initializeSyncNotebook(target)).fiber.dispose()
+    const db = new DatabaseSync(join(target, 'notebook.sqlite'))
+    db.exec(sql)
+    db.close()
+    const before = readFileSync(join(target, 'notebook.sqlite'))
+    assert.throws(() => migrateData(source, target, output), /Cannot automatically merge|Unsupported notebook table/)
+    assert.deepEqual(readFileSync(join(target, 'notebook.sqlite')), before)
+    assert.equal(migrationComplete(source, output), false)
+    for (const backup of readdirSync(output)) verifyBackup(join(output, backup))
+  })
+}

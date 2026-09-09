@@ -90,17 +90,16 @@ function mergeProjects(source: string, target: string) {
 }
 
 function mergeNotebook(source: string, target: string) {
+  if (mergeNotebookRows(source, target)) copyFileSync(source, target)
+}
+
+/** Return true to replace only a verified empty target with the complete incoming snapshot. */
+function mergeNotebookRows(source: string, target: string): boolean {
   // Identical snapshots can move with their complete sync history and binding.
   const identical = readFileSync(source).equals(readFileSync(target))
   const incoming = new DatabaseSync(source, { readOnly: true })
   const current = new DatabaseSync(target)
   try {
-    for (const db of [incoming, current]) {
-      if (!identical && db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sync_state'").get())
-        throw new Error(
-          'Cannot automatically merge different sync-enabled notebooks; preserve both libraries and use data sync to reconcile them. Originals and verified backups are retained.',
-        )
-    }
     // These are Nook-owned schemas, verified against provider-notebook-local.
     const expected = {
       notes: [
@@ -119,25 +118,25 @@ function mergeNotebook(source: string, target: string) {
       knowledge_sessions: ['id', 'enabled', 'project_id'],
       knowledge_fts: ['terms'],
     }
-    const syncExpected = current.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sync_state'").get()
-      ? {
-          projects: ['id', 'data', 'deleted'],
-          sync_versions: ['hash', 'body', 'pending'],
-          sync_heads: ['key', 'hash'],
-          sync_working: ['key', 'hash'],
-          sync_state: ['key', 'value'],
-        }
-      : {}
-    const allExpected = { ...expected, ...syncExpected }
-    const tables = new Set([
-      ...Object.keys(allExpected),
-      'knowledge_fts_data',
-      'knowledge_fts_idx',
-      'knowledge_fts_content',
-      'knowledge_fts_docsize',
-      'knowledge_fts_config',
-    ])
+    const hasSync = (db: DatabaseSync) =>
+      Boolean(db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sync_state'").get())
+    const syncExpected = {
+      projects: ['id', 'data', 'deleted'],
+      sync_versions: ['hash', 'body', 'pending'],
+      sync_heads: ['key', 'hash'],
+      sync_working: ['key', 'hash'],
+      sync_state: ['key', 'value'],
+    }
     for (const db of [incoming, current]) {
+      const allExpected = { ...expected, ...(hasSync(db) ? syncExpected : {}) }
+      const tables = new Set([
+        ...Object.keys(allExpected),
+        'knowledge_fts_data',
+        'knowledge_fts_idx',
+        'knowledge_fts_content',
+        'knowledge_fts_docsize',
+        'knowledge_fts_config',
+      ])
       for (const row of db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all())
         if (!String(row.name).startsWith('sqlite_') && !tables.has(String(row.name)))
           throw new Error(`Unsupported notebook table: ${row.name}`)
@@ -153,7 +152,24 @@ function mergeNotebook(source: string, target: string) {
         )
           throw new Error(`Unsupported notebook schema: ${table}`)
     }
-    if (identical) return
+    if (identical) return false
+    if (hasSync(incoming) || hasSync(current)) {
+      const targetTables = [...Object.keys(expected), ...(hasSync(current) ? Object.keys(syncExpected) : [])]
+      const empty = targetTables.every(table =>
+        table === 'sync_state'
+          ? equivalent(current.prepare('SELECT key,value FROM sync_state').all(), [
+              { key: 'projects-migrated', value: '1' },
+            ])
+          : !current.prepare(`SELECT 1 FROM ${table} LIMIT 1`).get(),
+      )
+      // The marker belongs to the empty target. Copy the source schema as well so
+      // the provider imports legacy projects and captures their sync history on boot.
+      // A legacy target may still own projects in projects.json outside SQLite.
+      if (empty && hasSync(current)) return true
+      throw new Error(
+        'Cannot automatically merge different sync-enabled notebooks; preserve both libraries and use data sync to reconcile them. Originals and verified backups are retained.',
+      )
+    }
     current.exec('BEGIN IMMEDIATE')
     for (const table of ['notes', 'knowledge_sessions'] as const) {
       const columns = expected[table]
@@ -185,6 +201,7 @@ function mergeNotebook(source: string, target: string) {
     const integrity = current.prepare('PRAGMA integrity_check').all()
     if (integrity.length !== 1 || integrity[0]?.integrity_check !== 'ok')
       throw new Error('Merged notebook integrity check failed')
+    return false
   } finally {
     incoming.close()
     current.close()
