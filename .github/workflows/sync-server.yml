@@ -1,0 +1,86 @@
+name: Publish Nook Sync
+
+on:
+  push:
+    tags: ['sync-server-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nook-sync-release
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/voosil/nook-sync
+  VERSION: 0.1.0
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check release version and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "sync-server-v$VERSION" ]]; then
+            echo 'Release tag and image version differ' >&2
+            exit 1
+          fi
+          python3 tests/sync-server/test_setup.py
+          docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "nook-sync:$VERSION" scripts/sync-server
+      - name: Verify real Compose lifecycle
+        run: python3 tests/sync-server/verify_docker.py
+      - name: Publish verified architecture
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARCH: ${{ matrix.arch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag "nook-sync:$VERSION" "$IMAGE:$GITHUB_SHA-$ARCH"
+          docker push "$IMAGE:$GITHUB_SHA-$ARCH"
+      - name: Logout
+        if: always()
+        run: docker logout ghcr.io
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - name: Publish version manifest
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          if docker buildx imagetools inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
+            echo 'Version already exists; bump the release version instead of overwriting it.' >&2
+            exit 1
+          fi
+          docker buildx imagetools create --tag "$IMAGE:$VERSION" "$IMAGE:$GITHUB_SHA-amd64" "$IMAGE:$GITHUB_SHA-arm64"
+          docker buildx imagetools inspect "$IMAGE:$VERSION" >> "$GITHUB_STEP_SUMMARY"
+      - name: Logout
+        if: always()
+        run: docker logout ghcr.io

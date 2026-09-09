@@ -31,7 +31,9 @@
     "desktop:dev": "node scripts/run-desktop.mjs",
     "desktop:stage": "pnpm run build && node scripts/stage-desktop.mjs",
     "desktop:package": "node scripts/package-desktop.mjs",
-    "verify:desktop": "node scripts/verify-desktop.mjs"
+    "verify:desktop": "node scripts/verify-desktop.mjs",
+    "sync-server:package": "node scripts/sync-server/package.mjs",
+    "sync-server:verify": "python3 tests/sync-server/verify_docker.py"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.2",
