@@ -3,6 +3,7 @@ name: Publish Nook Sync
 on:
   push:
     tags: ['sync-server-v*']
+    branches: ['release/nook-sync-*']
   workflow_dispatch:
 
 permissions:
