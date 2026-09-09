@@ -4,7 +4,7 @@ import { once } from 'node:events'
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { ROOT, runPnpm } from '../../scripts/profile/profile-lib.mjs'
@@ -58,7 +58,9 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   ]) {
     await cp(resolve(ROOT, name), resolve(root, name), {
       recursive: true,
-      filter: path => !path.split('/').some(part => ['node_modules', 'lib', 'dist', 'resources'].includes(part)),
+      filter: path =>
+        !path.split('/').some(part => ['node_modules', 'dist', 'resources'].includes(part)) &&
+        !/^packages\/[^/]+\/lib(?:\/|$)/.test(relative(ROOT, path).replaceAll('\\', '/')),
     })
   }
   // Use the same checksum-verified runtime cache as the actual desktop packager.
@@ -143,7 +145,7 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   assert.equal(await page.getByRole('button', { name: '打开 Nook HMR 2', exact: true }).count(), 1)
   await writeFile(sourcePath, original.replace('aria-label="打开 Nook"', 'aria-label="打开 Nook recovered"'))
   await page.getByRole('button', { name: '打开 Nook recovered', exact: true }).waitFor({ timeout: 30_000 })
-  const cssPath = resolve(root, 'packages/ui-notes/src/client/style.css')
+  const cssPath = resolve(root, 'packages/ui-notes/src/client/styles/index.css')
   await writeFile(cssPath, (await readFile(cssPath, 'utf8')) + '\n.nook-workspace { --nook-hmr-probe: verified; }\n')
   await page.waitForFunction(() => {
     const element = document.querySelector('.nook-workspace')

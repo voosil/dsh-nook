@@ -34,7 +34,7 @@ async function collect(directory, accept, result = new Map(), base = directory) 
 }
 
 export async function sourceSnapshot(root) {
-  const files = await collect(resolve(root, 'packages'), path => !path.split('/').includes('lib'))
+  const files = await collect(resolve(root, 'packages'), path => !/^[^/]+\/lib(?:\/|$)/.test(path))
   for (const [name, value] of await collect(resolve(root, 'scripts/sync-server'), () => true))
     files.set('scripts/sync-server/' + name, value)
   for (const name of [

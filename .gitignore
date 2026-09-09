@@ -1,6 +1,7 @@
 node_modules/
 .pnpm-store/
 lib/
+!/packages/*/src/client/lib/
 *.tsbuildinfo
 .dsh-dev/
 .nook-backups/

@@ -3,18 +3,8 @@ import { Cloud, RefreshCw, X } from 'lucide-react'
 import { SyncGuidePage } from './sync-guide.js'
 import type { SyncStatus, SyncConflict, Json } from '@nook-dsh/capability-sync'
 import { parseSyncConnection, CONNECTION_FILE_LIMIT } from '@nook-dsh/capability-sync'
-import type { SyncRemote, Method, Request, Value, Result } from '@nook-dsh/adapter-sync-dsh/rpc'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
-export type SyncApi = <K extends Method>(method: K, request: Request<K>, signal?: AbortSignal) => Promise<Value<K>>
-export function syncApi(remote: SyncRemote): SyncApi {
-  return async <K extends Method>(method: K, request: Request<K>, signal?: AbortSignal): Promise<Value<K>> => {
-    const call = remote[method] as (r: Request<K>, s?: AbortSignal) => Promise<RemoteResult<Result<Value<K>>>>
-    const response = await call(request, signal)
-    if (!response.ok) throw new Error(response.error.message)
-    if (!response.value.ok) throw new Error(response.value.error.message)
-    return response.value.value
-  }
-}
+import type { SyncApi } from '../lib/sync-api.js'
+
 function preview(data: Json) {
   if (data && typeof data === 'object' && !Array.isArray(data) && 'markdown' in data) return String(data.markdown)
   return JSON.stringify(data, null, 2)

@@ -16,7 +16,7 @@ import VideoSource from '../../packages/adapter-video-platform/src/index.ts'
 import * as VideoEditor from '../../packages/provider-video-editor/src/index.ts'
 import { requests } from '../../packages/adapter-notes-dsh/src/rpc.ts'
 import Rpc from '../../packages/adapter-notes-dsh/src/index.ts'
-import { Autosave } from '../../packages/ui-notes/src/client/autosave.ts'
+import { Autosave } from '../../packages/ui-notes/src/client/lib/autosave.ts'
 import type { CreateNoteRequest, NoteDto } from '../../packages/capability-note/src/index.ts'
 
 function input(markdown: string): CreateNoteRequest {

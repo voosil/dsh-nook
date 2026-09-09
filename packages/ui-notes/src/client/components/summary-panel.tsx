@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ProjectDto } from '@nook-dsh/capability-project'
 import type { NoteDto } from '@nook-dsh/capability-note'
 import type { Value } from '@nook-dsh/adapter-notes-dsh/rpc'
-import type { Api } from './index.js'
+import type { Api } from '../lib/api.js'
 
 function localDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`

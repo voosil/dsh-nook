@@ -17,11 +17,14 @@ async function until(predicate: () => boolean) {
 test('watcher serializes edits, keeps running after build failure, and separates Client from Host updates', async t => {
   const root = await mkdtemp(join(tmpdir(), 'nook-watch-test-'))
   const controller = new AbortController()
-  await mkdir(resolve(root, 'packages/ui/src/client'), { recursive: true })
+  await mkdir(resolve(root, 'packages/ui/src/client/lib'), { recursive: true })
   await mkdir(resolve(root, 'packages/ui/lib'), { recursive: true })
-  const client = resolve(root, 'packages/ui/src/client/index.tsx')
+  const client = resolve(root, 'packages/ui/src/client/lib/api.ts')
   await writeFile(client, 'first')
   await writeFile(resolve(root, 'packages/ui/lib/index.js'), 'export const name = "ui"')
+  const initial = await sourceSnapshot(root)
+  assert.ok(initial.has('ui/src/client/lib/api.ts'), 'Client lib sources must be watched')
+  assert.ok(!initial.has('ui/lib/index.js'), 'compiled lib output must not trigger source rebuilds')
   let builds = 0
   let restarts = 0
   let rejectBuild = false
@@ -29,7 +32,7 @@ test('watcher serializes edits, keeps running after build failure, and separates
   const messages: string[] = []
   const watching = watchSources({
     root,
-    initial: await sourceSnapshot(root),
+    initial,
     signal: controller.signal,
     report: (message: string) => messages.push(message),
     build: async () => {

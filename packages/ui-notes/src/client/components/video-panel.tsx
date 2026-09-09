@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import type { Api } from './index.js'
+import type { Api } from '../lib/api.js'
 import type { Value } from '@nook-dsh/adapter-notes-dsh/rpc'
 import type { ProjectDto } from '@nook-dsh/capability-project'
 
