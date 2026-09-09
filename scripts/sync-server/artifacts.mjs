@@ -40,10 +40,14 @@ export async function dockerArtifacts(replacements = {}) {
     parts.push(header, bytes, Buffer.alloc((512 - (bytes.length % 512)) % 512))
   }
   parts.push(Buffer.alloc(1024))
+  const archive = gzipSync(Buffer.concat(parts), { level: 9 })
+  // gzip's OS byte otherwise differs on macOS and Linux, breaking the embedded
+  // checksum chain. Use the Linux release runner's header on every build host.
+  archive[9] = 3
   return {
     version: serverVersion,
     filename: `nook-sync-${serverVersion}.tar.gz`,
-    archive: gzipSync(Buffer.concat(parts), { level: 9 }),
+    archive,
   }
 }
 

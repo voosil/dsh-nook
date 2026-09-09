@@ -85,6 +85,7 @@ test('downloaded Docker archive contains exact allowlisted build sources and no 
   const directory = await mkdtemp(join(tmpdir(), 'nook-deployment-'))
   try {
     const artifact = await dockerArtifacts()
+    assert.deepEqual([...artifact.archive.subarray(0, 10)], [31, 139, 8, 0, 0, 0, 0, 0, 2, 3])
     assert.deepEqual(artifact.archive, (await dockerArtifacts()).archive)
     const archive = join(directory, artifact.filename)
     await writeFile(archive, artifact.archive)
