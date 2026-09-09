@@ -169,7 +169,7 @@
 .nook-nav-bottom button {
   text-align: left;
 }
-.nook-nav-bottom p {
+.nook-nav-bottom > p {
   border-top: 1px solid var(--nook-border);
   margin-top: 15px;
   padding: 16px 8px 0;
@@ -697,4 +697,182 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.nook-sync-modal {
+  width: min(720px, 92vw);
+  max-width: 720px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.nook-sync-modal label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.nook-sync-modal input,
+.nook-sync-modal textarea {
+  box-sizing: border-box;
+  width: 100%;
+}
+.nook-sync-modal .nook-heading {
+  align-items: center;
+  margin-bottom: 16px;
+}
+.nook-sync-modal .nook-heading h2 {
+  margin-bottom: 0;
+}
+.nook-sync-modal .nook-actions {
+  flex-wrap: wrap;
+}
+.nook-sync-conflicts article {
+  border-top: 1px solid var(--background-modifier-border, #ddd);
+  margin-top: 18px;
+  padding-top: 12px;
+}
+.nook-sync-conflicts textarea {
+  margin: 8px 0;
+}
+.nook-nav-bottom small {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.nook-sync-guide-entry {
+  display: inline-block;
+  margin: 10px 0;
+  text-decoration: underline;
+}
+.nook-sync-guide-page {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow-y: auto;
+  background: var(--nook-bg);
+}
+.nook-sync-guide-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px max(24px, calc((100vw - 900px) / 2));
+  border-bottom: 1px solid var(--nook-border);
+}
+.nook-sync-guide-page .nook-sync-guide-body {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  font-size: 15px;
+}
+.nook-sync-guide-page h1 {
+  font-size: 30px;
+  margin-bottom: 16px;
+}
+.nook-sync-guide-page h2 {
+  font-size: 23px;
+  margin: 36px 0 18px;
+}
+.nook-sync-guide-page p {
+  margin: 14px 0;
+}
+.nook-sync-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin: 20px 0;
+}
+.nook-sync-guide-actions button {
+  background: var(--nook-accent);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+}
+.nook-sync-guide-page textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  font:
+    12px/1.5 ui-monospace,
+    monospace;
+}
+.nook-sync-guide-table {
+  overflow-x: auto;
+}
+.nook-sync-guide-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+}
+.nook-sync-guide-table th,
+.nook-sync-guide-table td {
+  border: 1px solid var(--nook-border);
+  text-align: left;
+  padding: 12px;
+}
+.nook-sync-guide-page summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.nook-sync-guide-page summary:focus-visible {
+  outline: 2px solid var(--nook-accent);
+  outline-offset: 3px;
+}
+.nook-sync-guide-body {
+  padding: 0 14px 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.nook-sync-guide-body details {
+  margin-top: 10px;
+  border-top: 1px solid var(--background-modifier-border, #ddd);
+}
+.nook-sync-guide-body summary {
+  padding: 12px 0;
+}
+.nook-sync-guide-body h3,
+.nook-sync-guide-body h4 {
+  margin: 14px 0 6px;
+}
+.nook-sync-guide-body ol,
+.nook-sync-guide-body ul {
+  padding-left: 22px;
+  list-style-position: outside;
+}
+.nook-sync-guide-body ol {
+  list-style-type: decimal;
+}
+.nook-sync-guide-body ul {
+  list-style-type: disc;
+}
+.nook-sync-guide-body li {
+  margin: 7px 0;
+}
+.nook-sync-guide-body pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--background-secondary, #f3f4f2);
+  white-space: pre;
+  font:
+    12px/1.6 ui-monospace,
+    monospace;
+}
+.nook-sync-guide-body a {
+  color: var(--text-accent, #3c705c);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nook-sync-guide-callout {
+  border-left: 3px solid var(--interactive-accent, #537466);
+  padding-left: 10px;
+}
+.nook-sync-guide-body dt {
+  font-weight: 600;
+  margin-top: 12px;
+}
+.nook-sync-guide-body dd {
+  margin: 4px 0 12px;
 }

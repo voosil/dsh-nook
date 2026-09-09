@@ -1,0 +1,24 @@
+services:
+  sync:
+    image: ghcr.io/voosil/nook-sync:0.1.0
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 40s
+    environment:
+      NOOK_MODE: ${NOOK_MODE:-vpn}
+      NOOK_HOST: ${NOOK_HOST:?请在 .env 中填写客户端可达的服务器地址}
+      NOOK_PORT: ${NOOK_PORT:-8443}
+      NOOK_EMAIL: ${NOOK_EMAIL:-}
+      NOOK_ACCEPT_ACME_TERMS: ${NOOK_ACCEPT_ACME_TERMS:-false}
+    ports:
+      - '${NOOK_BIND_IP:-0.0.0.0}:${NOOK_PORT:-8443}:${NOOK_PORT:-8443}'
+    volumes:
+      - sync-data:/var/lib/nook-sync
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+volumes:
+  sync-data:

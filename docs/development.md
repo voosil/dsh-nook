@@ -25,6 +25,12 @@ Development starts with fresh data and credentials. Configure development models
 
 Usage data, migration, working directory and shutdown behavior belong to the [formal runtime guide](runtime.md). Both Web and desktop use the same data lock and verified pre-start backup. Backup scope and recovery commands are described in the [backup guide](backup.md).
 
+## Repository scripts
+
+Scripts are grouped by responsibility: `scripts/build/` bundles Client and desktop code; `scripts/profile/` manages Profile setup, launchers, development watching and packed installation; `scripts/desktop/` prepares the desktop runtime and distribution; `scripts/verify/` contains repository checks and runtime acceptance; `scripts/data/` provides backup and recovery commands; `scripts/shared/` holds reusable process, port and peer-policy helpers. The [sync server tools](../scripts/sync-server/README.md) own deployment assets in `scripts/sync-server/`.
+
+The [root package scripts](../package.json) define the public command names. Internal imports and test fixtures follow the same directory layout.
+
 ## Verification
 
-The [mode acceptance test](../tests/e2e/dev-modes.test.ts) creates a disposable workspace and opens both modes in Chrome. It checks repeated Client updates, CSS/Slot remounting, build-failure recovery, Host restart/reconnection, usage snapshot isolation and process cleanup. The [watcher integration test](../tests/integration/dev-watch.test.ts) covers edits during an in-flight build and shutdown. The [package gate](../scripts/verify-package.mjs) uses the same snapshot installer as usage startup.
+The [mode acceptance test](../tests/e2e/dev-modes.test.ts) creates a disposable workspace and opens both modes in Chrome. It checks repeated Client updates, CSS/Slot remounting, build-failure recovery, Host restart/reconnection, usage snapshot isolation and process cleanup. The [watcher integration test](../tests/integration/dev-watch.test.ts) covers edits during an in-flight build and shutdown. The [package gate](../scripts/verify/verify-package.mjs) uses the same snapshot installer as usage startup.

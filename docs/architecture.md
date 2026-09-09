@@ -6,7 +6,7 @@ The runnable Nook application is the `nook` Profile. Its ordered layers are the 
 
 | Contract                                                     | Responsibility                                | Default implementation                     |
 | ------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------ |
-| [Project](../packages/capability-project/src/index.ts)       | The single optional classification of notes   | Local project provider                     |
+| [Project](../packages/capability-project/src/index.ts)       | The single optional classification of notes   | Local notebook provider                    |
 | [Note](../packages/capability-note/src/index.ts)             | Versioned Markdown and provenance             | Local notebook provider                    |
 | [Knowledge](../packages/capability-knowledge/src/index.ts)   | Search evidence and session preferences       | Local notebook provider                    |
 | [Generation](../packages/capability-generation/src/index.ts) | Model catalog and cancellable text generation | DSH intelligence adapter                   |
@@ -17,6 +17,8 @@ The runnable Nook application is the `nook` Profile. Its ordered layers are the 
 Capability packages contain DTOs, errors, events and interfaces. Features depend on these contracts. The notebook provider shares one transaction owner between note persistence and retrieval indexing. Reflection and video orchestrate capabilities; the knowledge conversation adapter can operate without either feature.
 
 Local persistence providers share a [backup library](../packages/storage-backup/src/index.ts) for durable recovery records. The same library supports offline snapshots and recovery commands; it contributes no runtime service. Behavior and scope belong in the [backup guide](backup.md).
+
+The [Sync capability](../packages/capability-sync/src/index.ts) separates type registration, transactional replica storage and remote object access. The notebook provider supplies projects, notes, knowledge and the replica from one SQLite transaction owner; the sync feature orchestrates records and blob dependencies through the WebDAV adapter. The [sync contract](../packages/feature-sync/README.md) owns wire format, limits, conflict semantics and target compatibility.
 
 ## Host and Client
 

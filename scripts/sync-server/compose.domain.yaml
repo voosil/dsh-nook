@@ -1,0 +1,5 @@
+# 域名模式额外开放 HTTP-01 证书验证端口。
+services:
+  sync:
+    ports:
+      - '${NOOK_BIND_IP:-0.0.0.0}:80:80'

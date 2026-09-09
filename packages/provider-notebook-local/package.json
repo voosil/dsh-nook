@@ -17,7 +17,10 @@
   "dependencies": {
     "@nook-dsh/capability-note": "workspace:*",
     "@nook-dsh/capability-knowledge": "workspace:*",
-    "@nook-dsh/storage-backup": "workspace:*"
+    "@nook-dsh/storage-backup": "workspace:*",
+    "@nook-dsh/storage-sync": "workspace:*",
+    "@nook-dsh/capability-sync": "workspace:*",
+    "@nook-dsh/capability-project": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.2",

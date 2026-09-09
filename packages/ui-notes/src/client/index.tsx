@@ -47,6 +47,8 @@ import { Autosave } from './autosave.js'
 import css from './style.css'
 import { SummaryPanel } from './summary.js'
 import { VideoPanel } from './video.js'
+import { SyncControl, syncApi, type SyncApi } from './sync.js'
+import { descriptors as syncDescriptors, RPC_PACKAGE as SYNC_PACKAGE } from '@nook-dsh/adapter-sync-dsh/rpc'
 
 export const inject = ['slots', 'remote']
 export type Api = <K extends Method>(method: K, request: Request<K>, signal?: AbortSignal) => Promise<Value<K>>
@@ -208,7 +210,7 @@ function RichEditor({
   )
 }
 
-type EditorHandle = { flush: () => Promise<boolean> }
+type EditorHandle = { flush: () => Promise<boolean>; dirty: () => boolean; revision: () => number }
 function NoteEditor({
   initial,
   projects,
@@ -320,7 +322,11 @@ function NoteEditor({
     }
   }, [])
   useEffect(() => {
-    handle.current = { flush: () => (blocked ? Promise.resolve(false) : controller.flush()) }
+    handle.current = {
+      flush: () => (blocked ? Promise.resolve(false) : controller.flush()),
+      dirty: () => controller.dirty,
+      revision: () => controller.note.revision,
+    }
     return () => {
       handle.current = null
     }
@@ -363,7 +369,7 @@ function NoteEditor({
                   ? '未保存'
                   : state === 'error'
                     ? '保存失败'
-                    : '已保存 · 已入库'}
+                    : '已保存到本地 · 已入库'}
           </span>
           <Button onClick={download}>导出</Button>
           <Button disabled={busy || blocked} onClick={() => void trash()}>
@@ -450,7 +456,10 @@ function NoteEditor({
   )
 }
 
-function NotebookApp({ api, close }: { api: Api; close: () => void }) {
+function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; close: () => void }) {
+  const [syncChange, setSyncChange] = useState(0)
+  const [editorEpoch, setEditorEpoch] = useState(0)
+  const [remoteChanged, setRemoteChanged] = useState(false)
   const [projects, setProjects] = useState<readonly ProjectDto[]>([])
   const [notes, setNotes] = useState<readonly NoteDto[]>([])
   const [selected, setSelected] = useState<NoteDto | null>(null)
@@ -471,6 +480,34 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
   const [deleteProject, setDeleteProject] = useState<ProjectDto | null>(null)
   const handle = useRef<EditorHandle | null>(null)
   const panel = useRef<HTMLDivElement>(null)
+  const selectedRef = useRef(selected)
+  selectedRef.current = selected
+  useEffect(() => setRemoteChanged(false), [selected?.id])
+  useEffect(() => {
+    const controller = new AbortController()
+    setRefresh(value => value + 1)
+    const current = selectedRef.current
+    if (current)
+      void api('get', { id: current.id }, controller.signal)
+        .then(next => {
+          if (
+            !next ||
+            controller.signal.aborted ||
+            selectedRef.current?.id !== current.id ||
+            next.revision === handle.current?.revision()
+          )
+            return
+          if (handle.current?.dirty()) {
+            setRemoteChanged(true)
+            return
+          }
+          setSelected(next)
+          setEditorEpoch(value => value + 1)
+          setRemoteChanged(false)
+        })
+        .catch(() => {})
+    return () => controller.abort()
+  }, [syncChange])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -695,6 +732,7 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
           {!projects.length && <p className="nook-muted">想法可以先不分类。</p>}
         </nav>
         <div className="nook-nav-bottom">
+          <SyncControl api={sync} onChanged={setSyncChange} />
           <Button onClick={() => void navigate(() => setVideoOpen(true))}>
             <Video size={16} aria-hidden="true" /> 视频转文稿
           </Button>
@@ -710,6 +748,11 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
         </div>
       </aside>
       <main className="nook-main">
+        {remoteChanged && (
+          <p className="nook-error" role="status">
+            这条笔记在其他设备有更新，当前输入已保留。可另存为新笔记后重新打开。
+          </p>
+        )}
         {error && (
           <div className="nook-error" role="alert">
             {error}{' '}
@@ -846,7 +889,7 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
             </section>
             {selected ? (
               <NoteEditor
-                key={selected.id}
+                key={`${selected.id}:${editorEpoch}`}
                 initial={selected}
                 api={api}
                 projects={projects}
@@ -866,12 +909,11 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
             ) : (
               <section className="nook-welcome">
                 <Sprout className="nook-welcome-mark" size={60} strokeWidth={1.5} aria-hidden="true" />
-                <small>A LITTLE SPACE FOR YOUR MIND</small>
+                <small>NOOK FOR YOUR MIND</small>
                 <h2>让想法，有处安放。</h2>
                 <button className="nook-new" disabled={busy} onClick={() => void create()}>
                   <Plus size={16} aria-hidden="true" /> 写一条笔记
                 </button>
-                <div className="nook-welcome-foot">选择左侧笔记，继续上一次的思考。</div>
               </section>
             )}
           </div>
@@ -980,11 +1022,13 @@ function NotebookApp({ api, close }: { api: Api; close: () => void }) {
 
 export async function apply(ctx: ClientContext): Promise<void> {
   await ctx.remote.$mount({ package: RPC_PACKAGE, descriptors })
-  ctx.inject(['remote.nookNotebookRpc', 'slots'], mountWorkspace)
+  await ctx.remote.$mount({ package: SYNC_PACKAGE, descriptors: syncDescriptors })
+  ctx.inject(['remote.nookNotebookRpc', 'remote.nookSyncRpc', 'slots'], mountWorkspace)
 }
 
 function mountWorkspace(ctx: ClientContext): void {
   const remote: NotebookRemote = ctx.remote.nookNotebookRpc
+  const sync = syncApi(ctx.remote.nookSyncRpc)
   const api: Api = async <K extends Method>(
     method: K,
     request: Request<K>,
@@ -1003,7 +1047,12 @@ function mountWorkspace(ctx: ClientContext): void {
   const listeners = new Set<() => void>()
   const setOpen = (value: boolean) => {
     open = value
-    if (!value && (window.location.hash === '#nook' || window.location.hash.startsWith('#nook-note='))) {
+    if (
+      !value &&
+      (window.location.hash === '#nook' ||
+        window.location.hash === '#nook-sync-guide' ||
+        window.location.hash.startsWith('#nook-note='))
+    ) {
       window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
     }
     for (const listener of listeners) listener()
@@ -1018,11 +1067,16 @@ function mountWorkspace(ctx: ClientContext): void {
       },
       () => open,
     )
-    return visible ? <NotebookApp api={api} close={() => setOpen(false)} /> : null
+    return visible ? <NotebookApp api={api} sync={sync} close={() => setOpen(false)} /> : null
   }
   ctx.effect(() => {
     const openHash = () => {
-      if (window.location.hash === '#nook' || window.location.hash.startsWith('#nook-note=')) setOpen(true)
+      if (
+        window.location.hash === '#nook' ||
+        window.location.hash === '#nook-sync-guide' ||
+        window.location.hash.startsWith('#nook-note=')
+      )
+        setOpen(true)
     }
     window.addEventListener('hashchange', openHash)
     return () => {

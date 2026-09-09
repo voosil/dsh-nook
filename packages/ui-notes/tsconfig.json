@@ -17,6 +17,12 @@
     },
     {
       "path": "../capability-project"
+    },
+    {
+      "path": "../adapter-sync-dsh"
+    },
+    {
+      "path": "../capability-sync"
     }
   ]
 }

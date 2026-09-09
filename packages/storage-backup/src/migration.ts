@@ -110,9 +110,17 @@ function mergeProjects(source: string, target: string) {
 }
 
 function mergeNotebook(source: string, target: string) {
+  // Identical snapshots can move with their complete sync history and binding.
+  const identical = readFileSync(source).equals(readFileSync(target))
   const incoming = new DatabaseSync(source, { readOnly: true })
   const current = new DatabaseSync(target)
   try {
+    for (const db of [incoming, current]) {
+      if (!identical && db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sync_state'").get())
+        throw new Error(
+          'Cannot automatically merge different sync-enabled notebooks; preserve both libraries and use data sync to reconcile them. Originals and verified backups are retained.',
+        )
+    }
     // These are Nook-owned schemas, verified against provider-notebook-local.
     const expected = {
       notes: [
@@ -131,8 +139,18 @@ function mergeNotebook(source: string, target: string) {
       knowledge_sessions: ['id', 'enabled', 'project_id'],
       knowledge_fts: ['terms'],
     }
+    const syncExpected = current.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sync_state'").get()
+      ? {
+          projects: ['id', 'data', 'deleted'],
+          sync_versions: ['hash', 'body', 'pending'],
+          sync_heads: ['key', 'hash'],
+          sync_working: ['key', 'hash'],
+          sync_state: ['key', 'value'],
+        }
+      : {}
+    const allExpected = { ...expected, ...syncExpected }
     const tables = new Set([
-      ...Object.keys(expected),
+      ...Object.keys(allExpected),
       'knowledge_fts_data',
       'knowledge_fts_idx',
       'knowledge_fts_content',
@@ -143,7 +161,7 @@ function mergeNotebook(source: string, target: string) {
       for (const row of db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all())
         if (!String(row.name).startsWith('sqlite_') && !tables.has(String(row.name)))
           throw new Error(`Unsupported notebook table: ${row.name}`)
-      for (const [table, names] of Object.entries(expected))
+      for (const [table, names] of Object.entries(allExpected))
         if (
           !equivalent(
             db
@@ -155,6 +173,7 @@ function mergeNotebook(source: string, target: string) {
         )
           throw new Error(`Unsupported notebook schema: ${table}`)
     }
+    if (identical) return
     current.exec('BEGIN IMMEDIATE')
     for (const table of ['notes', 'knowledge_sessions'] as const) {
       const columns = expected[table]

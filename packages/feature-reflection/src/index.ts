@@ -13,7 +13,7 @@ export interface SummaryRequest {
 export interface SummaryPreview {
   readonly title: string
   readonly markdown: string
-  readonly basedOn: readonly { readonly noteId: string; readonly revision: number }[]
+  readonly basedOn: readonly { readonly noteId: string; readonly revision: number; readonly versionId?: string }[]
 }
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -81,7 +81,11 @@ export default class ReflectionFeature extends Service {
     return {
       title: request.title,
       markdown,
-      basedOn: notes.map((note: NoteDto) => ({ noteId: note.id, revision: note.revision })),
+      basedOn: notes.map((note: NoteDto) => ({
+        noteId: note.id,
+        revision: note.revision,
+        ...(note.versionId ? { versionId: note.versionId } : {}),
+      })),
     }
   }
   private generate(request: SummaryRequest, instruction: string, text: string, signal: AbortSignal) {

@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url'
 import { test } from 'node:test'
 import { promisify } from 'node:util'
 import { acquireDataLock } from '../../packages/storage-backup/src/index.ts'
-import { LOCAL_PACKAGES, ROOT } from '../../scripts/profile-lib.mjs'
+import { LOCAL_PACKAGES, ROOT } from '../../scripts/profile/profile-lib.mjs'
 
 const execute = promisify(execFile)
 
@@ -15,7 +15,7 @@ test('refreshing a development Profile preserves existing user patch configurati
   const root = await mkdtemp(join(tmpdir(), 'nook-profile-data-'))
   t.after(() => rm(root, { recursive: true, force: true }))
   for (const name of [
-    'scripts/profile-lib.mjs',
+    'scripts/profile/profile-lib.mjs',
     'pnpm-lock.yaml',
     ...LOCAL_PACKAGES.map(name => `packages/${name}/package.json`),
   ]) {
@@ -31,7 +31,7 @@ test('refreshing a development Profile preserves existing user patch configurati
     [
       '--input-type=module',
       '-e',
-      `const { writeDevProfile } = await import(${JSON.stringify(pathToFileURL(join(root, 'scripts/profile-lib.mjs')).href)}); await writeDevProfile();`,
+      `const { writeDevProfile } = await import(${JSON.stringify(pathToFileURL(join(root, 'scripts/profile/profile-lib.mjs')).href)}); await writeDevProfile();`,
     ],
     {
       cwd: root,
@@ -50,7 +50,7 @@ test('backup CLI round trip, nonzero failures and cross-process runtime exclusio
   await mkdir(source)
   await writeFile(join(source, 'user-data'), '需要保护的数据')
   const cli = (...args: string[]) =>
-    execute(process.execPath, ['--import', 'tsx', resolve(ROOT, 'scripts/data-backup.mjs'), ...args], {
+    execute(process.execPath, ['--import', 'tsx', resolve(ROOT, 'scripts/data/data-backup.mjs'), ...args], {
       cwd: ROOT,
       env: { ...process.env, DSH_HOME: root },
       timeout: 10_000,

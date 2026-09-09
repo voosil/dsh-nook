@@ -8,7 +8,7 @@ The development Profile links Nook packages whose entry points target ignored bu
 
 ## Decision
 
-The [shared development launcher](../../../scripts/run-profile.mjs) awaits the repository build before preparing the Profile or starting DSH. The [runtime modes](../feature/2026-09-08-development-modes.md) define subsequent watching and port ownership. Both normal and Safe UI startup use this path. A build failure prevents boot. The [quick start](../../../README.md#quick-start) describes the startup behavior.
+The [shared development launcher](../../../scripts/profile/run-profile.mjs) awaits the repository build before preparing the Profile or starting DSH. The [runtime modes](../feature/2026-09-08-development-modes.md) define subsequent watching and port ownership. Both normal and Safe UI startup use this path. A build failure prevents boot. The [quick start](../../../README.md#quick-start) describes the startup behavior.
 
 ## Alternatives considered
 
@@ -18,7 +18,7 @@ Building only when an entry point is missing addresses a clean checkout but leav
 
 ## Validation
 
-The [launcher integration tests](../../../tests/integration/dev-startup.test.ts) execute the real launcher scripts in disposable workspaces. An artifact consumer verifies missing and stale Host/Client output in both modes, and a failing build prevents consuming existing output. The [Profile acceptance tests](../../../tests/e2e/profile-boot.test.ts) cover actual pinned DSH boot and the rendered application; the [package gate](../../../scripts/verify-package.mjs) checks isolated tarball installation.
+The [launcher integration tests](../../../tests/integration/dev-startup.test.ts) execute the real launcher scripts in disposable workspaces. An artifact consumer verifies missing and stale Host/Client output in both modes, and a failing build prevents consuming existing output. The [Profile acceptance tests](../../../tests/e2e/profile-boot.test.ts) cover actual pinned DSH boot and the rendered application; the [package gate](../../../scripts/verify/verify-package.mjs) checks isolated tarball installation.
 
 ## Consequences
 

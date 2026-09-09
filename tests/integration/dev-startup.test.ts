@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { test, type TestContext } from 'node:test'
 import { promisify } from 'node:util'
-import { ROOT } from '../../scripts/profile-lib.mjs'
+import { ROOT } from '../../scripts/profile/profile-lib.mjs'
 
 const execute = promisify(execFile)
 
@@ -43,22 +43,23 @@ async function launcherFixture(t: TestContext) {
     await writeFile(target, content)
   }
   await mkdir(resolve(root, '.dsh-dev/profiles/nook/node_modules'))
-  await mkdir(resolve(root, 'scripts'))
   for (const script of [
-    'run-profile.mjs',
-    'profile-lib.mjs',
-    'run-profile-args.mjs',
-    'process-scope.mjs',
-    'dev-watch.mjs',
-    'dev-sandbox.mjs',
+    'profile/run-profile.mjs',
+    'profile/profile-lib.mjs',
+    'profile/run-profile-args.mjs',
+    'shared/process-scope.mjs',
+    'profile/dev-watch.mjs',
+    'profile/dev-sandbox.mjs',
   ]) {
-    await copyFile(resolve(ROOT, 'scripts', script), resolve(root, 'scripts', script))
+    const target = resolve(root, 'scripts', script)
+    await mkdir(dirname(target), { recursive: true })
+    await copyFile(resolve(ROOT, 'scripts', script), target)
   }
 
   return {
     root,
     launch: (args: string[] = []) =>
-      execute(process.execPath, [resolve(root, 'scripts/run-profile.mjs'), ...args, '--port', '0'], {
+      execute(process.execPath, [resolve(root, 'scripts/profile/run-profile.mjs'), ...args, '--port', '0'], {
         cwd: root,
         env: { ...process.env, DSH_HOME: resolve(root, '.dsh-dev') },
         timeout: 15_000,

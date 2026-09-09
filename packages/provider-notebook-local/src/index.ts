@@ -1,9 +1,10 @@
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, existsSync, readFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { dirname, resolve } from 'node:path'
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
 import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import { writeRecoveryRecord } from '@nook-dsh/storage-backup'
+import { createBackup, writeRecoveryRecord } from '@nook-dsh/storage-backup'
 import {
   NoteError,
   noteTitle,
@@ -15,19 +16,33 @@ import {
   type CreateNoteRequest,
   type SaveNoteRequest,
 } from '@nook-dsh/capability-note'
+import { Replica } from '@nook-dsh/storage-sync'
+import { SyncError, type Json, type RecordVersion, type SyncReplica } from '@nook-dsh/capability-sync'
+import {
+  ProjectError,
+  type ProjectDto,
+  type ProjectEvent,
+  type ProjectEventListener,
+  type ProjectService,
+  type CreateProjectRequest,
+  type UpdateProjectRequest,
+} from '@nook-dsh/capability-project'
 import type { KnowledgeService, KnowledgeQuery, KnowledgeHit } from '@nook-dsh/capability-knowledge'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
     nookNotes: NoteService
     nookKnowledge: KnowledgeService
+    nookProjects: ProjectService
+    nookSyncReplica: SyncReplica
   }
 }
 
 export interface Config {
   readonly file: string
+  readonly projectsFile?: string
 }
-export const Config: z<Config> = z.object({ file: z.string().required() })
+export const Config: z<Config> = z.object({ file: z.string().required(), projectsFile: z.string() })
 
 /** CJK bigrams plus Latin words make FTS5 usable for Chinese without a model. */
 export function tokens(text: string): string[] {
@@ -77,11 +92,15 @@ function fromRow(row: Row): NoteDto {
 class Notebook {
   readonly db: DatabaseSync
   readonly backups: string
-  constructor(file: string) {
+  readonly replica?: Replica
+  constructor(file: string, projectsFile?: string) {
     this.backups = `${resolve(file)}.backups`
     mkdirSync(dirname(resolve(file)), { recursive: true })
+    const existed = existsSync(file)
     this.db = new DatabaseSync(resolve(file))
     try {
+      if (projectsFile && existed && !this.db.prepare("SELECT name FROM sqlite_schema WHERE name='sync_state'").get())
+        createBackup(dirname(resolve(file)), `${dirname(resolve(file))}.sync-backups`, 'sync-schema-migration')
       this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
         CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, title TEXT NOT NULL, markdown TEXT NOT NULL, project_id TEXT, pinned INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, revision INTEGER NOT NULL, source TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS notes_project ON notes(project_id, deleted_at);
@@ -90,6 +109,100 @@ class Notebook {
         CREATE TABLE IF NOT EXISTS knowledge_sessions (id TEXT PRIMARY KEY, enabled INTEGER NOT NULL, project_id TEXT);
         CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(terms);
       `)
+      if (projectsFile) {
+        this.replica = new Replica(this.db, `${resolve(file)}.files`, this.backups, () => {
+          createBackup(dirname(resolve(file)), `${dirname(resolve(file))}.sync-backups`, 'enable-sync')
+        })
+        this.db.exec(
+          'CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY, data TEXT NOT NULL, deleted INTEGER NOT NULL)',
+        )
+        this.replica.register({
+          type: 'project',
+          schema: 1,
+          validate: validateProjectVersion,
+          apply: value => {
+            this.db
+              .prepare(
+                'INSERT INTO projects VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,deleted=excluded.deleted',
+              )
+              .run(value.id, JSON.stringify(value.data), value.deleted ? 1 : 0)
+          },
+          copy: (v, id) =>
+            json({
+              ...(v.data as object),
+              id,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }),
+        })
+        this.replica.register({
+          type: 'note',
+          schema: 1,
+          validate: validateNoteVersion,
+          apply: value => {
+            const note = value.data as unknown as Omit<NoteDto, 'revision'>
+            const previous = this.get(value.id)
+            this.db
+              .prepare(
+                'INSERT INTO notes VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,markdown=excluded.markdown,project_id=excluded.project_id,pinned=excluded.pinned,created_at=excluded.created_at,updated_at=excluded.updated_at,deleted_at=excluded.deleted_at,revision=excluded.revision,source=excluded.source',
+              )
+              .run(
+                value.id,
+                note.title,
+                note.markdown,
+                note.projectId,
+                note.pinned ? 1 : 0,
+                note.createdAt,
+                note.updatedAt,
+                note.deletedAt,
+                (previous?.revision ?? 0) + 1,
+                JSON.stringify(note.source),
+              )
+            this.index(this.get(value.id)!)
+          },
+          copy: (v, id) =>
+            json({
+              ...(v.data as object),
+              id,
+              title: `${String((v.data as Record<string, Json>).title)}（冲突副本）`.slice(0, 300),
+              deletedAt: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }),
+        })
+        this.replica.afterApply = () => this.normalizeProjects()
+        this.replica.transaction(() => {
+          if (!this.db.prepare("SELECT value FROM sync_state WHERE key='projects-migrated'").get()) {
+            if (existsSync(projectsFile)) {
+              const legacy = JSON.parse(readFileSync(projectsFile, 'utf8')) as {
+                version: number
+                projects: ProjectDto[]
+              }
+              if (legacy.version !== 1 || !Array.isArray(legacy.projects))
+                throw new SyncError('旧项目文件格式不受支持。')
+              for (const project of legacy.projects) {
+                validateProjectVersion({
+                  format: 1,
+                  type: 'project',
+                  id: project.id,
+                  schema: 1,
+                  parents: [],
+                  deleted: false,
+                  data: json(project),
+                  blobs: [],
+                })
+                this.db.prepare('INSERT INTO projects VALUES(?,?,0)').run(project.id, JSON.stringify(project))
+              }
+            }
+            this.db.prepare("INSERT INTO sync_state VALUES('projects-migrated','1')").run()
+          }
+          for (const row of this.db.prepare('SELECT * FROM projects').all())
+            if (!this.replica!.working('project', String(row.id)))
+              this.replica!.capture('project', String(row.id), JSON.parse(String(row.data)), row.deleted === 1)
+          for (const row of this.db.prepare('SELECT * FROM notes').all())
+            if (!this.replica!.working('note', String(row.id))) this.capture(fromRow(row))
+        })
+      }
     } catch (error) {
       this.db.close()
       throw error
@@ -97,6 +210,7 @@ class Notebook {
   }
 
   transaction<T>(fn: () => T): T {
+    if (this.replica) return this.replica.transaction(fn)
     this.db.exec('BEGIN IMMEDIATE')
     try {
       const result = fn()
@@ -110,9 +224,62 @@ class Notebook {
 
   get(id: string): NoteDto | null {
     const row = this.db.prepare('SELECT * FROM notes WHERE id = ?').get(id)
-    return row ? fromRow(row) : null
+    return row ? this.withVersion(fromRow(row)) : null
   }
 
+  withVersion(note: NoteDto): NoteDto {
+    const versionId = this.replica?.working('note', note.id)
+    return versionId ? { ...note, versionId } : note
+  }
+  capture(note: NoteDto): NoteDto {
+    if (this.replica) {
+      const { revision: _revision, versionId: _versionId, ...data } = note
+      const versionId = this.replica.capture('note', note.id, json(data), note.deletedAt !== null)
+      return { ...note, versionId }
+    }
+    return note
+  }
+  deleteProject(id: string) {
+    this.transaction(() => {
+      const row = this.db.prepare('SELECT data FROM projects WHERE id=? AND deleted=0').get(id)
+      if (!row) throw new ProjectError('PROJECT_NOT_FOUND', '项目不存在。')
+      const project = JSON.parse(String(row.data)) as ProjectDto
+      const notes = this.db.prepare('SELECT * FROM notes WHERE project_id=?').all(id).map(fromRow)
+      const sessions = this.db.prepare('SELECT * FROM knowledge_sessions WHERE project_id=?').all(id)
+      writeRecoveryRecord(this.backups, 'delete-project', { project, notes, sessions })
+      this.db.prepare('UPDATE projects SET deleted=1 WHERE id=?').run(id)
+      this.replica!.capture('project', id, json(project), true)
+      this.db
+        .prepare('UPDATE notes SET project_id=NULL,revision=revision+1,updated_at=? WHERE project_id=?')
+        .run(new Date().toISOString(), id)
+      for (const note of notes) this.capture(this.get(note.id)!)
+      this.db.prepare('UPDATE knowledge_sessions SET enabled=0,project_id=NULL WHERE project_id=?').run(id)
+    })
+  }
+  normalizeProjects() {
+    const notes = this.db
+      .prepare(
+        'SELECT * FROM notes WHERE project_id IS NOT NULL AND project_id NOT IN (SELECT id FROM projects WHERE deleted=0)',
+      )
+      .all()
+      .map(fromRow)
+    const sessions = this.db
+      .prepare(
+        'SELECT * FROM knowledge_sessions WHERE project_id IS NOT NULL AND project_id NOT IN (SELECT id FROM projects WHERE deleted=0)',
+      )
+      .all()
+    if (notes.length || sessions.length) writeRecoveryRecord(this.backups, 'sync-detach-project', { notes, sessions })
+    this.db
+      .prepare(
+        'UPDATE notes SET project_id=NULL,revision=revision+1 WHERE project_id IS NOT NULL AND project_id NOT IN (SELECT id FROM projects WHERE deleted=0)',
+      )
+      .run()
+    this.db
+      .prepare(
+        'UPDATE knowledge_sessions SET project_id=NULL,enabled=0 WHERE project_id IS NOT NULL AND project_id NOT IN (SELECT id FROM projects WHERE deleted=0)',
+      )
+      .run()
+  }
   index(note: NoteDto): void {
     this.db.prepare('DELETE FROM knowledge_fts WHERE rowid IN (SELECT id FROM chunks WHERE note_id = ?)').run(note.id)
     this.db.prepare('DELETE FROM chunks WHERE note_id = ?').run(note.id)
@@ -162,16 +329,21 @@ class Notebook {
     const rows = this.db
       .prepare(`SELECT * FROM notes WHERE ${where} ORDER BY pinned DESC, ${order}, id ASC LIMIT ? OFFSET ?`)
       .all(...args, Math.max(1, Math.min(query.limit ?? 50, 500)), Math.max(0, query.offset ?? 0))
-    return { notes: rows.map(fromRow), total }
+    return { notes: rows.map(row => this.withVersion(fromRow(row))), total }
   }
 }
 
 class LocalNotes extends Service implements NoteService {
+  deleteProject?: (id: string) => Promise<void>
   constructor(
     ctx: Context,
     private readonly store: Notebook,
   ) {
     super(ctx, 'nookNotes')
+    if (store.replica)
+      this.deleteProject = async id => {
+        store.deleteProject(id)
+      }
   }
   async list(query: NoteQuery): Promise<NotePage> {
     return this.store.list(query)
@@ -203,7 +375,7 @@ class LocalNotes extends Service implements NoteService {
           JSON.stringify(note.source),
         )
       this.store.index(note)
-      return note
+      return this.store.capture(note)
     })
   }
   async save(request: SaveNoteRequest): Promise<NoteDto> {
@@ -224,7 +396,7 @@ class LocalNotes extends Service implements NoteService {
         .prepare('UPDATE notes SET title=?,markdown=?,project_id=?,pinned=?,revision=?,updated_at=? WHERE id=?')
         .run(note.title, note.markdown, note.projectId, note.pinned ? 1 : 0, note.revision, note.updatedAt, note.id)
       this.store.index(note)
-      return note
+      return this.store.capture(note)
     })
   }
   async setDeleted(id: string, revision: number, deleted: boolean): Promise<NoteDto> {
@@ -237,7 +409,7 @@ class LocalNotes extends Service implements NoteService {
         .prepare('UPDATE notes SET deleted_at=?,updated_at=?,revision=? WHERE id=?')
         .run(note.deletedAt, now, note.revision, id)
       this.store.index(note)
-      return note
+      return this.store.capture(note)
     })
   }
   async detachProject(projectId: string): Promise<void> {
@@ -249,6 +421,7 @@ class LocalNotes extends Service implements NoteService {
       this.store.db
         .prepare('UPDATE notes SET project_id=NULL, revision=revision+1, updated_at=? WHERE project_id=?')
         .run(new Date().toISOString(), projectId)
+      for (const note of notes) this.store.capture(this.store.get(note.id)!)
       // Deleting a scoped project must not silently broaden retrieval to every project.
       this.store.db
         .prepare('UPDATE knowledge_sessions SET enabled=0, project_id=NULL WHERE project_id=?')
@@ -316,13 +489,231 @@ class LocalKnowledge extends Service implements KnowledgeService {
 /** One transaction owner publishes two interchangeable Nook capability faces. */
 export function apply(ctx: Context, config: Config): void {
   ctx.effect(() => {
-    const store = new Notebook(config.file)
+    const store = new Notebook(config.file, config.projectsFile)
+    const projects = store.replica ? ctx.plugin(SqliteProjects, store) : undefined
+    const sync = store.replica ? ctx.plugin(ReplicaService, store.replica) : undefined
     const notes = ctx.plugin(LocalNotes, store)
     const knowledge = ctx.plugin(LocalKnowledge, store)
     return async () => {
       await knowledge.dispose()
       await notes.dispose()
+      await sync?.dispose()
+      await projects?.dispose()
+      store.replica?.dispose()
       store.db.close()
     }
   })
+}
+
+function json(value: unknown): Json {
+  return JSON.parse(JSON.stringify(value)) as Json
+}
+function dateValid(value: unknown) {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value))
+}
+function uuid(value: unknown) {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  )
+}
+function validateProjectVersion(v: RecordVersion) {
+  const p = v.data as unknown as ProjectDto
+  if (
+    !p ||
+    p.id !== v.id ||
+    !uuid(p.id) ||
+    typeof p.name !== 'string' ||
+    !p.name.trim() ||
+    p.name.length > 120 ||
+    typeof p.description !== 'string' ||
+    p.description.length > 2000 ||
+    !dateValid(p.createdAt) ||
+    !dateValid(p.updatedAt)
+  )
+    throw new SyncError('项目数据格式无效。')
+}
+function validateNoteVersion(v: RecordVersion) {
+  const n = v.data as unknown as NoteDto
+  if (
+    !n ||
+    n.id !== v.id ||
+    !uuid(n.id) ||
+    !dateValid(n.createdAt) ||
+    !dateValid(n.updatedAt) ||
+    (n.deletedAt !== null && !dateValid(n.deletedAt)) ||
+    (n.deletedAt !== null) !== v.deleted ||
+    !(n.projectId === null || uuid(n.projectId))
+  )
+    throw new SyncError('笔记数据格式无效。')
+  validate(n)
+  const s = n.source
+  if (
+    !s ||
+    !['personal', 'transcript', 'comment-note', 'ai-article', 'ai-summary'].includes(s.kind) ||
+    !(s.url === null || typeof s.url === 'string') ||
+    !(s.author === null || (typeof s.author === 'string' && s.author.length <= 300)) ||
+    !Array.isArray(s.basedOn) ||
+    s.basedOn.length > 500 ||
+    s.basedOn.some(
+      r =>
+        !uuid(r.noteId) ||
+        !Number.isSafeInteger(r.revision) ||
+        r.revision < 1 ||
+        (r.versionId !== undefined && !/^[a-f0-9]{64}$/.test(r.versionId)),
+    )
+  )
+    throw new SyncError('笔记来源格式无效。')
+}
+class SqliteProjects extends Service implements ProjectService {
+  private readonly listeners = new Set<ProjectEventListener>()
+  constructor(
+    ctx: Context,
+    private readonly store: Notebook,
+  ) {
+    super(ctx, 'nookProjects')
+    let before = this.all()
+    ctx.effect(() => {
+      const off = store.replica!.subscribe(() => {
+        const after = this.all()
+        for (const p of after) {
+          const old = before.find(x => x.id === p.id)
+          if (!old) this.publish({ type: 'project.created', project: p })
+          else if (JSON.stringify(old) !== JSON.stringify(p)) this.publish({ type: 'project.updated', project: p })
+        }
+        for (const p of before)
+          if (!after.some(x => x.id === p.id)) this.publish({ type: 'project.deleted', projectId: p.id })
+        before = after
+      })
+      return () => {
+        off()
+        this.listeners.clear()
+      }
+    })
+  }
+  private all(): ProjectDto[] {
+    return this.store.db
+      .prepare('SELECT data FROM projects WHERE deleted=0 ORDER BY id')
+      .all()
+      .map(row => JSON.parse(String(row.data)) as ProjectDto)
+  }
+  async list() {
+    return this.all()
+  }
+  async get(id: string) {
+    return this.all().find(p => p.id === id)
+  }
+  async create(request: CreateProjectRequest) {
+    const now = new Date().toISOString()
+    return this.save({
+      id: randomUUID(),
+      name: request.name.trim(),
+      description: request.description?.trim() ?? '',
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
+  async update(id: string, request: UpdateProjectRequest) {
+    const old = await this.get(id)
+    if (!old) throw new ProjectError('PROJECT_NOT_FOUND', '项目不存在。')
+    return this.save({
+      ...old,
+      ...request,
+      name: request.name?.trim() ?? old.name,
+      updatedAt: new Date().toISOString(),
+    })
+  }
+  private save(project: ProjectDto) {
+    return this.store.transaction(() => {
+      validateProjectVersion({
+        format: 1,
+        type: 'project',
+        id: project.id,
+        schema: 1,
+        parents: [],
+        deleted: false,
+        data: json(project),
+        blobs: [],
+      })
+      this.store.db
+        .prepare('INSERT INTO projects VALUES(?,?,0) ON CONFLICT(id) DO UPDATE SET data=excluded.data,deleted=0')
+        .run(project.id, JSON.stringify(project))
+      this.store.replica!.capture('project', project.id, json(project))
+      return project
+    })
+  }
+  async delete(id: string) {
+    this.store.deleteProject(id)
+  }
+  subscribe(listener: ProjectEventListener) {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+  private publish(event: ProjectEvent) {
+    for (const fn of this.listeners) {
+      try {
+        fn(event)
+      } catch {
+        /* subscriptions cannot undo storage */
+      }
+    }
+  }
+}
+class ReplicaService extends Service implements SyncReplica {
+  constructor(
+    ctx: Context,
+    private readonly replica: Replica,
+  ) {
+    super(ctx, 'nookSyncReplica')
+  }
+  registerType(...args: Parameters<SyncReplica['registerType']>) {
+    return this.replica.registerType(...args)
+  }
+  records(...args: Parameters<SyncReplica['records']>) {
+    return this.replica.records(...args)
+  }
+  writeRecords(...args: Parameters<SyncReplica['writeRecords']>) {
+    return this.replica.writeRecords(...args)
+  }
+  snapshot() {
+    return this.replica.snapshot()
+  }
+  version(...args: Parameters<SyncReplica['version']>) {
+    return this.replica.version(...args)
+  }
+  receive(...args: Parameters<SyncReplica['receive']>) {
+    return this.replica.receive(...args)
+  }
+  acknowledge(...args: Parameters<SyncReplica['acknowledge']>) {
+    return this.replica.acknowledge(...args)
+  }
+  binding() {
+    return this.replica.binding()
+  }
+  bind(...args: Parameters<SyncReplica['bind']>) {
+    return this.replica.bind(...args)
+  }
+  prepare() {
+    return this.replica.prepare()
+  }
+  conflicts() {
+    return this.replica.conflicts()
+  }
+  resolve(...args: Parameters<SyncReplica['resolve']>) {
+    return this.replica.resolve(...args)
+  }
+  stats() {
+    return this.replica.stats()
+  }
+  subscribe(...args: Parameters<SyncReplica['subscribe']>) {
+    return this.replica.subscribe(...args)
+  }
+  blob(...args: Parameters<SyncReplica['blob']>) {
+    return this.replica.blob(...args)
+  }
+  receiveBlob(...args: Parameters<SyncReplica['receiveBlob']>) {
+    return this.replica.receiveBlob(...args)
+  }
 }

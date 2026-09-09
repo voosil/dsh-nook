@@ -34,4 +34,4 @@ broker 的私有文件使用限制性 umask。macOS 复制符号链接时，其 
 
 创建新后端需要准备或校验运行时快照，加入现有后端只建立连接。当前后端版本和端口优先，更新代码、配置或端口需要关闭所有正式入口再启动。两个前端的页面状态各自独立，数据共享不等于即时同步尚未保存的编辑。
 
-[迁移测试](../../../tests/contract/migration.test.ts)覆盖双向数据保留、FTS、回收站、项目、冲突与中断继续。[共享生命周期测试](../../../tests/integration/shared-runtime.test.ts)覆盖竞争启动、单后端复用、独立退出和再次启动。[真实窗口验收](../../../scripts/verify-desktop.mjs)在搬移后的应用和真实浏览器中验证同一笔记及后端地址。[开发模式验收](../../../tests/e2e/dev-modes.test.ts)使用临时仓库及显式临时正式目录，避免触碰用户数据。
+[迁移测试](../../../tests/contract/migration.test.ts)覆盖双向数据保留、FTS、回收站、项目、冲突与中断继续。[共享生命周期测试](../../../tests/integration/shared-runtime.test.ts)覆盖竞争启动、单后端复用、独立退出和再次启动。[真实窗口验收](../../../scripts/verify/verify-desktop.mjs)在搬移后的应用和真实浏览器中验证同一笔记及后端地址。[开发模式验收](../../../tests/e2e/dev-modes.test.ts)使用临时仓库及显式临时正式目录，避免触碰用户数据。

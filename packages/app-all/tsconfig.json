@@ -1,5 +1,26 @@
 {
   "extends": "../../tsconfig.package.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "lib", "tsBuildInfoFile": "lib/.tsbuildinfo" },
-  "include": ["src/**/*.ts"]
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib",
+    "tsBuildInfoFile": "lib/.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../capability-sync"
+    },
+    {
+      "path": "../storage-sync"
+    },
+    {
+      "path": "../adapter-sync-webdav"
+    },
+    {
+      "path": "../feature-sync"
+    },
+    {
+      "path": "../adapter-sync-dsh"
+    }
+  ]
 }

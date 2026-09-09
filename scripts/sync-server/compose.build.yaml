@@ -1,0 +1,6 @@
+# 无法访问 GHCR 时，可显式选择本地构建。
+services:
+  sync:
+    image: nook-sync:0.1.0
+    pull_policy: never
+    build: .

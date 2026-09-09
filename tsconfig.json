@@ -2,6 +2,21 @@
   "files": [],
   "references": [
     {
+      "path": "packages/capability-sync"
+    },
+    {
+      "path": "packages/storage-sync"
+    },
+    {
+      "path": "packages/adapter-sync-webdav"
+    },
+    {
+      "path": "packages/feature-sync"
+    },
+    {
+      "path": "packages/adapter-sync-dsh"
+    },
+    {
       "path": "packages/storage-backup"
     },
     {

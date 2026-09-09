@@ -9,11 +9,6 @@
     - id: nook-dsh-compat
       name: '@nook-dsh/dsh-compat'
 
-    - id: nook-project-provider
-      name: '@nook-dsh/provider-project-local'
-      config:
-        file: !!js dshHomePath('nook/projects.json')
-
     - id: nook-artifact-provider
       name: '@nook-dsh/provider-artifact-local'
       config:
@@ -43,6 +38,15 @@
       name: '@nook-dsh/provider-notebook-local'
       config:
         file: !!js dshHomePath('nook/notebook.sqlite')
+        projectsFile: !!js dshHomePath('nook/projects.json')
+    - id: nook-sync-storage
+      name: '@nook-dsh/adapter-sync-webdav'
+    - id: nook-sync-feature
+      name: '@nook-dsh/feature-sync'
+      config:
+        file: !!js dshHomePath('nook-sync/settings.json')
+    - id: nook-sync-rpc
+      name: '@nook-dsh/adapter-sync-dsh'
     - id: nook-notes-feature
       name: '@nook-dsh/feature-notes'
     - id: nook-notes-rpc

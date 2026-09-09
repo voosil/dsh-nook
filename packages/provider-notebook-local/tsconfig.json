@@ -15,6 +15,15 @@
     },
     {
       "path": "../storage-backup"
+    },
+    {
+      "path": "../storage-sync"
+    },
+    {
+      "path": "../capability-sync"
+    },
+    {
+      "path": "../capability-project"
     }
   ]
 }

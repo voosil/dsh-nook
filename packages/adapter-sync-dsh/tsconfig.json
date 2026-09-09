@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.package.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "lib/.tsbuildinfo",
+    "rootDir": "src",
+    "outDir": "lib"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../capability-sync"
+    },
+    {
+      "path": "../feature-sync"
+    }
+  ]
+}

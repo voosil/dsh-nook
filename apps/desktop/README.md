@@ -15,7 +15,7 @@ pnpm verify:desktop   # 构建安装包，再运行真实窗口验收
 
 开发入口构建固定快照，修改源码后重新启动。需要热更新时使用[浏览器开发模式](../../docs/development.md)。开发与验证使用临时 home，不使用用户桌面数据或真实 DSH home。
 
-构建需要仓库开发工具链、网络和当前平台原生编译工具。Electron 与打包器版本归属[应用 manifest](package.json)，附带 Node 的版本和官方 SHA-256 归属[下载脚本](../../scripts/desktop-node.mjs)。运行时只携带 Node 可执行文件与许可证，原生模块按标准 Node 安装，不按 Electron ABI 重建。
+构建需要仓库开发工具链、网络和当前平台原生编译工具。Electron 与打包器版本归属[应用 manifest](package.json)，附带 Node 的版本和官方 SHA-256 归属[下载脚本](../../scripts/desktop/desktop-node.mjs)。运行时只携带 Node 可执行文件与许可证，原生模块按标准 Node 安装，不按 Electron ABI 重建。
 
 ## 数据与升级
 
@@ -35,11 +35,11 @@ Renderer 开启 sandbox、上下文隔离和 Web 安全，关闭 Node integratio
 
 ## 验证与限制
 
-[打包门禁](../../scripts/package-desktop.mjs)在 electron-builder 完成后再次校验包内运行时，以检查构建工具遗漏或修改资源。[窗口验收](../../scripts/verify-desktop.mjs)把 `.app` 复制到包含空格和中文的临时目录，使用不含开发工具的 PATH，验证鉴权、窗口隔离、笔记 RPC、保存与重载、第二次启动、网页与桌面共享读写及独立退出、资源损坏后的重试和退出清理；截图保存在 `.pack/desktop/nook-window.png`。
+[打包门禁](../../scripts/desktop/package-desktop.mjs)在 electron-builder 完成后再次校验包内运行时，以检查构建工具遗漏或修改资源。[窗口验收](../../scripts/verify/verify-desktop.mjs)把 `.app` 复制到包含空格和中文的临时目录，使用不含开发工具的 PATH，验证鉴权、窗口隔离、笔记 RPC、保存与重载、第二次启动、网页与桌面共享读写及独立退出、资源损坏后的重试和退出清理；截图保存在 `.pack/desktop/nook-window.png`。
 
 [生命周期测试](../../tests/integration/desktop-runtime.test.ts)覆盖重复停止、日志脱敏、子进程树清理和桌面父进程崩溃后的回收。[运行时安装测试](../../tests/desktop/payload.test.ts)覆盖升级保留数据和用户 patch、损坏资源及越界符号链接。
 
-[原生模块验收](../../scripts/desktop-native-smoke.mjs)使用安装包附带的 Node 和依赖，实际执行文件锁、SQLite FTS5、DSH shell、PTY 与服务释放。
+[原生模块验收](../../scripts/verify/desktop-native-smoke.mjs)使用安装包附带的 Node 和依赖，实际执行文件锁、SQLite FTS5、DSH shell、PTY 与服务释放。
 
 视频采集与浏览器预览仍使用各自的外部依赖，见[视频功能](../../packages/feature-video/README.md)与[浏览器边界](../../docs/architecture.md#external-boundaries)。Electron 的 Chromium 不替代社区浏览器 Provider。开发者签名、公证、自动更新及其他操作系统的发布不在当前安装产物中。
 

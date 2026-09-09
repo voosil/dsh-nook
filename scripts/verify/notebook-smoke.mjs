@@ -1,0 +1,190 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { startWebDav } from '../../tests/helpers/webdav.mjs'
+
+const require = createRequire(import.meta.url)
+const { chromium } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
+
+/** Exercise the shipped Client against the actual Host, including packed installs. */
+export async function notebookSmoke(url, screenshot, providedPage, verifySync = false) {
+  const dav = verifySync ? await startWebDav() : undefined
+  const browser = providedPage ? undefined : await chromium.launch({ channel: 'chrome', headless: true })
+  const errors = []
+  const page = providedPage ?? (await browser.newPage({ viewport: { width: 1440, height: 1000 } }))
+  const onError = error => errors.push(error.message)
+  try {
+    page.on('pageerror', onError)
+    await page.goto(url)
+    const workspace = page.getByRole('dialog', { name: 'Nook 笔记工作区', exact: true })
+    await workspace.waitFor()
+    await dismissOnboarding(page)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await workspace.getByRole('button', { name: '返回 AI 对话', exact: true }).click()
+      await workspace.waitFor({ state: 'hidden' })
+      assert.equal(await page.getByRole('button', { name: '打开 Nook 笔记', exact: true }).count(), 0)
+      const entry = page.getByRole('button', { name: '打开 Nook', exact: true })
+      assert.equal(await entry.count(), 1)
+      await entry.click()
+      await workspace.waitFor()
+    }
+    const suffix = Date.now().toString(36)
+    const title = `Nook 验收 ${suffix}`
+    const project = `验收项目 ${suffix}`
+    await workspace.getByRole('button', { name: '新建项目', exact: true }).click()
+    await workspace.getByLabel('项目名称', { exact: true }).fill(project)
+    await workspace.getByLabel('描述', { exact: true }).fill('仅用于自动化验收')
+    await workspace.getByRole('button', { name: '保存项目', exact: true }).click()
+    await workspace.getByRole('button', { name: project, exact: true }).waitFor()
+    await workspace
+      .getByRole('button', { name: /写一条笔记/ })
+      .first()
+      .click()
+    await workspace.getByRole('textbox', { name: '笔记标题', exact: true }).fill(title)
+    await workspace
+      .getByRole('textbox', { name: '笔记正文', exact: true })
+      .fill('劳动异化与自由实践：今天学习了新的概念。\n保留完整的思考过程。')
+    await workspace.getByRole('combobox', { name: '笔记所属项目' }).selectOption({ label: project })
+    await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+    await workspace.getByRole('button', { name: '置顶', exact: true }).click()
+    await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+    assert.ok((await workspace.innerText()).includes('创建于'))
+    assert.ok((await workspace.innerText()).includes('更新于'))
+    if (screenshot) await page.screenshot({ path: screenshot })
+    await page.reload()
+    await workspace.waitFor()
+    await dismissOnboarding(page)
+    await workspace.getByRole('searchbox', { name: '搜索笔记' }).fill(suffix)
+    await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
+    assert.equal(await workspace.getByRole('textbox', { name: '笔记标题', exact: true }).inputValue(), title)
+    assert.ok(
+      (await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()).includes('劳动异化'),
+    )
+    await workspace.getByRole('button', { name: '移到回收站', exact: true }).click()
+    await workspace.getByRole('button', { name: '回收站', exact: true }).click()
+    await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
+    await workspace.getByRole('button', { name: '恢复笔记', exact: true }).click()
+    await workspace.getByRole('button', { name: '项目', exact: true }).click()
+    const card = workspace.locator('.nook-project-grid article').filter({ hasText: project })
+    await card.getByRole('button', { name: '删除项目', exact: true }).click()
+    await workspace
+      .getByRole('alertdialog', { name: '删除项目' })
+      .getByRole('button', { name: '删除项目', exact: true })
+      .click()
+    await workspace.getByRole('alertdialog', { name: '删除项目' }).waitFor({ state: 'hidden' })
+    await workspace.getByRole('button', { name: '未分类', exact: true }).click()
+    await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
+    assert.equal(await workspace.getByRole('combobox', { name: '笔记所属项目' }).inputValue(), '')
+    await workspace.getByRole('button', { name: '移到回收站', exact: true }).click()
+    await workspace.getByRole('button', { name: '日 / 周总结', exact: true }).click()
+    await workspace.getByRole('dialog', { name: '笔记总结', exact: true }).waitFor()
+    await workspace
+      .getByRole('dialog', { name: '笔记总结', exact: true })
+      .getByRole('button', { name: '关闭', exact: true })
+      .click()
+    await workspace.getByRole('button', { name: '视频转文稿', exact: true }).click()
+    await workspace.getByRole('dialog', { name: '视频转文稿', exact: true }).waitFor()
+    await workspace
+      .getByRole('dialog', { name: '视频转文稿', exact: true })
+      .getByRole('button', { name: '关闭', exact: true })
+      .click()
+    if (dav) {
+      await workspace.getByRole('button', { name: /数据同步/ }).click()
+      const sync = workspace.getByRole('dialog', { name: '数据同步', exact: true })
+      await sync.getByLabel('WebDAV 同步目录').fill(dav.url)
+      assert.equal(await sync.locator('.nook-sync-guide-body').count(), 0)
+      await sync.getByRole('link', { name: '查看服务器 / NAS 配置指南' }).click()
+      const guide = workspace.getByRole('region', { name: '同步配置指南' })
+      await guide.waitFor()
+      await sync.waitFor({ state: 'hidden' })
+      assert.equal(new URL(page.url()).hash, '#nook-sync-guide')
+      await guide.getByRole('heading', { name: 'Linux 服务器一键配置', exact: true }).waitFor()
+      await guide.getByRole('heading', { name: 'Docker / Compose 部署', exact: true }).waitFor()
+      const deployment = guide.getByRole('link', { name: '下载 Docker 部署包', exact: true })
+      assert.equal(await deployment.getAttribute('download'), 'nook-sync-0.1.0.tar.gz')
+      assert.ok((await deployment.getAttribute('href')).startsWith('data:application/gzip;base64,'))
+      assert.ok(
+        await guide
+          .locator('article > p')
+          .first()
+          .evaluate(element => parseFloat(getComputedStyle(element).fontSize) >= 14),
+        'Guide paragraphs must not inherit the navigation footer font size',
+      )
+      await guide.getByText('查看完整的一行命令', { exact: true }).click()
+      const command = await guide.getByLabel('一键配置命令').inputValue()
+      assert.ok(command.startsWith("sudo python3 -c '"))
+      assert.ok(!command.includes('\n'))
+      await guide.getByText('查看完整的一行命令', { exact: true }).click()
+      if (process.env.NOOK_SYNC_GUIDE_SCREENSHOT) {
+        await guide.evaluate(element => {
+          element.scrollTop = 0
+        })
+        await page.screenshot({ path: process.env.NOOK_SYNC_GUIDE_SCREENSHOT })
+      }
+      const previousViewport = page.viewportSize()
+      await page.setViewportSize({ width: 720, height: 900 })
+      assert.ok(
+        await guide.evaluate(element => element.scrollWidth <= element.clientWidth + 1),
+        'Guide page must fit a narrow viewport',
+      )
+      await page.setViewportSize(previousViewport)
+      await guide.getByRole('button', { name: '返回数据同步' }).click()
+      await sync.waitFor()
+      await guide.waitFor({ state: 'hidden' })
+      assert.equal(await sync.getByLabel('WebDAV 同步目录').inputValue(), dav.url)
+      const input = sync.getByLabel('连接配置文件', { exact: true })
+      await input.setInputFiles({
+        name: 'invalid.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from('{"password":"private-input"'),
+      })
+      await sync.getByRole('alert').filter({ hasText: '连接文件无效' }).waitFor()
+      assert.equal(await sync.getByLabel('WebDAV 同步目录').inputValue(), dav.url)
+      assert.ok(!(await sync.innerText()).includes('private-input'))
+      const connection = {
+        format: 'nook-sync-connection',
+        version: 1,
+        url: dav.url,
+        username: 'tester',
+        password: 'secret',
+        caCert: '',
+      }
+      await input.setInputFiles({
+        name: 'connection.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(connection)),
+      })
+      await sync.getByText('连接信息已填入。', { exact: false }).waitFor()
+      assert.equal(await sync.getByLabel('存储用户名').inputValue(), 'tester')
+      assert.equal(await sync.getByLabel('存储密码或应用令牌').inputValue(), 'secret')
+      assert.equal(await sync.getByLabel('服务器 CA 证书（可选）').inputValue(), '')
+      assert.equal(dav.data.size, 0, 'Import must not contact the remote or enable sync')
+      if (process.env.NOOK_SYNC_IMPORT_SCREENSHOT)
+        await page.screenshot({ path: process.env.NOOK_SYNC_IMPORT_SCREENSHOT })
+      await sync.getByRole('button', { name: '验证并开启同步', exact: true }).click()
+      await sync.getByRole('status').filter({ hasText: '已同步' }).waitFor({ timeout: 30000 })
+      assert.ok([...dav.data.keys()].some(path => path.endsWith('/index.json')))
+      assert.equal(await sync.getByLabel('存储密码或应用令牌').inputValue(), '')
+      await sync.getByRole('button', { name: '关闭同步', exact: true }).click()
+      await sync.getByRole('status').filter({ hasText: '同步未开启' }).waitFor()
+      await sync.getByRole('button', { name: '关闭同步设置', exact: true }).click()
+    }
+    assert.deepEqual(errors, [])
+    return { title, errors }
+  } finally {
+    page.off('pageerror', onError)
+    await browser?.close()
+    await dav?.close()
+  }
+}
+
+export async function dismissOnboarding(page) {
+  for (const name of ['继续', '稍后配置']) {
+    const button = page.getByRole('button', { name, exact: true })
+    try {
+      await button.waitFor({ timeout: 4000 })
+      await button.click()
+    } catch (error) {
+      if (error.name !== 'TimeoutError') throw error
+    }
+  }
+}

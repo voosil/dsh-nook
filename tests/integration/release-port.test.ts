@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { test } from 'node:test'
-import { releasePort } from '../../scripts/release-port.mjs'
+import { releasePort } from '../../scripts/shared/release-port.mjs'
 
 test('port release terminates a real listener owned by the test', { timeout: 10_000 }, async () => {
   const child = spawn(

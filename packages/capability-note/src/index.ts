@@ -4,10 +4,15 @@ export interface NoteSource {
   readonly kind: NoteSourceKind
   readonly url: string | null
   readonly author: string | null
-  readonly basedOn: readonly { readonly noteId: string; readonly revision: number }[]
+  readonly basedOn: readonly {
+    readonly noteId: string
+    readonly revision: number
+    readonly versionId?: string | undefined
+  }[]
 }
 
 export interface NoteDto {
+  readonly versionId?: string | undefined
   readonly id: string
   readonly title: string
   readonly markdown: string
@@ -56,6 +61,8 @@ export interface NotePage {
 }
 
 export interface NoteService {
+  /** Atomic project deletion when one provider owns both stores. */
+  deleteProject?(id: string): Promise<void>
   list(query: NoteQuery): Promise<NotePage>
   get(id: string): Promise<NoteDto | null>
   create(request: CreateNoteRequest): Promise<NoteDto>

@@ -1,0 +1,4 @@
+.env
+connection.json
+*.tar
+*.tar.gz

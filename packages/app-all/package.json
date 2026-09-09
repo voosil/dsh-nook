@@ -50,7 +50,12 @@
     "@nook-dsh/provider-video-editor": "workspace:*",
     "@nook-dsh/feature-video": "workspace:*",
     "@nook-dsh/adapter-knowledge-dsh": "workspace:*",
-    "@nook-dsh/ui-knowledge": "workspace:*"
+    "@nook-dsh/ui-knowledge": "workspace:*",
+    "@nook-dsh/capability-sync": "workspace:*",
+    "@nook-dsh/storage-sync": "workspace:*",
+    "@nook-dsh/adapter-sync-webdav": "workspace:*",
+    "@nook-dsh/feature-sync": "workspace:*",
+    "@nook-dsh/adapter-sync-dsh": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.2",

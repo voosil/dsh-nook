@@ -10,7 +10,7 @@ A launcher that only builds on startup requires manual rebuilds after every sour
 
 [Development and usage](../../../docs/development.md) have separate launchers, ports and data lifetimes. Development uses the official Client HMR overlay and serial source polling with Host restarts after successful builds. Client bundling publishes only after all bundles compile, replacing individual files atomically.
 
-Usage installs packed packages and their pinned dependencies independently, then boots that snapshot against the persistent application home. Its working directory remains the repository for self-iteration. The [shared snapshot installer](../../../scripts/pack-profile.mjs) also serves the clean-package gate. Automatic port eviction is excluded from both launchers to preserve concurrently running instances.
+Usage installs packed packages and their pinned dependencies independently, then boots that snapshot against the persistent application home. Its working directory remains the repository for self-iteration. The [shared snapshot installer](../../../scripts/profile/pack-profile.mjs) also serves the clean-package gate. Automatic port eviction is excluded from both launchers to preserve concurrently running instances.
 
 The [startup build decision](../bug-fix/2026-09-08-dev-build-before-boot.md) remains applicable; the development watcher extends that initial build into an ongoing loop.
 

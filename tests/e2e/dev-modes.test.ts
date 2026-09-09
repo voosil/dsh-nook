@@ -7,9 +7,10 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
-import { ROOT, runPnpm } from '../../scripts/profile-lib.mjs'
-import { dismissOnboarding } from '../../scripts/notebook-smoke.mjs'
+import { ROOT, runPnpm } from '../../scripts/profile/profile-lib.mjs'
+import { dismissOnboarding } from '../../scripts/verify/notebook-smoke.mjs'
 import { verifyBackup } from '../../packages/storage-backup/src/index.ts'
+import { desktopNode, NODE_VERSION } from '../../scripts/desktop/desktop-node.mjs'
 
 const require = createRequire(import.meta.url)
 const { chromium } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
@@ -60,6 +61,10 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
       filter: path => !path.split('/').some(part => ['node_modules', 'lib', 'dist', 'resources'].includes(part)),
     })
   }
+  // Use the same checksum-verified runtime cache as the actual desktop packager.
+  // This test exercises reload/start behavior, not repeated internet downloads.
+  const nodeRuntime = await desktopNode()
+  await cp(nodeRuntime, resolve(root, '.pack/node', `node-v${NODE_VERSION}-darwin-arm64`), { recursive: true })
   await runPnpm(['install', '--frozen-lockfile'], { cwd: root, capture: true })
   await runPnpm(['run', 'dev:profile'], { cwd: root, capture: true })
   await mkdir(resolve(root, '.dsh-dev/nook'), { recursive: true })
@@ -70,7 +75,7 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
     const child = spawn(
       process.execPath,
       [
-        resolve(root, 'scripts', script),
+        resolve(root, 'scripts/profile', script),
         '--port',
         '0',
         ...(script === 'start-profile.mjs' ? ['--test-state', resolve(root, 'user-state')] : []),

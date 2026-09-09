@@ -39,7 +39,7 @@ The community browser package declares DSH peer ranges ending before `0.1.0-rc.7
 
 `pnpm peers check` consequently reports the community package's stale `@deepseek-ai/dsh-tools` and `@deepseek-ai/dsh-llm` peer ranges. These two known warnings are accepted only for the isolated service/provider slice above; any additional peer warning is a release failure.
 
-Fresh development and packed-install Profiles constrain all `@deepseek-ai/*` resolutions to the repository lockfile through [runtime overrides](../scripts/profile-lib.mjs). Pinning only the top-level DSH version is insufficient: its published dependencies contain semver ranges, and newer Cordis utility plugins require a newer Cordis runtime. The clean-install gate rejects extra peer mismatches.
+Fresh development and packed-install Profiles constrain all `@deepseek-ai/*` resolutions to the repository lockfile through [runtime overrides](../scripts/profile/profile-lib.mjs). Pinning only the top-level DSH version is insufficient: its published dependencies contain semver ranges, and newer Cordis utility plugins require a newer Cordis runtime. The clean-install gate rejects extra peer mismatches.
 
 ## UNKNOWN
 
@@ -74,7 +74,7 @@ The installed `dsh-client-ui-layout` Slot contract declares `shell.overlay` as a
 
 Client module discovery resolves `<package>/package.json`; contributing packages must export that path. Host entry points also need an applicable plugin export. Client mounting uses `ctx.remote.$mount({ package, descriptors })` followed by injection of the traced `remote.<namespace>` service before reading it. Package metadata or `$mount` completion alone is not proof that the namespace service is available.
 
-The installed Typert registry accepts invocation descriptors registered through `ctx.typert.register` under a lifecycle effect. Gateway calls require a visible `TypertRemoteService` binding and validate parameter and return schemas. Named request parameters and the final cancellation signal must match the descriptor. Nook uses the official connection and Gateway route; it adds no unauthenticated HTTP RPC endpoint. [Gateway tests](../tests/contract/notebook.test.ts) and the [browser acceptance script](../scripts/notebook-smoke.mjs) exercise this path.
+The installed Typert registry accepts invocation descriptors registered through `ctx.typert.register` under a lifecycle effect. Gateway calls require a visible `TypertRemoteService` binding and validate parameter and return schemas. Named request parameters and the final cancellation signal must match the descriptor. Nook uses the official connection and Gateway route; it adds no unauthenticated HTTP RPC endpoint. [Gateway tests](../tests/contract/notebook.test.ts) and the [browser acceptance script](../scripts/verify/notebook-smoke.mjs) exercise this path.
 
 ## Prompt and model contracts
 

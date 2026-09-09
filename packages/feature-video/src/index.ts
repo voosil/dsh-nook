@@ -90,7 +90,7 @@ export default class VideoFeature extends Service {
       const material = await this.ctx.nookVideoSource.collect(request.url, request.strategy !== 'none', signal)
       signal.throwIfAborted()
       this.update(request.id, { warnings: material.warnings, stage: '保存来源资料' })
-      const basedOn: { noteId: string; revision: number }[] = []
+      const basedOn: { noteId: string; revision: number; versionId?: string }[] = []
       const save = async (kind: NoteSource['kind'], markdown: string, author: string, stable: string | null) => {
         signal.throwIfAborted()
         if (request.projectId && !(await this.ctx.nookProjects.get(request.projectId)))
@@ -105,7 +105,11 @@ export default class VideoFeature extends Service {
         })
         if (note.deletedAt) throw new VideoError('这份来源资料已在回收站，请先恢复后重试。')
         noteIds.push(note.id)
-        basedOn.push({ noteId: note.id, revision: note.revision })
+        basedOn.push({
+          noteId: note.id,
+          revision: note.revision,
+          ...(note.versionId ? { versionId: note.versionId } : {}),
+        })
         this.update(request.id, { noteIds: [...noteIds] })
         return note
       }
@@ -124,7 +128,11 @@ export default class VideoFeature extends Service {
       if (request.write) {
         this.update(request.id, { stage: '逐段写作与审校，可取消；成功片段会缓存' })
         const basis = transcriptNote ?? commentNote!
-        basedOn.splice(0, basedOn.length, { noteId: basis.id, revision: basis.revision })
+        basedOn.splice(0, basedOn.length, {
+          noteId: basis.id,
+          revision: basis.revision,
+          ...(basis.versionId ? { versionId: basis.versionId } : {}),
+        })
         const markdown = await this.ctx.nookVideoWriter.write(
           {
             title: material.title,

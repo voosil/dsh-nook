@@ -9,7 +9,18 @@ const source = z.strictObject({
   kind: z.enum(['personal', 'transcript', 'comment-note', 'ai-article', 'ai-summary']),
   url: z.url().nullable(),
   author: z.string().max(300).nullable(),
-  basedOn: z.array(z.strictObject({ noteId: id, revision: z.int().positive() })).max(500),
+  basedOn: z
+    .array(
+      z.strictObject({
+        noteId: id,
+        revision: z.int().positive(),
+        versionId: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .optional(),
+      }),
+    )
+    .max(500),
 })
 const input = z.strictObject({
   title: z.string().max(300),
@@ -18,6 +29,10 @@ const input = z.strictObject({
   pinned: z.boolean(),
 })
 const note = input.extend({
+  versionId: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   id,
   createdAt: date,
   updatedAt: date,
@@ -74,7 +89,14 @@ export const requests = {
   }),
   get: z.strictObject({ id }),
   create: input.extend({ id, source }),
-  save: input.extend({ id, revision: z.int().positive() }),
+  save: input.extend({
+    id,
+    revision: z.int().positive(),
+    versionId: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+  }),
   trash: z.strictObject({ id, revision: z.int().positive(), deleted: z.boolean() }),
   projects: z.strictObject({}),
   createProject: z.strictObject({
@@ -107,7 +129,16 @@ const outputs = {
   summarize: z.strictObject({
     title: z.string(),
     markdown: z.string(),
-    basedOn: z.array(z.strictObject({ noteId: id, revision: z.int().positive() })),
+    basedOn: z.array(
+      z.strictObject({
+        noteId: id,
+        revision: z.int().positive(),
+        versionId: z
+          .string()
+          .regex(/^[a-f0-9]{64}$/)
+          .optional(),
+      }),
+    ),
   }),
   list: z.strictObject({ notes: z.array(note), total: z.int().nonnegative() }),
   get: note.nullable(),

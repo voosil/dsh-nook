@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
-import { sourceSnapshot, watchSources } from '../../scripts/dev-watch.mjs'
+import { sourceSnapshot, watchSources } from '../../scripts/profile/dev-watch.mjs'
 
 async function until(predicate: () => boolean) {
   for (let i = 0; i < 100; i++) {

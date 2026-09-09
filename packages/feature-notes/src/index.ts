@@ -53,6 +53,10 @@ export default class NotesFeature extends Service {
     return this.ctx.nookProjects.update(id, request)
   }
   async deleteProject(id: string) {
+    if (this.ctx.nookNotes.deleteProject) {
+      await this.ctx.nookNotes.deleteProject(id)
+      return true
+    }
     await this.ctx.nookNotes.detachProject(id)
     await this.ctx.nookProjects.delete(id)
     return true

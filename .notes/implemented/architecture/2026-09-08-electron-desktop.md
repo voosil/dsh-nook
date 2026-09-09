@@ -25,7 +25,7 @@ flowchart LR
 
 ### 版本与边界
 
-2026-09-08 查询 npm `electron@latest` 得到 `44.2.0`，与 [Electron 稳定版列表](https://releases.electronjs.org/?channel=stable)一致。应用 manifest 和 lockfile 固定这个版本，启动时不在线解析版本。[标准 Node 下载脚本](../../../scripts/desktop-node.mjs)固定 `24.20.0` 和官方归档 SHA-256。
+2026-09-08 查询 npm `electron@latest` 得到 `44.2.0`，与 [Electron 稳定版列表](https://releases.electronjs.org/?channel=stable)一致。应用 manifest 和 lockfile 固定这个版本，启动时不在线解析版本。[标准 Node 下载脚本](../../../scripts/desktop/desktop-node.mjs)固定 `24.20.0` 和官方归档 SHA-256。
 
 选择标准 Node 是为了让 DSH 的原生依赖和子进程使用同一 ABI，避免 Electron 更新要求重建整套 DSH 依赖。electron-builder 负责外壳，Nook stage 负责独立运行时，禁用对该运行时的 Electron ABI 重建。首个交付范围是本地未签名 macOS arm64 `.app`；最低 macOS 版本依据 [Electron 44 发布说明](https://releases.electronjs.org/release/v44.0.0)。
 
@@ -63,11 +63,11 @@ ABI 实验使用参考 Electron `44.0.0` 的 `ELECTRON_RUN_AS_NODE` 模式，并
 
 ### 安装与用户数据
 
-[stage](../../../scripts/stage-desktop.mjs)复用现有 tarball 安装流水线，生成可搬移的依赖闭包；不维护第二套产品包或 Bundle 清单，不修改安装后的第三方包。Electron 主进程进入 ASAR，Node、DSH 和原生文件使用 extraResources。
+[stage](../../../scripts/desktop/stage-desktop.mjs)复用现有 tarball 安装流水线，生成可搬移的依赖闭包；不维护第二套产品包或 Bundle 清单，不修改安装后的第三方包。Electron 主进程进入 ASAR，Node、DSH 和原生文件使用 extraResources。
 
 运行时按内容指纹安装到独立版本目录，校验覆盖文件、链接和可执行位。写入临时目录后再次校验，再以同文件系统 rename 发布；旧版本保留。可写 Profile 使用逐包链接连接应用运行时，因此 DSH 的 fallback 链接修复不会修改完整性清单覆盖的内容。用户 manifest、patch、会话、凭据与业务数据保持在版本目录之外；网页数据合并由[共享运行环境决策](2026-09-08-shared-runtime.md)定义，旧数据不删除。
 
-打包器会省略空目录。空的 seed `home/agents` 因而不进入清单，由可写 home 创建；[打包门禁](../../../scripts/package-desktop.mjs)核对 electron-builder 实际产物，防止只验证打包前目录而遗漏分发变化。
+打包器会省略空目录。空的 seed `home/agents` 因而不进入清单，由可写 home 创建；[打包门禁](../../../scripts/desktop/package-desktop.mjs)核对 electron-builder 实际产物，防止只验证打包前目录而遗漏分发变化。
 
 监督进程取得 Nook 数据锁后调用[备份机制](../../../docs/backup.md)，备份成功才启动 DSH。该快照仅覆盖其声明的 Nook 业务数据，不冒充完整 Harness home 备份。SQLite 只读打开干净 WAL 数据库也会创建空 WAL，备份比较仅忽略自身新建的零字节 WAL 与 SHM；已有或非空 WAL 仍须完整校验，见[备份决策](../feature/2026-09-08-data-backup.md)。
 
@@ -91,7 +91,7 @@ CLI 输出解析与日志分离，完整 token URL 只交给受限窗口完成�
 
 ## Consequences
 
-构建、类型、契约、集成、边界、peer、独立 tarball 安装和 Web 开发模式验证覆盖共用流水线。[真实打包窗口门禁](../../../scripts/verify-desktop.mjs)搬移 `.app` 到包含中文与空格的目录，使用不含开发工具的 PATH，覆盖 cookie、RPC、笔记持久化、备份、第二次启动、资源损坏后重试和退出清理。[生命周期测试](../../../tests/integration/desktop-runtime.test.ts)覆盖重复停止和父进程崩溃，[安装测试](../../../tests/desktop/payload.test.ts)覆盖数据和 patch 保留、损坏与越界链接。
+构建、类型、契约、集成、边界、peer、独立 tarball 安装和 Web 开发模式验证覆盖共用流水线。[真实打包窗口门禁](../../../scripts/verify/verify-desktop.mjs)搬移 `.app` 到包含中文与空格的目录，使用不含开发工具的 PATH，覆盖 cookie、RPC、笔记持久化、备份、第二次启动、资源损坏后重试和退出清理。[生命周期测试](../../../tests/integration/desktop-runtime.test.ts)覆盖重复停止和父进程崩溃，[安装测试](../../../tests/desktop/payload.test.ts)覆盖数据和 patch 保留、损坏与越界链接。
 
 本机两轮打包窗口验收测得首次启动约 31–41 秒、再次启动约 9 秒；这包含安装或完整性校验，是单机观测，不是跨设备性能承诺。独立 Node 与版本目录保留增加磁盘占用，完整校验增加冷启动 I/O；不以跳过校验或自动删除用户数据换取速度。缓存优化、增量安装和历史版本清理需要各自的恢复与中断验收。
 

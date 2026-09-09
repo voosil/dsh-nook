@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
-import { createProfileArgs, resolveDevPort } from '../../scripts/run-profile-args.mjs'
-import { releasePort } from '../../scripts/release-port.mjs'
+import { createProfileArgs, resolveDevPort } from '../../scripts/profile/run-profile-args.mjs'
+import { releasePort } from '../../scripts/shared/release-port.mjs'
 
 const ROOT = '/tmp/nook-workspace'
 const BIN = '/tmp/nook-workspace/node_modules/@deepseek-ai/dsh/lib/bin.js'

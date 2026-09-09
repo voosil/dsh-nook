@@ -124,3 +124,30 @@ test('migration refuses unknown notebook tables before replacing the desktop sto
   assert.throws(() => migrateData(source, target, join(root, 'backups')), /Unsupported notebook table/)
   assert.throws(() => readdirSync(target), { code: 'ENOENT' })
 })
+
+test('migration preserves a complete sync library and refuses to combine distinct sync histories', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'nook-sync-migration-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const source = join(root, 'source'),
+    target = join(root, 'target'),
+    other = join(root, 'other')
+  async function create(dir: string) {
+    const ctx = new Context()
+    await ctx.plugin(Notebook, { file: join(dir, 'notebook.sqlite'), projectsFile: join(dir, 'projects.json') })
+    await ctx.nookProjects.create({ name: dir })
+    ctx.nookSyncReplica.bind('https://example.com/dav/', randomUUID())
+    const snapshot = ctx.nookSyncReplica.snapshot(),
+      binding = ctx.nookSyncReplica.binding()
+    await ctx.fiber.dispose()
+    return { snapshot, binding }
+  }
+  const expected = await create(source)
+  migrateData(source, target, join(root, 'backups'))
+  const ctx = new Context()
+  await ctx.plugin(Notebook, { file: join(target, 'notebook.sqlite'), projectsFile: join(target, 'projects.json') })
+  assert.deepEqual(ctx.nookSyncReplica.snapshot(), expected.snapshot)
+  assert.deepEqual(ctx.nookSyncReplica.binding(), expected.binding)
+  await ctx.fiber.dispose()
+  await create(other)
+  assert.throws(() => migrateData(other, target, join(root, 'backups')), /Cannot automatically merge/)
+})
