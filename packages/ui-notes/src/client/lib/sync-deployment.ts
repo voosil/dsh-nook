@@ -1,20 +1,36 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 
-export const SYNC_DEPLOYMENT_PROMPT = `请帮我完成 Nook 家庭同步服务器部署和当前设备接入，持续执行到首次同步验证成功。
-先调用 nook_sync_deployment_guide 和 nook_sync_status，按实际环境复用已有服务。如果缺少 SSH 连接方式，请先询问我；不要要求我在聊天中发送密码或私钥。
-我授权安装和配置必要的 Docker/Tailscale、部署 Nook 同步服务，并把该服务器生成的连接配置经 SSH 保存到当前 Nook Host 的私有目录，供 Nook 导入。先核实服务器和目标地址，保留现有数据，执行并校验备份。账号登录或系统提权时提示我完成，随后继续。
-请使用 nook_sync_import_connection 读取本机私有连接文件，自动验证并开启同步；凭据不能进入对话、Tool 参数或日志。随后运行 nook_sync_run 并确认同步状态。遇到故障先诊断修复，不重置数据。最后报告验证结果与仍需处理的事项。`
+declare const __NOOK_SYNC_CONFIGURATION_GUIDE__: string
+
+export const SYNC_CONFIGURATION_REQUEST = `请协助我配置 Nook 数据同步。
+
+先了解已有的同步服务、可用的部署环境，以及需要参与同步的设备，再确定应当连接已有服务、部署新服务，还是处理现有同步问题。已有信息直接复用，只询问影响下一步的缺失信息。
+
+根据随附的 Nook 同步指南执行。有可用工具和相应权限时，直接完成已确定范围内的操作；需要我操作时，给出当前步骤的明确指引，取得结果后继续推进。账号登录和系统提权由我在对应界面完成，不要求我在聊天中提供密码、私钥或完整连接凭据。
+
+保留已有数据和配置；涉及覆盖或迁移时，先明确影响并创建、验证可恢复备份。遇到故障先诊断，不通过清空数据解决问题。
+
+按本次确定的范围验证结果。分别说明服务器是否可用、哪些设备已经接入、哪些设备已完成实际同步，以及尚未验证或需要我处理的事项。`
+
+export function syncConfigurationPrompt(guide: string = __NOOK_SYNC_CONFIGURATION_GUIDE__): string {
+  return `${SYNC_CONFIGURATION_REQUEST}\n\n---\n\n${guide}`
+}
 
 /** Public DSH controllers only; a fresh session preserves existing drafts. */
-export async function openSyncDeployment(ctx: Context, directory: string, signal: AbortSignal): Promise<void> {
+export async function openSyncDeployment(
+  ctx: Context,
+  directory: string,
+  signal: AbortSignal,
+  prompt: string = syncConfigurationPrompt(),
+): Promise<void> {
   signal.throwIfAborted()
   const workspace = await ctx.workspaces.create({ path: directory })
   signal.throwIfAborted()
   const sessionId = await ctx.sessions.create({ workspaceId: workspace.workspaceId })
   signal.throwIfAborted()
   const scope = ctx.sessions.scope(sessionId)
-  if (!scope) throw new Error('部署对话暂未就绪，请重试。')
-  ctx.conversation.input.for(scope).setDraft(SYNC_DEPLOYMENT_PROMPT)
+  if (!scope) throw new Error('同步配置对话暂未就绪，请重试。')
+  ctx.conversation.input.for(scope).setDraft(prompt)
   ctx.sessions.open(sessionId)
 }

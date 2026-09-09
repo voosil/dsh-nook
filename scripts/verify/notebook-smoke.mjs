@@ -161,8 +161,27 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     if (dav) {
       await workspace.getByRole('button', { name: /数据同步/ }).click()
       const sync = workspace.getByRole('dialog', { name: '数据同步', exact: true })
+      assert.equal(await sync.getByRole('tab', { name: '同步信息', exact: true }).getAttribute('aria-selected'), 'true')
+      assert.equal(await sync.getByRole('link', { name: '配置指南' }).count(), 0)
+      assert.equal(await sync.getByLabel('WebDAV 同步目录').isVisible(), false)
+      const information = sync.getByRole('tabpanel', { name: '同步信息', exact: true })
+      await information.getByRole('button', { name: '去配置', exact: true }).waitFor()
+      assert.equal(await information.getByRole('button').count(), 1)
       if (process.env.NOOK_SYNC_SETTINGS_SCREENSHOT)
         await page.screenshot({ path: process.env.NOOK_SYNC_SETTINGS_SCREENSHOT })
+      await information.getByRole('button', { name: '去配置', exact: true }).click()
+      await workspace.waitFor({ state: 'hidden' })
+      const initialComposer = page
+        .locator('[contenteditable="true"]')
+        .filter({ hasText: '请协助我配置 Nook 数据同步。' })
+      await initialComposer.waitFor()
+      const initialPrompt = await initialComposer.innerText()
+      await page.getByRole('button', { name: '打开 Nook', exact: true }).click()
+      await workspace.waitFor()
+      await workspace.getByRole('button', { name: /数据同步/ }).click()
+      await sync.getByRole('tab', { name: '同步信息', exact: true }).focus()
+      await page.keyboard.press('ArrowRight')
+      assert.equal(await sync.getByRole('tab', { name: '配置', exact: true }).getAttribute('aria-selected'), 'true')
       await sync.getByLabel('WebDAV 同步目录').fill(dav.url)
       assert.equal(await sync.locator('.nook-sync-guide-body').count(), 0)
       await sync.getByRole('link', { name: '配置指南' }).click()
@@ -170,10 +189,51 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await guide.waitFor()
       await sync.waitFor({ state: 'hidden' })
       assert.equal(new URL(page.url()).hash, '#nook-sync-guide')
-      await guide.getByRole('heading', { name: '部署家庭服务器', exact: true }).waitFor()
-      await guide.getByText('手动安装', { exact: true }).click()
+      await guide.getByRole('heading', { name: '配置同步', exact: true }).waitFor()
+      await guide.getByText('查看提示词', { exact: true }).click()
+      const configurationPrompt = await guide.getByLabel('同步配置提示词', { exact: true }).inputValue()
+      const normalizeParagraphs = text => text.trim().replace(/\n+/g, '\n')
+      assert.equal(normalizeParagraphs(initialPrompt), normalizeParagraphs(configurationPrompt))
+      assert.ok(configurationPrompt.startsWith('请协助我配置 Nook 数据同步。'))
+      assert.ok(configurationPrompt.includes('/releases/download/sync-assistant-v'))
+      assert.ok(configurationPrompt.includes('助手 SHA-256：'))
+      assert.ok(configurationPrompt.includes('## 连接已有服务'))
+      assert.ok(configurationPrompt.includes('## 故障排查'))
+      await page.evaluate(() => {
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText: async () => {
+              throw new Error('clipboard denied')
+            },
+          },
+        })
+      })
+      await guide.getByText('查看提示词', { exact: true }).click()
+      await guide.getByRole('button', { name: '复制提示词', exact: true }).click()
+      await guide.getByRole('alert').filter({ hasText: '无法访问剪贴板' }).waitFor()
+      await guide.getByLabel('同步配置提示词', { exact: true }).waitFor({ state: 'visible' })
+      assert.equal(await guide.getByLabel('同步配置提示词', { exact: true }).inputValue(), configurationPrompt)
+      await page.evaluate(() => {
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText: async text => {
+              window.__nookCopiedPrompt = text
+            },
+          },
+        })
+      })
+      await guide.getByRole('button', { name: '复制提示词', exact: true }).click()
+      await guide.getByRole('button', { name: '已复制提示词', exact: true }).waitFor()
+      assert.equal(await page.evaluate(() => window.__nookCopiedPrompt), configurationPrompt)
+      await page.evaluate(() => {
+        delete navigator.clipboard
+        delete window.__nookCopiedPrompt
+      })
+      await guide.getByText('手动配置', { exact: true }).click()
       await guide.getByText('查看安装命令', { exact: true }).click()
-      const assistantCommand = await guide.getByLabel('家庭服务器安装命令', { exact: true }).inputValue()
+      const assistantCommand = await guide.getByLabel('服务器安装命令', { exact: true }).inputValue()
       assert.ok(assistantCommand.startsWith("bash -c '"))
       assert.ok(assistantCommand.includes('/releases/download/sync-assistant-v'))
       assert.ok(assistantCommand.includes('sha256sum -c'))
@@ -254,16 +314,28 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await sync.getByRole('status').filter({ hasText: '已同步' }).waitFor({ timeout: 30000 })
       assert.ok([...dav.data.keys()].some(path => path.endsWith('/index.json')))
       assert.equal(await sync.getByLabel('存储密码或应用令牌').inputValue(), '')
+      assert.equal(await sync.getByRole('tab', { name: '同步信息', exact: true }).getAttribute('aria-selected'), 'true')
+      assert.equal(await sync.getByRole('link', { name: '配置指南' }).count(), 0)
+      assert.ok((await information.innerText()).includes(dav.url))
+      await sync.getByRole('tab', { name: '配置', exact: true }).click()
+      await sync.getByLabel('WebDAV 同步目录').fill('https://unsaved.invalid/nook/')
+      await sync.getByRole('tab', { name: '同步信息', exact: true }).click()
       await sync.getByRole('button', { name: '关闭同步', exact: true }).click()
       await sync.getByRole('status').filter({ hasText: '同步未开启' }).waitFor()
+      assert.ok((await information.innerText()).includes(dav.url))
+      await information.getByRole('button', { name: '开启同步', exact: true }).click()
+      await sync.getByRole('status').filter({ hasText: '已同步' }).waitFor()
       await sync.getByRole('button', { name: '关闭同步设置', exact: true }).click()
       await workspace.getByRole('button', { name: /数据同步/ }).click()
+      assert.equal(await sync.getByRole('tab', { name: '同步信息', exact: true }).getAttribute('aria-selected'), 'true')
+      await sync.getByRole('tab', { name: '配置', exact: true }).click()
+      assert.equal(await sync.getByLabel('WebDAV 同步目录').inputValue(), dav.url)
       await sync.getByRole('link', { name: '配置指南' }).click()
-      await guide.getByRole('button', { name: '让 AI 帮我部署并连接', exact: true }).click()
+      await guide.getByRole('button', { name: '让 AI 帮我配置', exact: true }).click()
       await workspace.waitFor({ state: 'hidden' })
       const composer = page.locator('[contenteditable="true"]').filter({ hasText: 'nook_sync_deployment_guide' })
       await composer.waitFor()
-      assert.ok((await composer.innerText()).includes('nook_sync_import_connection'))
+      assert.equal(normalizeParagraphs(await composer.innerText()), normalizeParagraphs(configurationPrompt))
     }
     assert.deepEqual(errors, [])
     return { title, errors }

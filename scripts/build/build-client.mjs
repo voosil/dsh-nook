@@ -15,10 +15,12 @@ const clients = [
 const installer = await installerArtifacts()
 const docker = await dockerArtifacts()
 const assistant = await assistantArtifacts()
+const guide = await deploymentGuide()
+const configurationGuide = `# Nook 同步指南\n\n安装助手版本：${guide.version}\n助手下载地址：${guide.assistantUrl}\n助手 SHA-256：${guide.assistantSha256}\n\n交互安装命令：\n\n\`\`\`bash\n${guide.interactiveInstallCommand}\n\`\`\`\n\n${guide.skill}`
 const output = []
 output.push({
   path: resolve(root, 'packages/feature-agent/lib/sync-deployment.json'),
-  contents: Buffer.from(JSON.stringify(await deploymentGuide(), null, 2)),
+  contents: Buffer.from(JSON.stringify(guide, null, 2)),
 })
 for (const client of clients) {
   const directory = resolve(root, 'packages', client.directory)
@@ -27,6 +29,7 @@ for (const client of clients) {
     define: {
       __NOOK_SYNC_SETUP_SOURCE__: JSON.stringify(installer.source),
       __NOOK_SYNC_ASSISTANT_COMMAND__: JSON.stringify(assistant.command),
+      __NOOK_SYNC_CONFIGURATION_GUIDE__: JSON.stringify(configurationGuide),
       __NOOK_SYNC_SETUP_COMMAND__: JSON.stringify(installer.command),
       __NOOK_SYNC_DOCKER_ARCHIVE__: JSON.stringify(docker.archive.toString('base64')),
       __NOOK_SYNC_DOCKER_FILENAME__: JSON.stringify(docker.filename),

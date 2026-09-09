@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { syncConfigurationPrompt } from '../lib/sync-deployment.js'
 
 declare const __NOOK_SYNC_ASSISTANT_COMMAND__: string
 
@@ -7,32 +8,68 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
   const [openError, setOpenError] = useState('')
   const [copied, setCopied] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [promptCopied, setPromptCopied] = useState(false)
+  const [promptFailed, setPromptFailed] = useState(false)
+  const prompt = syncConfigurationPrompt()
   return (
-    <section aria-label="部署家庭服务器">
-      <h2>部署家庭服务器</h2>
-      <p>让 AI 帮你部署服务器、连接这台设备并验证同步。进入对话后发送已填好的请求，按提示完成账号登录。</p>
-      <button
-        type="button"
-        disabled={opening}
-        onClick={async () => {
-          setOpening(true)
-          setOpenError('')
-          try {
-            await onDeploy()
-          } catch (error) {
-            setOpenError(error instanceof Error ? error.message : '无法打开部署对话，请重试。')
-          } finally {
-            setOpening(false)
-          }
-        }}
-      >
-        {opening ? '正在打开部署对话…' : '让 AI 帮我部署并连接'}
-      </button>
+    <section aria-label="配置同步">
+      <h2>配置同步</h2>
+      <p>让 AI 帮你部署同步服务或连接已有服务，根据实际环境完成配置和验证。</p>
+      <div className="nook-sync-guide-actions">
+        <button
+          type="button"
+          disabled={opening}
+          onClick={async () => {
+            setOpening(true)
+            setOpenError('')
+            try {
+              await onDeploy()
+            } catch (error) {
+              setOpenError(error instanceof Error ? error.message : '无法打开同步配置对话，请重试。')
+            } finally {
+              setOpening(false)
+            }
+          }}
+        >
+          {opening ? '正在打开同步配置对话…' : '让 AI 帮我配置'}
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(prompt)
+              setPromptCopied(true)
+              setPromptFailed(false)
+            } catch {
+              setPromptCopied(false)
+              setPromptFailed(true)
+            }
+          }}
+        >
+          {promptCopied ? '已复制提示词' : '复制提示词'}
+        </button>
+      </div>
+      <p>进入对话后发送已填好的请求，或复制提示词交给其他 AI。提示词附有同步指南。</p>
       {openError && <p role="alert">{openError}</p>}
+      {promptFailed && <p role="alert">无法访问剪贴板，请从下方复制提示词。</p>}
+      <details open={promptFailed || undefined}>
+        <summary>查看提示词</summary>
+        <textarea
+          aria-label="同步配置提示词"
+          rows={8}
+          readOnly
+          value={prompt}
+          onFocus={event => event.target.select()}
+        />
+      </details>
       <details>
-        <summary>手动安装</summary>
+        <summary>手动配置</summary>
+        <button type="button" onClick={onConnect}>
+          连接已有服务
+        </button>
+        <p>需要新建服务时，可使用以下安装助手。</p>
         <ol>
-          <li>通过 SSH 登录服务器，复制并执行下方安装命令。</li>
+          <li>在服务器终端复制并执行下方安装命令。</li>
           <li>按终端提示登录 Tailscale。助手自动安装依赖、配置地址、证书和开机启动。</li>
           <li>复制终端输出的连接信息，返回数据同步粘贴并验证。</li>
         </ol>
@@ -49,7 +86,7 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
               }
             }}
           >
-            {copied ? '已复制安装命令' : '复制家庭服务器安装命令'}
+            {copied ? '已复制安装命令' : '复制服务器安装命令'}
           </button>
           <button type="button" onClick={onConnect}>
             已安装，粘贴连接信息
@@ -59,7 +96,7 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
         <details open={failed || undefined}>
           <summary>查看安装命令</summary>
           <textarea
-            aria-label="家庭服务器安装命令"
+            aria-label="服务器安装命令"
             rows={4}
             readOnly
             value={__NOOK_SYNC_ASSISTANT_COMMAND__}

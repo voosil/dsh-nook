@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Cloud, RefreshCw, X } from 'lucide-react'
 import { SyncGuidePage } from './sync-guide.js'
 import type { SyncStatus, SyncConflict, Json } from '@nook-dsh/capability-sync'
@@ -18,6 +18,8 @@ export function SyncControl({
   onChanged: (change: number) => void
   onDeploy: () => Promise<void>
 }) {
+  const [tab, setTab] = useState<'status' | 'configuration'>('status')
+  const tabId = useId()
   const [guideOpen, setGuideOpen] = useState(window.location.hash === '#nook-sync-guide')
   useEffect(() => {
     const changed = () => setGuideOpen(window.location.hash === '#nook-sync-guide')
@@ -77,17 +79,22 @@ export function SyncControl({
     }
   }, [api])
   async function operation(fn: () => Promise<unknown>) {
+    const signal = lifecycle.current?.signal
+    if (!signal || signal.aborted) return
     setBusy(true)
     setError('')
     try {
       await fn()
-      if (lifecycle.current?.signal.aborted) return
-      setStatus(await api('status', {}, lifecycle.current?.signal))
-      setConflicts(await api('conflicts', {}, lifecycle.current?.signal))
+      if (signal.aborted) return
+      const next = await api('status', {}, signal)
+      const nextConflicts = await api('conflicts', {}, signal)
+      if (signal.aborted) return
+      setStatus(next)
+      setConflicts(nextConflicts)
     } catch (e) {
-      if (!lifecycle.current?.signal.aborted) setError(e instanceof Error ? e.message : '操作未完成。')
+      if (!signal.aborted) setError(e instanceof Error ? e.message : '操作未完成。')
     } finally {
-      setBusy(false)
+      if (!signal.aborted) setBusy(false)
     }
   }
   const label = !status?.enabled
@@ -116,6 +123,7 @@ export function SyncControl({
           setImported(false)
           setConnectionText('')
           setCaCert(status?.caCert ?? '')
+          setTab('status')
           setOpen(true)
           void operation(async () => {})
         }}
@@ -131,6 +139,7 @@ export function SyncControl({
               setUsername(status?.username ?? '')
               setCaCert(status?.caCert ?? '')
             }
+            setTab('configuration')
             window.location.hash = 'nook'
             setOpen(true)
           }}
@@ -158,247 +167,356 @@ export function SyncControl({
                 <X size={18} aria-hidden="true" />
               </button>
             </div>
-            <p className="nook-sync-description nook-muted">通过 WebDAV 在设备间同步笔记和项目。</p>
-            {status?.enabled && (
-              <p className="nook-sync-progress nook-muted" role="status">
-                {status.pending > 0 && <span>{status.pending} 个待传版本</span>}
-                {status.conflicts > 0 && <span>{status.conflicts} 条冲突</span>}
-                {status.lastSync && <span>最近同步：{new Date(status.lastSync).toLocaleString()}</span>}
-              </p>
-            )}
             {(error || status?.error) && (
               <p className="nook-error" role="alert">
                 {error || status?.error}
               </p>
             )}
-            {!!status?.unsupported && <p>有 {status.unsupported} 条数据的类型或格式需要新版应用，原始内容已保留。</p>}
-            <div className="nook-sync-import">
-              <div className="nook-sync-import-heading">
-                <span>{imported ? '连接信息已导入' : '连接信息'}</span>
-                <button type="button" disabled={busy} onClick={() => importInput.current?.click()}>
-                  导入连接配置
-                </button>
-              </div>
-              {!imported && (
-                <textarea
-                  aria-label="粘贴连接信息"
-                  rows={2}
-                  autoComplete="off"
-                  spellCheck={false}
-                  maxLength={CONNECTION_FILE_LIMIT}
-                  placeholder="粘贴安装助手提供的连接信息"
-                  value={connectionText}
-                  disabled={busy}
-                  onChange={event => {
-                    const text = event.target.value
-                    setConnectionText(text)
-                    setError('')
-                    if (!text.trim()) return
-                    try {
-                      importConnection(text)
-                    } catch (error) {
-                      setError(error instanceof Error ? error.message : '无法识别连接信息。')
-                    }
-                  }}
-                />
-              )}
-              {imported && (
+            <div className="nook-sync-tabs" role="tablist" aria-label="数据同步视图">
+              {(
+                [
+                  { key: 'status', label: '同步信息' },
+                  { key: 'configuration', label: '配置' },
+                ] as const
+              ).map(item => (
                 <button
+                  key={item.key}
+                  id={`${tabId}-${item.key}-tab`}
                   type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setImported(false)
-                    setPassword('')
+                  role="tab"
+                  aria-selected={tab === item.key}
+                  aria-controls={`${tabId}-${item.key}-panel`}
+                  tabIndex={tab === item.key ? 0 : -1}
+                  onClick={() => setTab(item.key)}
+                  onKeyDown={event => {
+                    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                    event.preventDefault()
+                    const next =
+                      event.key === 'Home'
+                        ? 'status'
+                        : event.key === 'End'
+                          ? 'configuration'
+                          : tab === 'status'
+                            ? 'configuration'
+                            : 'status'
+                    setTab(next)
+                    event.currentTarget.parentElement
+                      ?.querySelector<HTMLButtonElement>(`[id="${tabId}-${next}-tab"]`)
+                      ?.focus()
                   }}
                 >
-                  使用其他连接信息
+                  {item.label}
                 </button>
-              )}
-              <input
-                ref={importInput}
-                hidden
-                type="file"
-                accept=".json,application/json"
-                aria-label="连接配置文件"
-                disabled={busy}
-                onChange={event => {
-                  const file = event.target.files?.[0]
-                  event.target.value = ''
-                  if (!file) return
-                  const signal = lifecycle.current?.signal
-                  setBusy(true)
-                  setError('')
-                  void (async () => {
-                    try {
-                      if (file.size > CONNECTION_FILE_LIMIT) throw new Error('连接文件不能超过 32 KB。')
-                      const text = await file.text()
-                      if (!signal || signal.aborted) return
-                      importConnection(text)
-                    } catch (error) {
-                      if (signal && !signal.aborted)
-                        setError(error instanceof Error ? error.message : '无法读取连接文件。')
-                    } finally {
-                      if (signal && !signal.aborted) setBusy(false)
-                    }
-                  })()
-                }}
-              />
-              <p className="nook-muted">
-                {imported ? '请核对下方地址。家庭服务器需连接同一 Tailscale 网络。' : '包含密码，请勿分享。'}
-              </p>
+              ))}
             </div>
-            <form
-              onSubmit={event => {
-                event.preventDefault()
-                void operation(async () => {
-                  await api(
-                    'configure',
-                    { enabled: true, url, username, caCert, ...(password ? { password } : {}) },
-                    lifecycle.current?.signal,
-                  )
-                  setPassword('')
-                  setImported(false)
-                  await api('run', {}, lifecycle.current?.signal)
-                })
-              }}
+            <div
+              role="tabpanel"
+              id={`${tabId}-configuration-panel`}
+              aria-labelledby={`${tabId}-configuration-tab`}
+              hidden={tab !== 'configuration'}
             >
-              <label>
-                WebDAV 同步目录
-                <input
-                  required
-                  type="url"
-                  placeholder="https://example.com/dav/nook/"
-                  value={url}
-                  onChange={e => setUrl(e.target.value)}
-                  disabled={busy}
-                />
-              </label>
-              <details key={imported ? 'imported' : 'manual'}>
-                <summary>账号与证书</summary>
-                <label>
-                  存储用户名
-                  <input
-                    autoComplete="off"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    disabled={busy}
-                  />
-                </label>
-                <label>
-                  存储密码或应用令牌
-                  <input
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder={status?.hasPassword ? '留空保留已保存的凭据' : ''}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    disabled={busy}
-                  />
-                </label>
-                <label>
-                  服务器 CA 证书（可选）
-                  <textarea
-                    rows={3}
-                    placeholder="粘贴 CA 证书；公开可信证书可留空"
-                    value={caCert}
-                    onChange={e => setCaCert(e.target.value)}
-                    disabled={busy}
-                  />
-                </label>
-              </details>
-              <details className="nook-sync-info">
-                <summary>同步范围与数据保护</summary>
-                <p className="nook-muted">
-                  仅同步笔记和项目，不含独立文件、对话及模型配置。每台设备保留本地数据，首次开启前自动备份并校验。请使用
-                  Nook 专用目录。
-                </p>
-              </details>
-              <div className="nook-sync-footer">
+              <p className="nook-sync-manual-guide">
                 <a className="nook-sync-guide-entry" href="#nook-sync-guide">
                   配置指南 ↗
                 </a>
-                <div className="nook-actions">
-                  <button type="submit" disabled={busy || !!connectionText.trim()}>
-                    {busy ? '处理中…' : status?.enabled ? '保存配置' : '验证并开启同步'}
+              </p>
+              <div className="nook-sync-import">
+                <div className="nook-sync-import-heading">
+                  <span>{imported ? '连接信息已导入' : '连接信息'}</span>
+                  <button type="button" disabled={busy} onClick={() => importInput.current?.click()}>
+                    导入连接配置
                   </button>
-                  {status?.enabled && (
-                    <>
+                </div>
+                {!imported && (
+                  <textarea
+                    aria-label="粘贴连接信息"
+                    rows={2}
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={CONNECTION_FILE_LIMIT}
+                    placeholder="粘贴安装助手提供的连接信息"
+                    value={connectionText}
+                    disabled={busy}
+                    onChange={event => {
+                      const text = event.target.value
+                      setConnectionText(text)
+                      setError('')
+                      if (!text.trim()) return
+                      try {
+                        importConnection(text)
+                      } catch (error) {
+                        setError(error instanceof Error ? error.message : '无法识别连接信息。')
+                      }
+                    }}
+                  />
+                )}
+                {imported && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setImported(false)
+                      setPassword('')
+                    }}
+                  >
+                    使用其他连接信息
+                  </button>
+                )}
+                <input
+                  ref={importInput}
+                  hidden
+                  type="file"
+                  accept=".json,application/json"
+                  aria-label="连接配置文件"
+                  disabled={busy}
+                  onChange={event => {
+                    const file = event.target.files?.[0]
+                    event.target.value = ''
+                    if (!file) return
+                    const signal = lifecycle.current?.signal
+                    setBusy(true)
+                    setError('')
+                    void (async () => {
+                      try {
+                        if (file.size > CONNECTION_FILE_LIMIT) throw new Error('连接文件不能超过 32 KB。')
+                        const text = await file.text()
+                        if (!signal || signal.aborted) return
+                        importConnection(text)
+                      } catch (error) {
+                        if (signal && !signal.aborted)
+                          setError(error instanceof Error ? error.message : '无法读取连接文件。')
+                      } finally {
+                        if (signal && !signal.aborted) setBusy(false)
+                      }
+                    })()
+                  }}
+                />
+                <p className="nook-muted">{imported ? '请核对下方地址与目标服务。' : '包含密码，请勿分享。'}</p>
+              </div>
+              <form
+                onSubmit={event => {
+                  event.preventDefault()
+                  void operation(async () => {
+                    await api(
+                      'configure',
+                      { enabled: true, url, username, caCert, ...(password ? { password } : {}) },
+                      lifecycle.current?.signal,
+                    )
+                    setPassword('')
+                    setImported(false)
+                    await api('run', {}, lifecycle.current?.signal)
+                    setTab('status')
+                  })
+                }}
+              >
+                <label>
+                  WebDAV 同步目录
+                  <input
+                    required
+                    type="url"
+                    placeholder="https://example.com/dav/nook/"
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                    disabled={busy}
+                  />
+                </label>
+                <details key={imported ? 'imported' : 'manual'}>
+                  <summary>账号与证书</summary>
+                  <label>
+                    存储用户名
+                    <input
+                      autoComplete="off"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      disabled={busy}
+                    />
+                  </label>
+                  <label>
+                    存储密码或应用令牌
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      placeholder={status?.hasPassword ? '留空保留已保存的凭据' : ''}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      disabled={busy}
+                    />
+                  </label>
+                  <label>
+                    服务器 CA 证书（可选）
+                    <textarea
+                      rows={3}
+                      placeholder="粘贴 CA 证书；公开可信证书可留空"
+                      value={caCert}
+                      onChange={e => setCaCert(e.target.value)}
+                      disabled={busy}
+                    />
+                  </label>
+                </details>
+                <details className="nook-sync-info">
+                  <summary>同步范围与数据保护</summary>
+                  <p className="nook-muted">
+                    仅同步笔记和项目，不含独立文件、对话及模型配置。每台设备保留本地数据，首次开启前自动备份并校验。请使用
+                    Nook 专用目录。
+                  </p>
+                </details>
+                <div className="nook-sync-footer">
+                  <div className="nook-actions">
+                    <button type="submit" disabled={busy || !!connectionText.trim()}>
+                      {busy ? '处理中…' : status?.enabled ? '保存配置' : '验证并开启同步'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div
+              role="tabpanel"
+              id={`${tabId}-status-panel`}
+              aria-labelledby={`${tabId}-status-tab`}
+              hidden={tab !== 'status'}
+            >
+              {!status ? (
+                <p role="status">正在读取同步信息…</p>
+              ) : !status.url ? (
+                <div className="nook-sync-empty">
+                  <button type="button" disabled={busy} onClick={() => void operation(onDeploy)}>
+                    {busy ? '正在打开…' : '去配置'}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <dl className="nook-sync-details">
+                    <div>
+                      <dt>同步目录</dt>
+                      <dd>{status.url}</dd>
+                    </div>
+                    <div>
+                      <dt>最近同步</dt>
+                      <dd>{status.lastSync ? new Date(status.lastSync).toLocaleString() : '尚未同步'}</dd>
+                    </div>
+                    <div>
+                      <dt>待传版本</dt>
+                      <dd>{status.pending}</dd>
+                    </div>
+                    <div>
+                      <dt>同步冲突</dt>
+                      <dd>{status.conflicts}</dd>
+                    </div>
+                  </dl>
+                  {!!status.unsupported && (
+                    <p>有 {status.unsupported} 条数据的类型或格式需要新版应用，原始内容已保留。</p>
+                  )}
+                  <div className="nook-actions">
+                    {status.enabled ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void operation(() => api('run', {}, lifecycle.current?.signal))}
+                        >
+                          <RefreshCw size={14} aria-hidden="true" /> 立即同步
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            void operation(() =>
+                              api(
+                                'configure',
+                                { enabled: false, url: status.url, username: status.username },
+                                lifecycle.current?.signal,
+                              ),
+                            )
+                          }
+                        >
+                          关闭同步
+                        </button>
+                      </>
+                    ) : (
                       <button
                         type="button"
-                        disabled={busy || !status?.enabled}
-                        onClick={() => void operation(() => api('run', {}, lifecycle.current?.signal))}
-                      >
-                        <RefreshCw size={14} aria-hidden="true" /> 立即同步
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy || !status?.enabled}
+                        disabled={busy}
                         onClick={() =>
-                          void operation(() =>
-                            api('configure', { enabled: false, url, username }, lifecycle.current?.signal),
-                          )
+                          void operation(async () => {
+                            await api(
+                              'configure',
+                              { enabled: true, url: status.url, username: status.username, caCert: status.caCert },
+                              lifecycle.current?.signal,
+                            )
+                            await api('run', {}, lifecycle.current?.signal)
+                          })
                         }
                       >
-                        关闭同步
+                        开启同步
                       </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </form>
-            {!!conflicts.length && (
-              <div className="nook-sync-conflicts">
-                <h3>选择需要保留的版本</h3>
-                <p>被替换的内容会先备份。保留全部会把其他版本另存为副本。</p>
-                {conflicts.map(c => (
-                  <article key={c.key}>
-                    <h4>
-                      {c.type === 'note' ? '笔记' : c.type === 'project' ? '项目' : c.type} · {c.id}
-                    </h4>
-                    {c.versions.map(v => (
-                      <div key={v.hash}>
-                        <small>
-                          {v.value.deleted ? '已删除版本' : '内容版本'} · {v.hash.slice(0, 10)}
-                        </small>
-                        <textarea readOnly rows={5} aria-label="冲突版本内容" value={preview(v.value.data)} />
-                        <div className="nook-actions">
-                          <button
-                            disabled={busy}
-                            onClick={() =>
-                              void operation(() =>
-                                api(
-                                  'resolve',
-                                  { key: c.key, expected: c.versions.map(x => x.hash), selected: v.hash, copy: false },
-                                  lifecycle.current?.signal,
-                                ),
-                              )
-                            }
-                          >
-                            保留此版本
-                          </button>
-                          {['note', 'project'].includes(c.type) && (
+                    )}
+                  </div>
+                </>
+              )}
+              {!!conflicts.length && (
+                <div className="nook-sync-conflicts">
+                  <h3>选择需要保留的版本</h3>
+                  <p>被替换的内容会先备份。保留全部会把其他版本另存为副本。</p>
+                  {conflicts.map(c => (
+                    <article key={c.key}>
+                      <h4>
+                        {c.type === 'note' ? '笔记' : c.type === 'project' ? '项目' : c.type} · {c.id}
+                      </h4>
+                      {c.versions.map(v => (
+                        <div key={v.hash}>
+                          <small>
+                            {v.value.deleted ? '已删除版本' : '内容版本'} · {v.hash.slice(0, 10)}
+                          </small>
+                          <textarea readOnly rows={5} aria-label="冲突版本内容" value={preview(v.value.data)} />
+                          <div className="nook-actions">
                             <button
                               disabled={busy}
                               onClick={() =>
                                 void operation(() =>
                                   api(
                                     'resolve',
-                                    { key: c.key, expected: c.versions.map(x => x.hash), selected: v.hash, copy: true },
+                                    {
+                                      key: c.key,
+                                      expected: c.versions.map(x => x.hash),
+                                      selected: v.hash,
+                                      copy: false,
+                                    },
                                     lifecycle.current?.signal,
                                   ),
                                 )
                               }
                             >
-                              保留此版本及其他副本
+                              保留此版本
                             </button>
-                          )}
+                            {['note', 'project'].includes(c.type) && (
+                              <button
+                                disabled={busy}
+                                onClick={() =>
+                                  void operation(() =>
+                                    api(
+                                      'resolve',
+                                      {
+                                        key: c.key,
+                                        expected: c.versions.map(x => x.hash),
+                                        selected: v.hash,
+                                        copy: true,
+                                      },
+                                      lifecycle.current?.signal,
+                                    ),
+                                  )
+                                }
+                              >
+                                保留此版本及其他副本
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </article>
-                ))}
-              </div>
-            )}
+                      ))}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
         </div>
       )}

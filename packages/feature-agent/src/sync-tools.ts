@@ -82,7 +82,7 @@ export function registerSyncTools(ctx: Context): void {
   register({
     name: 'nook_sync_deployment_guide',
     description:
-      'Get the packaged Nook sync deployment workflow and pinned installer details. Call first when asked to deploy a sync server or connect a device.',
+      'Get the packaged Nook sync configuration guide and pinned installer details for deployment, connecting existing services, or troubleshooting. Choose the workflow from the user’s needs and available environment.',
     parameters: {},
     async execute() {
       return { result: await readFile(new URL('./sync-deployment.json', import.meta.url), 'utf8') }
