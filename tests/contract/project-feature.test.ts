@@ -27,6 +27,10 @@ class FakeProjectProvider extends Service implements ProjectService {
     return [...this.projects.values()]
   }
 
+  async reorder() {
+    return this.list()
+  }
+
   async get(projectId: string): Promise<ProjectDto | undefined> {
     return this.projects.get(projectId)
   }

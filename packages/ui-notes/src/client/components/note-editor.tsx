@@ -1,6 +1,6 @@
 import { ExternalLink, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { noteTitle, type NoteDto, type NoteInput } from '@nook-dsh/capability-note'
+import { type NoteDto, type NoteInput } from '@nook-dsh/capability-note'
 import type { ProjectDto } from '@nook-dsh/capability-project'
 import type { Api } from '../lib/api.js'
 import { Autosave } from '../lib/autosave.js'
@@ -10,7 +10,12 @@ import { RichEditor } from './rich-editor.js'
 
 const draftKey = (id: string) => `nook.note-draft.v1.${id}`
 
-export type EditorHandle = { flush: () => Promise<boolean>; dirty: () => boolean; revision: () => number }
+export type EditorHandle = {
+  flush: () => Promise<boolean>
+  dirty: () => boolean
+  revision: () => number
+  input: () => NoteInput
+}
 export function NoteEditor({
   initial,
   projects,
@@ -19,8 +24,12 @@ export function NoteEditor({
   onDeleted,
   onCopy,
   handle,
+  onExport,
+  disabled = false,
 }: {
   initial: NoteDto
+  onExport: (input: NoteInput) => Promise<void>
+  disabled?: boolean
   projects: readonly ProjectDto[]
   api: Api
   onSaved: (note: NoteDto) => void
@@ -126,6 +135,7 @@ export function NoteEditor({
       flush: () => (blocked ? Promise.resolve(false) : controller.flush()),
       dirty: () => controller.dirty,
       revision: () => controller.note.revision,
+      input: () => controller.current,
     }
     return () => {
       handle.current = null
@@ -144,17 +154,6 @@ export function NoteEditor({
       setBusy(false)
     }
   }
-  function download() {
-    const blob = new Blob([input.title ? `# ${input.title}\n\n${input.markdown}` : input.markdown], {
-      type: 'text/markdown;charset=utf-8',
-    })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `${noteTitle(input).replace(/[\\/:*?"<>|]/g, '_')}.md`
-    anchor.click()
-    URL.revokeObjectURL(url)
-  }
   return (
     <section className="nook-editor" aria-label="笔记编辑区">
       <div className="nook-editor-top">
@@ -171,8 +170,10 @@ export function NoteEditor({
                     ? '保存失败'
                     : '已保存到本地 · 已入库'}
           </span>
-          <Button onClick={download}>导出</Button>
-          <Button disabled={busy || blocked} onClick={() => void trash()}>
+          <Button disabled={disabled || busy} onClick={() => void onExport(input)}>
+            导出
+          </Button>
+          <Button disabled={disabled || busy || blocked} onClick={() => void trash()}>
             {note.deletedAt ? '恢复笔记' : '移到回收站'}
           </Button>
         </div>
@@ -200,14 +201,14 @@ export function NoteEditor({
           placeholder="无标题笔记"
           maxLength={300}
           value={input.title}
-          disabled={!!note.deletedAt}
+          disabled={disabled || busy || !!note.deletedAt}
           onChange={event => change({ ...input, title: event.target.value })}
         />
         <div className="nook-meta">
           <select
             aria-label="笔记所属项目"
             value={input.projectId ?? ''}
-            disabled={!!note.deletedAt}
+            disabled={disabled || busy || !!note.deletedAt}
             onChange={event => change({ ...input, projectId: event.target.value || null })}
           >
             <option value="">未分类</option>
@@ -220,7 +221,7 @@ export function NoteEditor({
           <span title={fullDate(note.createdAt)}>创建于 {fullDate(note.createdAt)}</span>
           <span title={fullDate(note.updatedAt)}>更新于 {fullDate(note.updatedAt)}</span>
           <Button
-            disabled={!!note.deletedAt}
+            disabled={disabled || busy || !!note.deletedAt}
             active={input.pinned}
             onClick={() => change({ ...input, pinned: !input.pinned })}
           >
@@ -248,7 +249,7 @@ export function NoteEditor({
         )}
         <RichEditor
           markdown={input.markdown}
-          disabled={!!note.deletedAt}
+          disabled={disabled || busy || !!note.deletedAt}
           onChange={markdown => change({ ...controller.current, markdown })}
         />
       </div>

@@ -85,6 +85,17 @@ test('two notebooks migrate projects and sync notes, source versions, trash, con
   assert.ok(await readFile(join(dir, 'projects.json'), 'utf8'))
   await run(a)
   await run(b)
+  const secondProject = await a.nookProjects.create({ name: '排序项目' })
+  await a.nookProjects.reorder([secondProject.id, project.id])
+  await run(a)
+  await run(b)
+  assert.deepEqual(
+    (await b.nookProjects.list()).map(p => p.id),
+    [secondProject.id, project.id],
+  )
+  await a.nookNotebook.deleteProject(secondProject.id)
+  await run(a)
+  await run(b)
   let bn = (await b.nookNotes.get(original.id))!
   assert.equal(bn.markdown, '旧库中文内容')
   assert.equal(bn.projectId, project.id)

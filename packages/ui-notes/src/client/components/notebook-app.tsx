@@ -2,6 +2,7 @@ import {
   ArrowUpRight,
   FileText,
   Folder,
+  MoreHorizontal,
   FolderOpen,
   Inbox,
   ListChecks,
@@ -22,6 +23,9 @@ import { Button } from './button.js'
 import { NoteEditor, type EditorHandle } from './note-editor.js'
 import { SummaryPanel } from './summary-panel.js'
 import { VideoPanel } from './video-panel.js'
+import { ActionMenu, type MenuPosition } from './action-menu.js'
+import { ExportToast } from './export-toast.js'
+import { exportNote, type ExportReceipt } from '../lib/export-note.js'
 import { SyncControl } from './sync-control.js'
 
 const personal = { kind: 'personal' as const, url: null, author: null, basedOn: [] }
@@ -48,6 +52,13 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
   const [error, setError] = useState('')
   const [projectForm, setProjectForm] = useState<{ id?: string; name: string; description: string } | null>(null)
   const [deleteProject, setDeleteProject] = useState<ProjectDto | null>(null)
+  const [menu, setMenu] = useState<
+    (MenuPosition & ({ kind: 'note'; note: NoteDto } | { kind: 'project'; project: ProjectDto })) | null
+  >(null)
+  const [exportReceipt, setExportReceipt] = useState<ExportReceipt | null>(null)
+  const [draggedProject, setDraggedProject] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const operation = useRef(false)
   const handle = useRef<EditorHandle | null>(null)
   const panel = useRef<HTMLDivElement>(null)
   const selectedRef = useRef(selected)
@@ -82,7 +93,9 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
   useEffect(() => {
     const controller = new AbortController()
     void api('projects', {}, controller.signal)
-      .then(setProjects)
+      .then(result => {
+        if (!controller.signal.aborted) setProjects(result)
+      })
       .catch(cause => {
         if (!controller.signal.aborted) setError(String(cause))
       })
@@ -99,6 +112,7 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
           controller.signal,
         )
           .then(result => {
+            if (controller.signal.aborted) return
             setNotes(result.notes)
             setTotal(result.total)
             setLoading(false)
@@ -148,6 +162,7 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
   }, [])
 
   async function navigate(action: () => void) {
+    if (busy) return
     if (handle.current && !(await handle.current.flush())) return
     action()
   }
@@ -209,6 +224,111 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
       setBusy(false)
     }
   }
+  async function download(input: Pick<NoteInput, 'title' | 'markdown'>) {
+    try {
+      setExportReceipt(await exportNote(input))
+    } catch (cause) {
+      setError(String(cause))
+    }
+  }
+  async function noteAction(note: NoteDto, action: 'pin' | 'trash' | 'export') {
+    if (operation.current) return
+    operation.current = true
+    setBusy(true)
+    setError('')
+    try {
+      if (action === 'export' && selectedRef.current?.id === note.id && handle.current) {
+        await download(handle.current.input())
+        return
+      }
+      if (handle.current && !(await handle.current.flush())) return
+      const current = await api('get', { id: note.id })
+      if (!current) throw new Error('笔记不存在，请刷新列表。')
+      if (action === 'export') {
+        await download(current)
+        return
+      }
+      const next =
+        action === 'trash'
+          ? await api('trash', { id: current.id, revision: current.revision, deleted: !current.deletedAt })
+          : await api('save', {
+              id: current.id,
+              revision: current.revision,
+              title: current.title,
+              markdown: current.markdown,
+              projectId: current.projectId,
+              pinned: !current.pinned,
+            })
+      setNotes(notes =>
+        action === 'trash'
+          ? notes.filter(item => item.id !== next.id)
+          : notes.map(item => (item.id === next.id ? next : item)),
+      )
+      if (selectedRef.current?.id === note.id) {
+        setSelected(action === 'trash' ? null : next)
+        setEditorEpoch(value => value + 1)
+      }
+      setRefresh(value => value + 1)
+    } catch (cause) {
+      setError(String(cause))
+    } finally {
+      operation.current = false
+      setBusy(false)
+    }
+  }
+  async function moveProject(id: string, target: string) {
+    if (operation.current || id === target) return
+    const ids = projects.map(project => project.id)
+    const from = ids.indexOf(id),
+      to = ids.indexOf(target)
+    if (from < 0 || to < 0) return
+    ids.splice(from, 1)
+    ids.splice(to, 0, id)
+    operation.current = true
+    setBusy(true)
+    try {
+      setProjects(await api('reorderProjects', { ids }))
+      setRefresh(value => value + 1)
+    } catch (cause) {
+      setError(String(cause))
+      setRefresh(value => value + 1)
+    } finally {
+      operation.current = false
+      setBusy(false)
+    }
+  }
+  async function removeProject() {
+    if (!deleteProject || operation.current) return
+    operation.current = true
+    setBusy(true)
+    setError('')
+    try {
+      if (handle.current && !(await handle.current.flush())) {
+        setError('当前笔记尚未保存，请取消后处理保存问题，再删除项目。')
+        return
+      }
+      await api('deleteProject', { id: deleteProject.id })
+      if (projectId === deleteProject.id) {
+        setProjectId(null)
+        setPage(0)
+      }
+      const current = selectedRef.current
+      if (current?.projectId === deleteProject.id) {
+        // The provider changes note revisions while detaching the deleted project.
+        setSelected(null)
+        const next = await api('get', { id: current.id })
+        setSelected(next)
+        setEditorEpoch(value => value + 1)
+      }
+      setDeleteProject(null)
+      setRefresh(value => value + 1)
+    } catch (cause) {
+      setError(String(cause))
+    } finally {
+      operation.current = false
+      setBusy(false)
+    }
+  }
   const heading = trash
     ? '回收站'
     : projectId === null
@@ -225,7 +345,7 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
       aria-modal="true"
       aria-label="Nook 笔记工作区"
       onKeyDown={event => {
-        if (event.key === 'Escape' && !projectForm && !deleteProject && !summaryOpen && !videoOpen) {
+        if (event.key === 'Escape' && !menu && !projectForm && !deleteProject && !summaryOpen && !videoOpen) {
           event.stopPropagation()
           void navigate(close)
         }
@@ -263,13 +383,18 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
           <Plus size={16} aria-hidden="true" /> 写一条笔记 <kbd>新建</kbd>
         </button>
         <nav aria-label="笔记导航">
-          <Button active={mode === 'notes' && !trash && projectId === undefined} onClick={() => view(undefined)}>
+          <Button
+            disabled={busy}
+            active={mode === 'notes' && !trash && projectId === undefined}
+            onClick={() => view(undefined)}
+          >
             <FileText size={16} aria-hidden="true" /> 所有笔记
           </Button>
-          <Button active={mode === 'notes' && !trash && projectId === null} onClick={() => view(null)}>
+          <Button disabled={busy} active={mode === 'notes' && !trash && projectId === null} onClick={() => view(null)}>
             <Inbox size={16} aria-hidden="true" /> 未分类
           </Button>
           <Button
+            disabled={busy}
             active={mode === 'projects'}
             onClick={() =>
               void navigate(() => {
@@ -283,35 +408,80 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
         </nav>
         <div className="nook-section-label">
           我的项目{' '}
-          <Button title="新建项目" onClick={() => setProjectForm({ name: '', description: '' })}>
+          <Button disabled={busy} title="新建项目" onClick={() => setProjectForm({ name: '', description: '' })}>
             <Plus size={16} aria-hidden="true" />
           </Button>
         </div>
         <nav className="nook-project-nav">
           {projects.map(project => (
-            <Button
+            <div
               key={project.id}
-              active={projectId === project.id && mode === 'notes' && !trash}
-              onClick={() => view(project.id)}
+              className={`nook-project-row ${draggedProject === project.id ? 'dragging' : ''} ${dropTarget === project.id ? 'drop-target' : ''}`}
+              draggable={!busy}
+              onDragStart={event => {
+                setMenu(null)
+                setDraggedProject(project.id)
+                event.dataTransfer.effectAllowed = 'move'
+                event.dataTransfer.setData('text/plain', project.id)
+              }}
+              onDragEnd={() => {
+                setDraggedProject(null)
+                setDropTarget(null)
+              }}
+              onDragOver={event => {
+                if (draggedProject && !busy) {
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = 'move'
+                  setDropTarget(project.id)
+                }
+              }}
+              onDrop={event => {
+                event.preventDefault()
+                if (draggedProject) void moveProject(draggedProject, project.id)
+                setDraggedProject(null)
+                setDropTarget(null)
+              }}
+              onContextMenu={event => {
+                event.preventDefault()
+                if (!busy) setMenu({ kind: 'project', project, x: event.clientX, y: event.clientY })
+              }}
             >
-              <Folder size={16} aria-hidden="true" />
-              {project.name}
-            </Button>
+              <Button
+                disabled={busy}
+                active={projectId === project.id && mode === 'notes' && !trash}
+                onClick={() => view(project.id)}
+              >
+                <Folder size={16} aria-hidden="true" />
+                <span>{project.name}</span>
+              </Button>
+              <button
+                className="nook-project-more"
+                disabled={busy}
+                aria-label={`项目操作：${project.name}`}
+                aria-haspopup="menu"
+                onClick={event => {
+                  const rect = event.currentTarget.getBoundingClientRect()
+                  setMenu({ kind: 'project', project, x: rect.right, y: rect.bottom })
+                }}
+              >
+                <MoreHorizontal size={16} aria-hidden="true" />
+              </button>
+            </div>
           ))}
           {!projects.length && <p className="nook-muted">想法可以先不分类。</p>}
         </nav>
         <div className="nook-nav-bottom">
           <SyncControl api={sync} onChanged={setSyncChange} />
-          <Button onClick={() => void navigate(() => setVideoOpen(true))}>
+          <Button disabled={busy} onClick={() => void navigate(() => setVideoOpen(true))}>
             <Video size={16} aria-hidden="true" /> 视频转文稿
           </Button>
-          <Button onClick={() => void navigate(() => setSummaryOpen(true))}>
+          <Button disabled={busy} onClick={() => void navigate(() => setSummaryOpen(true))}>
             <ListChecks size={16} aria-hidden="true" /> 日 / 周总结
           </Button>
-          <Button active={trash} onClick={() => view(undefined, true)}>
+          <Button disabled={busy} active={trash} onClick={() => view(undefined, true)}>
             <Trash2 size={16} aria-hidden="true" /> 回收站
           </Button>
-          <Button onClick={() => void navigate(close)}>
+          <Button disabled={busy} onClick={() => void navigate(close)}>
             <ArrowUpRight size={16} aria-hidden="true" /> 返回 AI 对话
           </Button>
         </div>
@@ -342,7 +512,7 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
                 <small>为长期的事情留一处空间</small>
                 <h1>项目</h1>
               </div>
-              <Button onClick={() => setProjectForm({ name: '', description: '' })}>
+              <Button disabled={busy} onClick={() => setProjectForm({ name: '', description: '' })}>
                 <Plus size={16} aria-hidden="true" /> 新建项目
               </Button>
             </div>
@@ -366,7 +536,9 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
                     >
                       编辑
                     </Button>
-                    <Button onClick={() => setDeleteProject(project)}>删除项目</Button>
+                    <Button disabled={busy} onClick={() => setDeleteProject(project)}>
+                      删除项目
+                    </Button>
                   </div>
                 </article>
               ))}
@@ -418,6 +590,18 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
                     className={`nook-note-card ${selected?.id === note.id ? 'selected' : ''}`}
                     disabled={busy}
                     onClick={() => void openNote(note)}
+                    aria-haspopup="menu"
+                    onContextMenu={event => {
+                      event.preventDefault()
+                      if (!busy) setMenu({ kind: 'note', note, x: event.clientX, y: event.clientY })
+                    }}
+                    onKeyDown={event => {
+                      if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                        event.preventDefault()
+                        const rect = event.currentTarget.getBoundingClientRect()
+                        setMenu({ kind: 'note', note, x: rect.left + 20, y: rect.top + 20 })
+                      }
+                    }}
                   >
                     <strong>
                       {note.pinned && (
@@ -463,8 +647,11 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
                 api={api}
                 projects={projects}
                 handle={handle}
+                disabled={busy}
+                onExport={download}
                 onSaved={note => {
                   setSelected(note)
+                  setNotes(notes => notes.map(item => (item.id === note.id ? note : item)))
                   setRefresh(value => value + 1)
                 }}
                 onDeleted={() => {
@@ -524,6 +711,8 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
       {projectForm && (
         <div className="nook-modal-backdrop">
           <form
+            role="dialog"
+            aria-label={projectForm.id ? '编辑项目' : '新建项目'}
             className="nook-modal"
             onSubmit={event => {
               event.preventDefault()
@@ -534,7 +723,9 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
             <label>
               项目名称
               <input
+                aria-label="项目名称"
                 autoFocus
+                disabled={busy}
                 required
                 maxLength={120}
                 value={projectForm.name}
@@ -544,14 +735,23 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
             <label>
               描述
               <textarea
+                aria-label="描述"
                 maxLength={2000}
+                disabled={busy}
                 rows={4}
                 value={projectForm.description}
                 onChange={event => setProjectForm({ ...projectForm, description: event.target.value })}
               />
             </label>
+            {error && (
+              <p className="nook-error" role="alert">
+                {error}
+              </p>
+            )}
             <div className="nook-actions">
-              <Button onClick={() => setProjectForm(null)}>取消</Button>
+              <Button disabled={busy} onClick={() => setProjectForm(null)}>
+                取消
+              </Button>
               <button type="submit" disabled={busy}>
                 保存项目
               </button>
@@ -564,27 +764,82 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
           <div className="nook-modal" role="alertdialog" aria-label="删除项目">
             <h2>删除「{deleteProject.name}」？</h2>
             <p>其中的笔记会保留，并移到“未分类”。</p>
+            {error && (
+              <p className="nook-error" role="alert">
+                {error}
+              </p>
+            )}
             <div className="nook-actions">
-              <Button onClick={() => setDeleteProject(null)}>取消</Button>
-              <Button
-                disabled={busy}
-                onClick={() => {
-                  setBusy(true)
-                  void api('deleteProject', { id: deleteProject.id })
-                    .then(() => {
-                      setDeleteProject(null)
-                      setRefresh(value => value + 1)
-                    })
-                    .catch(cause => setError(String(cause)))
-                    .finally(() => setBusy(false))
-                }}
-              >
+              <Button disabled={busy} onClick={() => setDeleteProject(null)}>
+                取消
+              </Button>
+              <Button disabled={busy} onClick={() => void removeProject()}>
                 删除项目
               </Button>
             </div>
           </div>
         </div>
       )}
+      {menu && (
+        <ActionMenu
+          key={`${menu.kind}:${menu.kind === 'note' ? menu.note.id : menu.project.id}:${menu.x}:${menu.y}`}
+          position={menu}
+          close={() => setMenu(null)}
+          actions={
+            menu.kind === 'note'
+              ? [
+                  { label: '导出', run: () => void noteAction(menu.note, 'export') },
+                  ...(!menu.note.deletedAt
+                    ? [{ label: menu.note.pinned ? '取消置顶' : '置顶', run: () => void noteAction(menu.note, 'pin') }]
+                    : []),
+                  {
+                    label: menu.note.deletedAt ? '恢复笔记' : '删除',
+                    danger: !menu.note.deletedAt,
+                    run: () => void noteAction(menu.note, 'trash'),
+                  },
+                ]
+              : [
+                  {
+                    label: '编辑项目',
+                    run: () => {
+                      setError('')
+                      setProjectForm({
+                        id: menu.project.id,
+                        name: menu.project.name,
+                        description: menu.project.description,
+                      })
+                    },
+                  },
+                  {
+                    label: '上移',
+                    disabled: projects[0]?.id === menu.project.id,
+                    run: () => {
+                      const index = projects.findIndex(p => p.id === menu.project.id)
+                      if (index > 0) void moveProject(menu.project.id, projects[index - 1]!.id)
+                    },
+                  },
+                  {
+                    label: '下移',
+                    disabled: projects.at(-1)?.id === menu.project.id,
+                    run: () => {
+                      const index = projects.findIndex(p => p.id === menu.project.id)
+                      const next = projects[index + 1]
+                      if (next) void moveProject(menu.project.id, next.id)
+                    },
+                  },
+                  {
+                    label: '删除项目',
+                    danger: true,
+                    run: () => {
+                      setError('')
+                      setDeleteProject(menu.project)
+                    },
+                  },
+                ]
+          }
+        />
+      )}
+      {exportReceipt && <ExportToast receipt={exportReceipt} close={() => setExportReceipt(null)} onError={setError} />}
     </div>
   )
 }

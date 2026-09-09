@@ -26,6 +26,10 @@ class FakeProjects extends Service implements ProjectService {
   async list() {
     return [PROJECT]
   }
+  async reorder() {
+    return this.list()
+  }
+
   async get(id: string) {
     return id === PROJECT.id ? PROJECT : undefined
   }

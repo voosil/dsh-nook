@@ -40,7 +40,14 @@ const note = input.extend({
   revision: z.int().positive(),
   source,
 })
-const project = z.strictObject({ id, name: z.string(), description: z.string(), createdAt: date, updatedAt: date })
+const project = z.strictObject({
+  sortOrder: z.int().nonnegative().optional(),
+  id,
+  name: z.string(),
+  description: z.string(),
+  createdAt: date,
+  updatedAt: date,
+})
 const hit = z.strictObject({
   documentId: id,
   title: z.string(),
@@ -105,6 +112,7 @@ export const requests = {
   }),
   updateProject: z.strictObject({ id, name: z.string().trim().min(1).max(120), description: z.string().max(2000) }),
   deleteProject: z.strictObject({ id }),
+  reorderProjects: z.strictObject({ ids: z.array(id) }),
   search: z.strictObject({
     query: z.string().max(500),
     projectId: projectId.optional(),
@@ -149,6 +157,7 @@ const outputs = {
   createProject: project,
   updateProject: project,
   deleteProject: z.boolean(),
+  reorderProjects: z.array(project),
   search: z.array(hit),
 }
 export type Method = keyof typeof requests
