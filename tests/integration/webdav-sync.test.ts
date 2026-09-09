@@ -149,7 +149,7 @@ test('sync RPC keeps credentials private, disabling preserves pending data, and 
   assert.equal(enabled.ok, true, JSON.stringify(enabled))
   assert.equal(enabled.value.hasPassword, true)
   assert.ok(!JSON.stringify(enabled).includes('secret'))
-  assert.equal((await stat(settings)).mode & 0o777, 0o600)
+  if (process.platform !== 'win32') assert.equal((await stat(settings)).mode & 0o777, 0o600)
   await ctx.nookNotes.create(note('RPC同步'))
   await invoke('run', {})
   assert.equal((await invoke('status', {})).value.pending, 0)

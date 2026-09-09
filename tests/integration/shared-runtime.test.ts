@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { test } from 'node:test'
+import { pathToFileURL } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 import { SharedRuntime, type BrokerLaunch } from '../../apps/desktop/src/shared-client.ts'
 
@@ -130,12 +131,12 @@ test(
     const entry = join(root, 'frontend.mts')
     await writeFile(
       entry,
-      `import {SharedRuntime} from ${JSON.stringify(resolve('apps/desktop/src/shared-client.ts'))};
+      `import {SharedRuntime} from ${JSON.stringify(pathToFileURL(resolve('apps/desktop/src/shared-client.ts')).href)};
 const runtime=new SharedRuntime(${JSON.stringify(root)},async()=>(${JSON.stringify(launch)}),()=>{},()=>{});
 process.send?.({url:await runtime.ready});`,
     )
     const parent = fork(entry, {
-      execArgv: ['--import', resolve('node_modules/tsx/dist/loader.mjs')],
+      execArgv: ['--import', pathToFileURL(resolve('node_modules/tsx/dist/loader.mjs')).href],
       stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
     })
     let peer: SharedRuntime | undefined

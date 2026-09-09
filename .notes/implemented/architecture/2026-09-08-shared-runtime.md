@@ -8,9 +8,9 @@ Status: implemented
 
 ## Decision
 
-[正式运行环境](../../../docs/runtime.md)把数据位置与前端入口分开。先启动的入口提供标准 Node 和离线 seed，独立 broker 拥有共享后端；后启动的入口连接已有 broker。浏览器和 Electron 保留原有 DSH 鉴权及 Nook RPC，不增加业务 API 或跨 Host/Client 的非 JSON 对象。
+[正式运行环境](../../../docs/runtime.md)把数据位置与前端入口分开。先启动的入口提供标准 Node 和平台固定快照，独立 broker 拥有共享后端；后启动的入口连接已有 broker。macOS 使用离线 seed，Windows 使用[原位安装快照](../bug-fix/2026-09-09-windows-web-start.md)。浏览器和 Electron 保留原有 DSH 鉴权及 Nook RPC，不增加业务 API 或跨 Host/Client 的非 JSON 对象。
 
-broker 使用仅当前用户可访问的 Unix socket 传递启动 URL、日志和连接释放消息。短路径由正式根目录的指纹派生，避免 macOS 的 socket 路径长度限制。标准 Node 的原生文件锁决定唯一 broker，进程退出由内核释放锁；取得锁的进程才能清理自己的旧 socket。数据备份锁继续由 DSH 监督进程持有。
+macOS broker 使用仅当前用户可访问的 Unix socket 传递启动 URL、日志和连接释放消息；Windows 使用命名管道。连接地址由正式根目录的指纹派生，避免 macOS 的 socket 路径长度限制。标准 Node 的原生文件锁决定唯一 broker，进程退出由内核释放锁；取得锁的进程才能清理自己的旧 Unix socket。数据备份锁继续由 DSH 监督进程持有。
 
 broker 的私有文件使用限制性 umask。macOS 复制符号链接时，其 inode 权限随 umask 改变，不能作为运行时完整性的稳定依据；清单对链接记录目标字符串，对普通文件和目录保留实际执行权限检查，并继续拒绝越界链接。限制性 umask 下的复制与校验由[运行时安装回归测试](../../../tests/desktop/payload.test.ts)覆盖。
 

@@ -130,10 +130,31 @@ export async function installPayload(seed: string, state: string, signal?: Abort
     }
   } else await verifyPayload(destination, manifest, signal)
 
+  return activateProfile({
+    state,
+    seedProfile: join(destination, 'home', 'profiles', 'nook'),
+    node: join(destination, 'node', 'bin', 'node'),
+    supervisor: join(destination, 'boot', 'supervisor.mjs'),
+  })
+}
+
+/** Attach a fixed installed package snapshot to the writable user Profile. */
+export async function activateProfile({
+  state,
+  seedProfile,
+  node,
+  supervisor,
+}: {
+  state: string
+  seedProfile: string
+  node: string
+  supervisor: string
+}): Promise<RuntimeConfig> {
+  const home = safeHome(join(state, 'harness'))
+  const versions = join(state, 'runtimes')
   const profile = join(home, 'profiles', 'nook')
   await mkdir(profile, { recursive: true, mode: 0o700 })
   await mkdir(join(home, 'agents'), { recursive: true, mode: 0o700 })
-  const seedProfile = join(destination, 'home', 'profiles', 'nook')
   const source = JSON.parse(await readFile(join(seedProfile, 'package.json'), 'utf8'))
   await createOnce(
     join(profile, 'package.json'),
@@ -175,6 +196,9 @@ export async function installPayload(seed: string, state: string, signal?: Abort
     const temporary = `${link}.nook-${randomUUID()}`
     await symlink(join(sourceModules, name), temporary, 'junction')
     try {
+      // Windows cannot rename over a directory junction. The broker holds the
+      // runtime lock; only verified application-owned links may be replaced.
+      if (process.platform === 'win32' && existingLink) await rm(link)
       await rename(temporary, link)
     } finally {
       await rm(temporary, { force: true })
@@ -188,8 +212,8 @@ export async function installPayload(seed: string, state: string, signal?: Abort
     throw new Error('Invalid DSH CLI manifest')
   return {
     home,
-    node: join(destination, 'node', 'bin', 'node'),
-    supervisor: join(destination, 'boot', 'supervisor.mjs'),
+    node,
+    supervisor,
     bin: resolve(dsh, metadata.bin.dsh),
     cwd,
     profile: 'nook',

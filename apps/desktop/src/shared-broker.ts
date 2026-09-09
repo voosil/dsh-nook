@@ -4,7 +4,7 @@ import { createServer, type Socket } from 'node:net'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { installPayload } from './payload.js'
+import { activateProfile, installPayload } from './payload.js'
 import { DesktopRuntime } from './runtime.js'
 import { claimRuntime } from './native-lock.js'
 import { lineReader, redact } from './policy.js'
@@ -14,11 +14,11 @@ import type { BrokerOptions } from './shared-client.js'
 async function serve(options: BrokerOptions) {
   const previousMask = process.umask(0o077)
   const { state, seed } = options
-  if (!state || (!seed && !options.config)) throw new Error('Missing shared runtime configuration')
+  if (!state || (!seed && !options.config && !options.snapshot)) throw new Error('Missing shared runtime configuration')
   await mkdir(join(state, 'logs'), { recursive: true, mode: 0o700 })
   const profile = seed
     ? join(seed, 'payload/home/profiles/nook')
-    : join(options.config!.home, 'profiles', options.config!.profile)
+    : (options.snapshot?.seedProfile ?? join(options.config!.home, 'profiles', options.config!.profile))
   const releaseLock = claimRuntime(state, profile)
   if (!releaseLock) return
   const log = createWriteStream(join(state, 'logs', `backend-${Date.now()}-${process.pid}.log`), {
@@ -124,13 +124,15 @@ async function serve(options: BrokerOptions) {
   server.on('error', failure)
   try {
     // The advisory lock grants exclusive ownership, including stale socket cleanup.
-    try {
-      const info = await lstat(path)
-      if (!info.isSocket() || info.uid !== process.getuid!()) throw new Error('Refusing a foreign Nook control socket')
-      await unlink(path)
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-    }
+    if (process.platform !== 'win32')
+      try {
+        const info = await lstat(path)
+        if (!info.isSocket() || info.uid !== process.getuid!())
+          throw new Error('Refusing a foreign Nook control socket')
+        await unlink(path)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+      }
     await new Promise<void>((resolve, reject) => {
       server.once('error', reject)
       server.listen(path, () => {
@@ -138,9 +140,13 @@ async function serve(options: BrokerOptions) {
         resolve()
       })
     })
-    await chmod(path, 0o600)
+    if (process.platform !== 'win32') await chmod(path, 0o600)
     starting = (async () => {
-      const config = seed ? await installPayload(seed, state, abort.signal) : options.config!
+      const config = seed
+        ? await installPayload(seed, state, abort.signal)
+        : options.snapshot
+          ? await activateProfile({ state, ...options.snapshot })
+          : options.config!
       if (stopping) return
       const require = createRequire(join(config.home, 'profiles', config.profile, 'package.json'))
       const { resumeMigrations } = await import(

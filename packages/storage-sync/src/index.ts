@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, openSync, fsyncSync, closeSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import { writeRecoveryRecord } from '@nook-dsh/storage-backup'
+import { durableRename, syncPath } from '@nook-dsh/storage-backup/durability'
 import {
   canonicalJson,
   SyncError,
@@ -378,18 +379,8 @@ export class Replica implements SyncReplica {
     if (this.blob(ref.hash)) return
     const temp = join(this.files, `.partial-${randomUUID()}`)
     writeFileSync(temp, bytes, { flag: 'wx', mode: 0o600 })
-    const fd = openSync(temp, 'r')
-    try {
-      fsyncSync(fd)
-    } finally {
-      closeSync(fd)
-    }
-    renameSync(temp, join(this.files, ref.hash))
-    const directory = openSync(this.files, 'r')
-    try {
-      fsyncSync(directory)
-    } finally {
-      closeSync(directory)
-    }
+    syncPath(temp)
+    durableRename(temp, join(this.files, ref.hash))
+    syncPath(this.files)
   }
 }

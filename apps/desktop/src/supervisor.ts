@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { launchUrl, lineReader, redact, runtimeEnvironment } from './policy.js'
 import type { RuntimeConfig } from './payload.js'
+import { windowsJob } from './windows-job.js'
 
 async function supervise() {
   const config = JSON.parse(process.argv[2] ?? '{}') as RuntimeConfig
@@ -15,6 +16,7 @@ async function supervise() {
   let release: (() => void) | undefined
   let stopping: Promise<void> | undefined
   let ready = false
+  let job: ReturnType<typeof windowsJob> | undefined
   const send = (value: object) => {
     if (process.connected) process.send?.(value, undefined, undefined, () => {})
   }
@@ -23,6 +25,11 @@ async function supervise() {
       if (child?.pid) {
         const pid = child.pid
         const signal = (name: NodeJS.Signals) => {
+          if (process.platform === 'win32') {
+            if (name === 'SIGTERM' && child?.connected) child.send({ type: 'stop' }, () => {})
+            else job?.dispose()
+            return
+          }
           try {
             process.kill(-pid, name)
           } catch (error) {
@@ -43,6 +50,7 @@ async function supervise() {
         }
       }
       release?.()
+      job?.dispose()
       process.off('disconnect', disconnected)
       process.off('message', message)
       process.off('SIGTERM', terminated)
@@ -77,11 +85,37 @@ async function supervise() {
       await stop()
       return
     }
+    if (process.platform === 'win32') job = windowsJob(join(config.home, 'profiles', config.profile))
     child = spawn(
       process.execPath,
-      [config.bin, '--profile', config.profile, '--no-open', '--host', '127.0.0.1', '--port', String(config.port ?? 0)],
-      { cwd: config.cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
+      [
+        ...(process.platform === 'win32' ? ['--import', new URL('./windows-shutdown.mjs', import.meta.url).href] : []),
+        config.bin,
+        '--profile',
+        config.profile,
+        '--no-open',
+        '--host',
+        '127.0.0.1',
+        '--port',
+        String(config.port ?? 0),
+      ],
+      {
+        cwd: config.cwd,
+        env,
+        detached: true,
+        windowsHide: true,
+        stdio: process.platform === 'win32' ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe'],
+      },
     )
+    if (child.pid && job) {
+      try {
+        job.assign(child.pid)
+        child.send({ type: 'start' }, () => {})
+      } catch (error) {
+        child.kill('SIGKILL')
+        throw error
+      }
+    }
     send({ type: 'pid', pid: child.pid })
     const consume = (line: string) => {
       const url = launchUrl(line)

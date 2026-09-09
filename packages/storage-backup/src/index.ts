@@ -5,7 +5,6 @@ import {
   copyFileSync,
   constants,
   existsSync,
-  fsyncSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -14,13 +13,13 @@ import {
   readdirSync,
   readSync,
   realpathSync,
-  renameSync,
   rmdirSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { durableRename, syncPath } from './durability.js'
 
 interface Entry {
   path: string
@@ -37,22 +36,13 @@ export interface BackupManifest {
   files: Entry[]
 }
 
-function syncPath(path: string): void {
-  const fd = openSync(path, 'r')
-  try {
-    fsyncSync(fd)
-  } finally {
-    closeSync(fd)
-  }
-}
-
 function durableWrite(path: string, data: string): void {
   writeFileSync(path, data, { flag: 'wx', mode: 0o600, flush: true })
 }
 
 function durableDirectory(path: string): void {
   const firstCreated = mkdirSync(path, { recursive: true, mode: 0o700 })
-  if (!firstCreated) return
+  if (!firstCreated || process.platform === 'win32') return
   // Flush each new directory entry, including the entry in its existing parent.
   const parent = dirname(resolve(firstCreated))
   for (let current = resolve(path); ; current = dirname(current)) {
@@ -121,7 +111,7 @@ function publish(directory: string, manifest: BackupManifest): string {
   syncPath(join(directory, 'data'))
   syncPath(directory)
   const destination = join(dirname(directory), `${manifest.createdAt.replaceAll(':', '-')}-${randomUUID()}`)
-  renameSync(directory, destination)
+  durableRename(directory, destination)
   syncPath(dirname(destination))
   return destination
 }

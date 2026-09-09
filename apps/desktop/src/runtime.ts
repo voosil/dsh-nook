@@ -17,6 +17,7 @@ export class DesktopRuntime {
       cwd: config.cwd,
       env: runtimeEnvironment(config.home, dirname(config.node)),
       detached: true,
+      windowsHide: true,
       stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
     })
     const child = this.child
@@ -73,7 +74,7 @@ export class DesktopRuntime {
         for (const pid of [this.dshPid, this.child.pid])
           if (pid) {
             try {
-              process.kill(-pid, 'SIGKILL')
+              process.kill(process.platform === 'win32' ? pid : -pid, 'SIGKILL')
             } catch (error) {
               if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error
             }

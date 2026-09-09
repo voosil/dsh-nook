@@ -5,6 +5,10 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
+    "./durability": {
+      "types": "./lib/durability.d.ts",
+      "default": "./lib/durability.js"
+    },
     ".": {
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
@@ -17,5 +21,8 @@
   "files": [
     "lib"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "koffi": "3.1.6"
+  }
 }

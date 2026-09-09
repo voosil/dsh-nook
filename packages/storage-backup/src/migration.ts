@@ -1,20 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
-import {
-  closeSync,
-  copyFileSync,
-  existsSync,
-  fsyncSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  readdirSync,
-  realpathSync,
-  renameSync,
-  writeFileSync,
-} from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, sep } from 'node:path'
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
 import { acquireDataLock, createBackup, physicalPath, restoreBackup, verifyBackup } from './index.js'
+import { durableRename, syncPath as syncDirectory } from './durability.js'
 
 interface Receipt {
   version: 1
@@ -44,18 +33,9 @@ function writeReceipt(path: string, receipt: Receipt) {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
   const temporary = `${path}.${randomUUID()}.tmp`
   writeFileSync(temporary, JSON.stringify(receipt, null, 2) + '\n', { mode: 0o600, flag: 'wx', flush: true })
-  renameSync(temporary, path)
+  durableRename(temporary, path, true)
   syncDirectory(dirname(path))
   syncDirectory(dirname(dirname(path)))
-}
-
-function syncDirectory(path: string) {
-  const fd = openSync(path, 'r')
-  try {
-    fsyncSync(fd)
-  } finally {
-    closeSync(fd)
-  }
 }
 
 /** Refuse to start an empty store while a previous directory handoff is pending. */
@@ -229,10 +209,10 @@ function finish(receipt: Receipt, path: string, output: string): Receipt {
         !sameSnapshot(createBackup(target, output, 'verify-migration-target'), targetBackup)
       )
         throw new Error('Migration target changed; preserved for inspection')
-      renameSync(target, retained)
+      durableRename(target, retained)
       syncDirectory(dirname(target))
     }
-    renameSync(staging, target)
+    durableRename(staging, target)
     syncDirectory(dirname(target))
   } else if (
     !existsSync(target) ||

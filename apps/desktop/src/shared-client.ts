@@ -10,6 +10,7 @@ export interface BrokerOptions {
   state: string
   seed?: string
   config?: RuntimeConfig
+  snapshot?: { seedProfile: string; node: string; supervisor: string }
   port?: number
 }
 export interface BrokerLaunch {
@@ -79,7 +80,7 @@ export class SharedRuntime {
     const timer = setTimeout(() => {
       reject(new Error('Shared Nook startup timed out'))
       void this.stop()
-    }, 180_000)
+    }, 600_000)
     this.startup = (async () => {
       let socket = await connectSocket(state)
       if (!socket && !this.stopped) {
@@ -87,6 +88,7 @@ export class SharedRuntime {
         if (this.stopped) return
         const child = spawn(launch.node, [launch.broker, JSON.stringify(launch.options)], {
           detached: true,
+          windowsHide: true,
           stdio: 'ignore',
           env: runtimeEnvironment(join(state, 'harness'), dirname(launch.node)),
         })

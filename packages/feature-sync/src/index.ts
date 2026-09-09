@@ -1,14 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  renameSync,
-  chmodSync,
-  openSync,
-  fsyncSync,
-  closeSync,
-} from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { Context, Service } from '@deepseek-ai/cordis'
@@ -23,6 +13,7 @@ import {
   type StorageConfig,
 } from '@nook-dsh/capability-sync'
 import { synchronize } from './engine.js'
+import { durableRename, syncPath } from '@nook-dsh/storage-backup/durability'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -165,20 +156,10 @@ export default class SyncFeature extends Service implements SyncService {
     mkdirSync(dirname(this.config.file), { recursive: true, mode: 0o700 })
     const temp = `${this.config.file}.${randomUUID()}.tmp`
     writeFileSync(temp, JSON.stringify(settings), { mode: 0o600, flag: 'wx' })
-    const fd = openSync(temp, 'r')
-    try {
-      fsyncSync(fd)
-    } finally {
-      closeSync(fd)
-    }
-    renameSync(temp, this.config.file)
+    syncPath(temp)
+    durableRename(temp, this.config.file, true)
     chmodSync(this.config.file, 0o600)
-    const directory = openSync(dirname(this.config.file), 'r')
-    try {
-      fsyncSync(directory)
-    } finally {
-      closeSync(directory)
-    }
+    syncPath(dirname(this.config.file))
     this.settings = settings
   }
   run(): Promise<SyncStatus> {

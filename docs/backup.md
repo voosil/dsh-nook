@@ -25,6 +25,8 @@ pnpm backup create --output /Volumes/Backup/Nook
 
 ## 恢复
 
+Windows 文件刷盘使用可写句柄，备份目录和迁移回执通过写穿重命名发布；Node 不提供 POSIX 式的 Windows 目录刷盘接口。文件内容和清单仍须逐项校验，发布失败时保留临时目录并中止后续修改。访问权限继承所在用户目录的 Windows ACL，POSIX 模式位只在支持它的平台检查。
+
 恢复先校验全部文件，再写入一个不存在的新目录；即使目标是空目录也拒绝覆盖：
 
 ```bash

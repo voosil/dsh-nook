@@ -33,7 +33,8 @@
     "desktop:dev": "node scripts/desktop/run-desktop.mjs",
     "desktop:stage": "pnpm run build && node scripts/desktop/stage-desktop.mjs",
     "desktop:package": "node scripts/desktop/package-desktop.mjs",
-    "verify:desktop": "node scripts/verify/verify-desktop.mjs"
+    "verify:desktop": "node scripts/verify/verify-desktop.mjs",
+    "verify:windows": "pnpm run build && node scripts/verify/verify-windows-start.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.2",

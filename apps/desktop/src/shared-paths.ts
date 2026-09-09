@@ -23,7 +23,11 @@ export function testState(path: string): string {
 
 export function runtimeSocket(state: string): string {
   safeHome(join(state, 'harness'))
-  const key = createHash('sha256').update(canonicalPath(state)).digest('hex').slice(0, 32)
+  const canonical = canonicalPath(state)
+  const key = createHash('sha256')
+    .update(process.platform === 'win32' ? canonical.toLowerCase() : canonical)
+    .digest('hex')
+    .slice(0, 32)
   // A short path avoids macOS's Unix-domain socket path limit, including CJK homes.
   return process.platform === 'win32' ? `\\\\.\\pipe\\nook-${key}` : `/tmp/nook-${process.getuid!()}-${key}.sock`
 }

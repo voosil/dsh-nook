@@ -48,6 +48,7 @@ async function launcherFixture(t: TestContext) {
     'profile/profile-lib.mjs',
     'profile/run-profile-args.mjs',
     'shared/process-scope.mjs',
+    'shared/corepack-command.mjs',
     'profile/dev-watch.mjs',
     'profile/dev-sandbox.mjs',
   ]) {

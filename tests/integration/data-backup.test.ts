@@ -16,6 +16,7 @@ test('refreshing a development Profile preserves existing user patch configurati
   t.after(() => rm(root, { recursive: true, force: true }))
   for (const name of [
     'scripts/profile/profile-lib.mjs',
+    'scripts/shared/corepack-command.mjs',
     'pnpm-lock.yaml',
     ...LOCAL_PACKAGES.map(name => `packages/${name}/package.json`),
   ]) {

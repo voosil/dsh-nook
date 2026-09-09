@@ -106,6 +106,9 @@ export function lineReader(onLine: (line: string) => void, maximum = 16_384) {
 
 export function runtimeEnvironment(home: string, nodeDirectory: string): NodeJS.ProcessEnv {
   const env = { ...process.env }
+  const pathKey = Object.keys(env).find(key => key.toLowerCase() === 'path') ?? 'PATH'
+  const inheritedPath = env[pathKey] ?? ''
+  delete env[pathKey]
   for (const key of [
     'ELECTRON_RUN_AS_NODE',
     'NODE_OPTIONS',
@@ -116,7 +119,7 @@ export function runtimeEnvironment(home: string, nodeDirectory: string): NodeJS.
     delete env[key]
   return {
     ...env,
-    PATH: `${nodeDirectory}${process.platform === 'win32' ? ';' : ':'}${env.PATH ?? ''}`,
+    PATH: `${nodeDirectory}${process.platform === 'win32' ? ';' : ':'}${inheritedPath}`,
     DSH_HOME: safeHome(home),
     DSH_AGENTS_HOME: resolve(home, 'agents'),
     DSH_TELEMETRY_DISABLED: '1',

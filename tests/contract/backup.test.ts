@@ -98,7 +98,7 @@ test('backup restores committed WAL, FTS, projects, trash, preferences, and arti
     const backup = createBackup(source, join(root, 'backups'))
     const manifest = verifyBackup(backup)
     assert.ok(!manifest.files.some(file => file.path === 'notebook.sqlite-wal'))
-    assert.equal(statSync(join(backup, 'data', 'projects.json')).mode & 0o777, 0o600)
+    if (process.platform !== 'win32') assert.equal(statSync(join(backup, 'data', 'projects.json')).mode & 0o777, 0o600)
     // A later write must not alter the captured snapshot.
     await ctx.nookNotes.save({ ...note, markdown: 'after backup' })
     const target = join(root, 'restored')

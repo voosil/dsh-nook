@@ -2,6 +2,7 @@ import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { resolve, delimiter } from 'node:path'
+import { corepackCommand } from '../shared/corepack-command.mjs'
 
 export const ROOT = resolve(import.meta.dirname, '../..')
 export const DEV_HOME = resolve(ROOT, '.dsh-dev')
@@ -175,7 +176,10 @@ export async function installProfile(profileDir = PROFILE_DIR) {
 }
 
 export function runPnpm(args, options = {}) {
-  return run('corepack', [`pnpm@${PNPM_VERSION}`, ...args], {
+  const [command, commandArgs] = corepackCommand([`pnpm@${PNPM_VERSION}`, ...args], {
+    env: { ...process.env, ...options.env },
+  })
+  return run(command, commandArgs, {
     ...options,
     env: { CI: 'true', ...options.env },
   })

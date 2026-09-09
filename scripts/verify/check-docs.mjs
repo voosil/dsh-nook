@@ -85,7 +85,7 @@ for (const file of [...new Set(files)]) {
     errors.push(`${rel}: note outside a lifecycle folder (proposed/implemented/rejected)`)
     continue
   }
-  const lines = text.split('\n')
+  const lines = text.split(/\r?\n/)
   if (!lines[0].startsWith('# Agent Note: ')) {
     errors.push(`${rel}: first line must start "# Agent Note: "`)
   }

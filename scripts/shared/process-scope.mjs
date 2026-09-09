@@ -1,11 +1,14 @@
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
+import { join } from 'node:path'
+import { corepackCommand } from './corepack-command.mjs'
 
 /** Own child process groups so Ctrl+C also stops builds and runtime workers. */
 export class ProcessScope {
   children = new Set()
 
   spawn(command, args, options = {}) {
+    if (command === 'corepack') [command, args] = corepackCommand(args, { env: options.env ?? process.env })
     const child = spawn(command, args, { stdio: 'inherit', ...options, detached: process.platform !== 'win32' })
     this.children.add(child)
     child.once('exit', () => this.children.delete(child))
@@ -37,10 +40,20 @@ export class ProcessScope {
   async stop(child) {
     if (!this.children.has(child)) return
     const exited = once(child, 'exit')
+    if (process.platform === 'win32') {
+      const killer = spawn(
+        join(process.env.SystemRoot ?? 'C:\\Windows', 'System32/taskkill.exe'),
+        ['/PID', String(child.pid), '/T', '/F'],
+        { windowsHide: true, stdio: 'ignore' },
+      )
+      const [code] = await once(killer, 'exit')
+      if (code !== 0 && this.children.has(child)) throw new Error(`Could not stop owned process tree ${child.pid}`)
+      await exited
+      return
+    }
     const signal = name => {
       try {
-        if (process.platform === 'win32') child.kill(name)
-        else process.kill(-child.pid, name)
+        process.kill(-child.pid, name)
       } catch (error) {
         if (error.code !== 'ESRCH') throw error
       }

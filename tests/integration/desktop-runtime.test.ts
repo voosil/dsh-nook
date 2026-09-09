@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { test } from 'node:test'
+import { pathToFileURL } from 'node:url'
 import { DesktopRuntime } from '../../apps/desktop/src/runtime.ts'
 import type { RuntimeConfig } from '../../apps/desktop/src/payload.ts'
 
@@ -22,8 +23,10 @@ async function fixture(root: string): Promise<RuntimeConfig> {
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 const descendant=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore'});
+descendant.unref();
 writeFileSync(${JSON.stringify(join(root, 'pids.json'))},JSON.stringify([process.pid,descendant.pid]));
 const server=createServer((_req,res)=>res.end('ok'));
+process.once('SIGTERM',()=>{writeFileSync(${JSON.stringify(join(root, 'graceful'))},'yes');server.close()});
 server.listen(0,'127.0.0.1',()=>console.log('dsh web: http://127.0.0.1:'+server.address().port+'/?token=synthetic-secret'));
 `,
   )
@@ -55,6 +58,39 @@ async function assertGone(pids: number[]) {
   assert.fail(`Runtime processes survived shutdown: ${pids.join(', ')}`)
 }
 
+test(
+  'Windows kernel job reaps descendants if the supervisor crashes',
+  { skip: process.platform !== 'win32', timeout: 20_000 },
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), 'nook-job-crash-'))
+    const config = await fixture(root)
+    const child = fork(config.supervisor, [JSON.stringify(config)], {
+      execArgv: [],
+      stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
+    })
+    try {
+      await new Promise<void>((resolveReady, reject) => {
+        const message = (value: { type?: string; message?: string }) => {
+          if (value.type === 'ready' || value.type === 'failure') {
+            child.off('message', message)
+            if (value.type === 'ready') resolveReady()
+            else reject(new Error(value.message))
+          }
+        }
+        child.on('message', message)
+      })
+      const pids = JSON.parse(await readFile(join(root, 'pids.json'), 'utf8'))
+      const exited = once(child, 'exit')
+      child.kill('SIGKILL')
+      await exited
+      await assertGone(pids)
+    } finally {
+      child.kill('SIGKILL')
+      await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+    }
+  },
+)
+
 test('desktop shutdown is idempotent, redacts logs, and reaps DSH descendants', { timeout: 20_000 }, async () => {
   const root = await mkdtemp(join(tmpdir(), 'nook-supervisor-test-'))
   let runtime: DesktopRuntime | undefined
@@ -72,6 +108,7 @@ test('desktop shutdown is idempotent, redacts logs, and reaps DSH descendants', 
     const stopping = runtime.stop()
     assert.equal(runtime.stop(), stopping)
     await stopping
+    assert.equal(await readFile(join(root, 'graceful'), 'utf8'), 'yes')
     await assertGone(pids)
     assert.equal(logs.join('\n').includes('synthetic-secret'), false)
     assert.match(logs.join('\n'), /REDACTED/)
@@ -89,12 +126,12 @@ test('supervisor reaps runtime when its desktop parent crashes', { timeout: 20_0
     const entry = join(root, 'parent.mts')
     await writeFile(
       entry,
-      `import { DesktopRuntime } from ${JSON.stringify(resolve('apps/desktop/src/runtime.ts'))};
+      `import { DesktopRuntime } from ${JSON.stringify(pathToFileURL(resolve('apps/desktop/src/runtime.ts')).href)};
 const runtime=new DesktopRuntime(${JSON.stringify(config)},()=>{},()=>{});
 await runtime.ready;process.send?.({ready:true});`,
     )
     parent = fork(entry, {
-      execArgv: ['--import', resolve('node_modules/tsx/dist/loader.mjs')],
+      execArgv: ['--import', pathToFileURL(resolve('node_modules/tsx/dist/loader.mjs')).href],
       stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
     })
     await once(parent, 'message')

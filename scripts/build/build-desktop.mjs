@@ -5,6 +5,7 @@ import { ROOT } from '../profile/profile-lib.mjs'
 for (const [name, extension] of [
   ['main', 'js'],
   ['supervisor', 'mjs'],
+  ['windows-shutdown', 'mjs'],
   ['payload', 'mjs'],
   ['shared-client', 'mjs'],
   ['shared-broker', 'mjs'],

@@ -5,7 +5,7 @@
 | `pnpm dev`   | 3080         | Watches packages; rebuilds Client plugins and restarts Host code       | A fresh temporary home, removed on exit     |
 | `pnpm start` | 3081         | Builds and installs a fixed snapshot; changes apply on the next launch | Shared formal data; see [usage](runtime.md) |
 
-Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port when creating a backend. An already-running shared backend keeps its existing port. Development keeps that selected port across Host restarts. An occupied port fails startup; neither launcher terminates another application's listener.
+Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port when creating a backend. An already-running shared backend keeps its existing port. Development keeps that selected port across Host restarts. An unavailable explicit port fails startup. Windows usage startup can automatically select a free port when its default is unavailable; see the [runtime guide](runtime.md#启动与退出). Neither launcher terminates another application's listener.
 
 ## Development
 
@@ -32,5 +32,7 @@ Scripts are grouped by responsibility: `scripts/build/` bundles Client and deskt
 The [root package scripts](../package.json) define the public command names. Internal imports and test fixtures follow the same directory layout.
 
 ## Verification
+
+`pnpm verify:windows` builds and runs the [Windows startup acceptance](../scripts/verify/verify-windows-start.mjs) using a temporary path with spaces and Chinese characters. Its first launch uses the default port policy without an override. It installs all packed Nook packages, opens Chrome, checks authenticated notebook operations and sync, shares the backend between clients, and restarts on the same port to verify persistent credentials, pre-start backups and shutdown. It does not import the repository's old usage data. The screenshot is saved to `.pack/windows-start.png`.
 
 The [mode acceptance test](../tests/e2e/dev-modes.test.ts) creates a disposable workspace and opens both modes in Chrome. It checks repeated Client updates, CSS/Slot remounting, build-failure recovery, Host restart/reconnection, usage snapshot isolation and process cleanup. The [watcher integration test](../tests/integration/dev-watch.test.ts) covers edits during an in-flight build and shutdown. The [package gate](../scripts/verify/verify-package.mjs) uses the same snapshot installer as usage startup.

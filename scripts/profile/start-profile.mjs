@@ -4,6 +4,8 @@ import { parseArgs } from 'node:util'
 import { DEV_HOME, ROOT, PNPM_VERSION, exists } from './profile-lib.mjs'
 import { ProcessScope } from '../shared/process-scope.mjs'
 import { stageDesktop } from '../desktop/stage-desktop.mjs'
+import { prepareWindowsWebRuntime } from './prepare-web-runtime.mjs'
+import { selectWebPort } from './web-port.mjs'
 
 const { values } = parseArgs({
   args: process.argv.slice(2).filter(arg => arg !== '--'),
@@ -42,7 +44,7 @@ try {
   const state = values['test-state'] ? testState(values['test-state']) : userState()
   const source = join(DEV_HOME, 'nook')
   const backups = join(state, 'backups')
-  if ((await exists(source)) && !migrationComplete(source, backups)) {
+  if (!values['test-state'] && (await exists(source)) && !migrationComplete(source, backups)) {
     if (await sharedRuntimeRunning(state))
       throw new Error('Close Nook desktop and other pnpm start terminals once before importing the old Web data.')
     const receipt = migrateData(source, join(state, 'harness/nook'), backups)
@@ -52,13 +54,26 @@ try {
     runtime = new SharedRuntime(
       state,
       async () => {
+        const selectedPort = await selectWebPort(port, { explicit: values.port !== undefined })
+        if (process.platform === 'win32') {
+          const launch = await prepareWindowsWebRuntime(state, {
+            runPnpm: (args, options = {}) =>
+              processes.run('corepack', [`pnpm@${PNPM_VERSION}`, ...args], {
+                ...options,
+                cwd: options.cwd ?? ROOT,
+                env: { ...process.env, CI: 'true', ...options.env },
+              }),
+          })
+          launch.options.port = selectedPort
+          return launch
+        }
         await mkdir(join(ROOT, '.pack'), { recursive: true })
         temporary = await mkdtemp(join(ROOT, '.pack/web-start-'))
         const seed = await stageDesktop({ destination: join(temporary, 'runtime') })
         return {
           node: join(seed, 'payload/node/bin/node'),
           broker: join(seed, 'payload/boot/shared-broker.mjs'),
-          options: { state, seed, port },
+          options: { state, seed, port: selectedPort },
         }
       },
       line => {

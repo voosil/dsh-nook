@@ -54,9 +54,9 @@ The pinned `@deepseek-ai/dsh-client-hmr` Host polls Client bundle files and emit
 
 The [release source](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.1.3-alpha.2) uses Cordis `4.0.2` and Schemastery `3.18.2`. Client plugins use Cordis `Context`; `@deepseek-ai/dsh-client-ui-renderer/client` owns the `slots` context augmentation. The former `dsh-client-runtime` package is absent from this release. Nook declares the renderer as a Client injection and imports its public types.
 
-The Web startup URL contains a process token. A GET to that URL exchanges the token for a cookie and redirects to `/`; unauthenticated index requests return HTTP 401. Browser and HTTP acceptance use this flow, and diagnostic logs redact token values. Open the complete URL printed by the launcher to establish a browser session. Signed cookies use the persistent credential secret and survive Host restarts in the same home.
+The Web startup URL contains a process token. A GET to that URL exchanges the token for a cookie and redirects to `/`; unauthenticated index requests return HTTP 401. Browser and HTTP acceptance use this flow, and diagnostic logs redact token values. Open the complete URL printed by the launcher to establish a browser session. Signed cookies use the persistent credential secret and survive Host restarts in the same home at the same host and port. The pinned client-connection package binds the cookie name and signed audience to that authority; changing the port requires another token exchange.
 
-Session JSONL persistence depends on `fs-ext@2.1.1` for POSIX file locks. Workspace, development Profile and packed Profile installs permit its native build. Nook's model adapter and knowledge assembly hook do not configure persona; the release's persona prefix/suffix migration does not change those contracts.
+Session JSONL persistence imports `fs-ext@2.1.1`; its binding supports POSIX `flock` and Windows `LockFileEx`. The pinned JSONL backend also declares Koffi and uses its own Windows semaphore and write-through publication branch. Workspace, development Profile and packed Profile installs permit native builds. Nook's model adapter and knowledge assembly hook do not configure persona; the release's persona prefix/suffix migration does not change those contracts.
 
 ## Desktop launcher discovery
 
