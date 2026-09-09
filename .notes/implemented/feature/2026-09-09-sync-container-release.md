@@ -8,7 +8,7 @@ Status: implemented
 
 ## Decision
 
-[发布工作流](../../../.github/workflows/sync-server.yml)在独立版本标签上使用原生 amd64 和 arm64 runner 分别构建与执行 [Compose 验收](../../../tests/sync-server/verify_docker.py)，验证成功才推送架构镜像并合成固定版本清单。Actions 使用短期 GITHUB_TOKEN 的 packages:write 权限，源码通过 OCI source 标签关联仓库。版本清单不覆盖已有版本；工作流按仓库串行发布，失败可定位到具体架构。
+[发布工作流](../../../.github/workflows/sync-server.yml)由独立版本标签或专用发布分支触发，使用原生 amd64 和 arm64 runner 分别构建与执行 [Compose 验收](../../../tests/sync-server/verify_docker.py)，验证成功才推送架构镜像并合成固定版本清单。Actions 使用短期 GITHUB_TOKEN 的 packages:write 权限，源码通过 OCI source 标签关联仓库。版本清单不覆盖已有版本；工作流按仓库串行发布，失败可定位到具体架构。
 
 发布所需源文件可以在隔离检出中形成专门的版本提交；当前工作区的其他未提交产品改动不因镜像发布而自动提交。容器只复制明确列出的服务源文件，不包含本地配置、凭据或数据。部署方式和版本由 [Docker 部署说明](../../../scripts/sync-server/DOCKER.md)承载。
 
@@ -17,6 +17,10 @@ Status: implemented
 **本机保存长期 GHCR 令牌。** 现有 GitHub CLI 凭据不含 packages 写权限。Actions 的仓库令牌足够执行发布，避免额外授权并保存长期凭据。
 
 **只发布本机 arm64 镜像。** 常见 VPS 使用 amd64，因此两个架构在各自原生 runner 上验证后再共同发布。
+
+## Validation
+
+[首次发布运行](https://github.com/voosil/dsh-nook/actions/runs/34304459205)在两个原生架构上通过真实 Compose 启停、TLS、认证、条件写入、卷锁、重建和证书备份验收后完成 GHCR 发布。匿名清单检查确认固定版本同时包含 linux/amd64 与 linux/arm64。
 
 ## Consequences
 

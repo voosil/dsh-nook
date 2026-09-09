@@ -60,12 +60,11 @@ docker compose restart sync
 备份时先停止写入，复制整个数据卷并校验备份文件。下面的操作只创建备份，不删除或覆盖业务卷；归档包含密码和私钥，备份目录需要保密：
 
 ```bash
-docker compose stop sync
-mkdir -m 700 backup
-docker compose run --rm --no-deps --entrypoint tar sync -C /var/lib/nook-sync -czf - . > backup/nook-sync.tar.gz
-tar -tzf backup/nook-sync.tar.gz > backup/contents.txt
-sha256sum backup/nook-sync.tar.gz > backup/SHA256SUMS
-sha256sum -c backup/SHA256SUMS
+backup_dir=$(mktemp -d ./nook-sync-backup.XXXXXX) &&
+docker compose stop sync &&
+docker compose run --rm --no-deps --entrypoint tar sync -C /var/lib/nook-sync -czf - . > "$backup_dir/nook-sync.tar.gz" &&
+tar -tzf "$backup_dir/nook-sync.tar.gz" > "$backup_dir/contents.txt" &&
+(cd "$backup_dir" && sha256sum nook-sync.tar.gz > SHA256SUMS && sha256sum -c SHA256SUMS) &&
 docker compose start sync
 ```
 
@@ -75,4 +74,4 @@ docker compose start sync
 
 无法访问 GHCR 时，使用 `docker compose -f compose.yaml -f compose.build.yaml up -d --build --wait --wait-timeout 180` 从源码构建本地镜像，需要访问 Docker Hub 和 Debian 软件源。域名模式继续追加域名配置文件。
 
-在仓库根目录执行 `pnpm sync-server:package` 生成 `.pack/sync-server/nook-sync-0.1.0.tar.gz`，其中包含本说明和完整构建材料。执行 `pnpm sync-server:package -- --image` 会构建本机架构镜像并生成 Docker 归档、SHA256SUMS 和镜像元数据。应用指南内的下载包使用相同的文件集合。发布其他架构需在对应环境构建或使用 Docker Buildx，并独立验收。打包命令不推送镜像。仓库发布工作流在 `sync-server-v0.1.0` 标签上分别构建与验收两个架构，使用短期 `GITHUB_TOKEN` 推送 GHCR，再生成固定版本的多架构清单；已存在的版本拒绝覆盖。首次创建的 GHCR 包需设置公开可见，供客户端匿名拉取。
+在仓库根目录执行 `pnpm sync-server:package` 生成 `.pack/sync-server/nook-sync-0.1.0.tar.gz`，其中包含本说明和完整构建材料。执行 `pnpm sync-server:package -- --image` 会构建本机架构镜像并生成 Docker 归档、SHA256SUMS 和镜像元数据。应用指南内的下载包使用相同的文件集合。发布其他架构需在对应环境构建或使用 Docker Buildx，并独立验收。打包命令不推送镜像。仓库发布工作流由 `sync-server-v0.1.0` 标签或专用 `release/nook-sync-*` 分支触发，分别构建与验收两个架构，使用短期 `GITHUB_TOKEN` 推送 GHCR，再生成固定版本的多架构清单；已存在的版本拒绝覆盖。首次创建的 GHCR 包需设置公开可见，供客户端匿名拉取。
