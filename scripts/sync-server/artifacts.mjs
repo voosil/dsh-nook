@@ -3,6 +3,7 @@ import { deflateSync, gzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
 
 export const serverVersion = '0.1.0'
+const lf = text => text.replaceAll('\r\n', '\n')
 export const deploymentFiles = [
   'Dockerfile',
   'compose.yaml',
@@ -21,8 +22,8 @@ export async function dockerArtifacts(replacements = {}) {
   for (const name of deploymentFiles) {
     const bytes =
       replacements[name] === undefined
-        ? await readFile(new URL(name, import.meta.url))
-        : Buffer.from(replacements[name])
+        ? Buffer.from(lf(await readFile(new URL(name, import.meta.url), 'utf8')))
+        : Buffer.from(lf(String(replacements[name])))
     const header = Buffer.alloc(512)
     header.write(name)
     const octal = (value, offset, width) => header.write(value.toString(8).padStart(width - 1, '0') + '\0', offset)
@@ -54,11 +55,11 @@ export async function dockerArtifacts(replacements = {}) {
 export const assistantVersion = '0.1.0'
 export async function assistantArtifacts() {
   const sha = data => createHash('sha256').update(data).digest('hex')
-  const template = await readFile(new URL('./assistant.py', import.meta.url), 'utf8')
+  const template = lf(await readFile(new URL('./assistant.py', import.meta.url), 'utf8'))
   const image = template.match(/^IMAGE = '([^']+)'/m)?.[1]
   if (!/^ghcr\.io\/voosil\/nook-sync@sha256:[a-f0-9]{64}$/.test(image ?? ''))
     throw new Error('Assistant image must be pinned')
-  const compose = (await readFile(new URL('./compose.yaml', import.meta.url), 'utf8')).replace(
+  const compose = lf(await readFile(new URL('./compose.yaml', import.meta.url), 'utf8')).replace(
     /image: .*/,
     `image: ${image}`,
   )
@@ -101,7 +102,7 @@ python3 "$nook_tmp/assistant.py" install --yes </dev/tty
 
 /** Self-contained, shell-safe command; no mutable download endpoint or runtime fetch. */
 export async function installerArtifacts() {
-  const source = await readFile(new URL('./setup.py', import.meta.url), 'utf8')
+  const source = lf(await readFile(new URL('./setup.py', import.meta.url), 'utf8'))
   const payload = deflateSync(Buffer.from(source), { level: 9 }).toString('base64')
   const command = `sudo python3 -c 'import base64,zlib;__NOOK_INSTALLER_SOURCE__=zlib.decompress(base64.b64decode("${payload}")).decode();exec(compile(__NOOK_INSTALLER_SOURCE__,"nook-sync-setup.py","exec"))'`
   return { source, command }

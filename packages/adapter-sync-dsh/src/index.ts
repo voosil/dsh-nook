@@ -35,6 +35,9 @@ export default class SyncRpc extends TypertRemoteService {
   status(_request: Request<'status'>, signal: AbortSignal) {
     return result(signal, () => this.ctx.nookSync.status())
   }
+  prepareDeployment(_request: Request<'prepareDeployment'>, signal: AbortSignal) {
+    return result(signal, () => this.ctx.nookSync.prepareDeployment())
+  }
   configure(request: Request<'configure'>, signal: AbortSignal) {
     return result(signal, () =>
       this.ctx.nookSync.configure(

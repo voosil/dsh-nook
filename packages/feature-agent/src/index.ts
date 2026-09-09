@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { NookDshService } from '@nook-dsh/dsh-adapter'
 import type { ProjectFeatureService } from '@nook-dsh/feature-project'
 import type { PreviewFeatureService } from '@nook-dsh/feature-preview'
+import { registerSyncTools } from './sync-tools.js'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -45,6 +46,7 @@ const PROJECT_VALUE_SCHEMA = {
 } as const
 
 export function apply(ctx: Context): void {
+  ctx.inject(['nookSync'], registerSyncTools)
   ctx.effect(
     () =>
       ctx.nookDsh.registerTool({

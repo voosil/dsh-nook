@@ -3,6 +3,7 @@
   "compilerOptions": { "rootDir": "src", "outDir": "lib", "tsBuildInfoFile": "lib/.tsbuildinfo" },
   "include": ["src/**/*.ts"],
   "references": [
+    { "path": "../capability-sync" },
     { "path": "../capability-project" },
     { "path": "../feature-project" },
     { "path": "../feature-preview" },

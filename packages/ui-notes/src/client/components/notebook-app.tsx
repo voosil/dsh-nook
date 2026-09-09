@@ -30,7 +30,17 @@ import { SyncControl } from './sync-control.js'
 
 const personal = { kind: 'personal' as const, url: null, author: null, basedOn: [] }
 
-export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; close: () => void }) {
+export function NotebookApp({
+  api,
+  sync,
+  close,
+  onDeploy,
+}: {
+  api: Api
+  sync: SyncApi
+  close: () => void
+  onDeploy: () => Promise<void>
+}) {
   const [syncChange, setSyncChange] = useState(0)
   const [editorEpoch, setEditorEpoch] = useState(0)
   const [remoteChanged, setRemoteChanged] = useState(false)
@@ -161,10 +171,10 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
     }
   }, [])
 
-  async function navigate(action: () => void) {
+  async function navigate(action: () => void | Promise<void>) {
     if (busy) return
     if (handle.current && !(await handle.current.flush())) return
-    action()
+    await action()
   }
   async function create(copy?: NoteInput) {
     if (!copy && handle.current && !(await handle.current.flush())) return
@@ -471,7 +481,7 @@ export function NotebookApp({ api, sync, close }: { api: Api; sync: SyncApi; clo
           {!projects.length && <p className="nook-muted">想法可以先不分类。</p>}
         </nav>
         <div className="nook-nav-bottom">
-          <SyncControl api={sync} onChanged={setSyncChange} />
+          <SyncControl api={sync} onChanged={setSyncChange} onDeploy={() => navigate(onDeploy)} />
           <Button disabled={busy} onClick={() => void navigate(() => setVideoOpen(true))}>
             <Video size={16} aria-hidden="true" /> 视频转文稿
           </Button>

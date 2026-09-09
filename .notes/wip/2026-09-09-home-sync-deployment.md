@@ -26,9 +26,23 @@
 13. 用户明确回复允许下载到指定私有目录后，重新执行传输成功。Windows 目录 `.nook-backups/home-server-20260909` 关闭 ACL 继承，仅当前用户与 SYSTEM 拥有权限；连接文件与备份均被 Git 忽略。通过 SSH 标准输出的二进制流保存文件，避免 PowerShell 文本管道破坏 gzip；备份下载后摘要与服务器一致。连接配置格式为 `nook-sync-connection` 版本 1，密码和 CA 内容没有输出到对话。
 14. 用 Nook 实际 `parseSyncConnection` 解析下载文件、用 Node `X509Certificate` 验证其 CA 类型，均通过且未联网。仓库 `docs:check` 与本次两个记录文件的 Prettier 检查通过。仅修改部署实录和对应过程笔记，没有修改或提交用户正在进行的其他代码变更。
 
+## 接入与产品改进续录
+
+15. 用户追加授权：由 AI 完成 connection.json 导入，并把过程中的不友好环节改进到代码。Windows 从官方软件源下载 1.102.3 AMD64 MSI，校验 Authenticode 为有效的 Tailscale Inc 签名；完整安装日志保存在临时目录。
+16. Windows MSI 首次退出 1603，日志定位到 `iphlpsvc` 被禁用。记录原状态后通过系统提权将其恢复为 Manual 并启动，再次安装退出 0。Tailscale 服务自动启动；用户完成客户端账号登录后，状态 Running、健康告警为空，地址 `100.121.60.76`。
+17. 客户端 `tailscale ping` 经香港 DERP 到达服务器，随后使用 Nook 实际 WebDAV Adapter 完整验证 HTTPS、CA、认证及条件写入成功。没有把未形成直接连接视为失败，也没有关闭证书校验。
+18. 正式 Nook 数据位于 `%APPDATA%/Nook`，区别于开发实例。启动遇到遗留数据锁，确认 owner PID 37776 不存在且没有正式实例运行后，把锁目录重命名保存为 `nook.lock.stale-20260909-37776`，未删除用户数据。正式启动按产品流程创建并验证备份。
+19. 通过固定 DSH 已核实的本机认证及 `nookSyncRpc.configure` 导入私有文件，再调用 run/status。没有直接编辑 settings.json，没有输出密码或令牌。2026-09-09 12:45 UTC 状态 enabled=true、idle、pending=0、conflicts=0、unsupported=0、error=null，首次同步完成。该用户库当时没有待传记录；真实双客户端数据及冲突由隔离集成测试覆盖。
+20. 不友好点：浏览器文件选择器不能作为 AI 自动接入的唯一方式。新增 Host 工具 `nook_sync_import_connection`，以绝对文件路径与独立核实的 expected_url 导入，凭据不进入模型参数。复用现有 Feature 的备份、目标绑定与网络验证，并提供状态、同步及部署指南工具。
+21. 不友好点：用户必须复制多段命令并反复回到配置页。部署入口通过公开 DSH 控制器创建独立对话草稿，提示词包含完整部署与私密交接授权；由用户发送。部署 skill 随 feature-agent 包发布，由专用指南工具返回，不依赖用户预装仓库 skill。
+22. 干净包浏览器验收发现：无工作区的新 DSH 会话输入框会被禁用，单独 create/open 无法形成可发送提示词。核查固定运行时后，入口先由 Nook RPC 准备专用部署目录，再通过公开 workspaces.create 与 sessions.create({workspaceId}) 绑定会话，保持旧草稿不变。这个问题没有通过跳过浏览器断言掩盖。
+23. Windows CRLF 摘要问题在产物生成器统一 LF 后修复，正常 Windows 打包的五个摘要与公开 v0.1.0 一致；增加跨换行契约测试。导入集成测试经真实 DshAdapter/官方 defineTool 编译注册，覆盖目标拒绝、无效及超大文件、取消、备份、同步和卸载清理。
+24. 干净打包验收通过：35 个 Nook 包、25 个 Profile 组成项、实际浏览器中的工作区注册、新对话预填与手动导入同步。相关 Node 测试 15 项通过，独立 Apache 用例按平台跳过；安装器 19 项 Python 测试和嵌入源码启动校验在服务器的自动清理临时目录通过。Windows 仅有 Python 商店别名，不能把它当作已安装解释器；归档测试同时修正 GNU tar 对 Windows 盘符的解析及原生 tar 输出 CRLF 的兼容性。
+25. 仅释放本次启动的正式 Nook 启动器，让共享运行时正常结束，再启动通过验收的新构建。2026-09-09 13:02 UTC 正式 Host `http://127.0.0.1:3020` 的 run RPC 再次返回 enabled=true、idle、pending=0、conflicts=0、unsupported=0、error=null，验证配置与凭据在重启后持久保留。独立的开发实例保持运行。
+
 ## 待验收
 
-客户端 Windows 安装与接入尚待用户选择；实际 Nook 客户端及家庭网络外访问、整机重启尚未验收。物理重启及家庭网络外访问不能以容器内验证替代。不要对承载其他业务的家庭服务器默认执行 reboot。
+Windows 客户端安装、登录、真实连接导入及首次同步已经验收。家庭网络外访问、整机重启和恢复到新卷尚未验收；不要对承载其他业务的家庭服务器默认执行 reboot。
 
 ## 后续 skill 提炼要点
 
@@ -41,4 +55,4 @@
 - 凭据传输明确给出内容、目的地和权限，遵守宿主审批边界。获准后通过二进制 SSH 通道落盘，验证备份摘要、文件解析和 Git 忽略；不要把连接编码写进模型可见日志。
 - 最小验收包括 TLS、认证拒绝、原子条件写入、监听地址、健康状态、开机启动配置、备份逐文件校验与 Nook 单独重启后的凭据持久性。物理重启、跨网络访问和恢复到新卷列为独立验收，不能与这些检查混同。
 
-实机记录阶段没有创建可供 DSH 加载的 skill；后续需按真实 DSH skill 加载契约实现分发与发现，不能仅凭仓库中存在 Markdown 文件就声称一键部署入口已接通。
+部署 skill 见 [nook-sync-deploy](../../packages/feature-agent/skills/nook-sync-deploy/SKILL.md)，产品实现与选择依据见[功能笔记](../implemented/feature/2026-09-09-ai-sync-deployment.md)。它由专用指南工具提供给 AI，不声称已经注册进 DSH 原生 skill 目录。

@@ -36,6 +36,7 @@ const conflict = z.strictObject({
   versions: z.array(z.strictObject({ hash, value: version })),
 })
 export const requests = {
+  prepareDeployment: z.strictObject({}),
   status: z.strictObject({}),
   configure: z.strictObject({
     enabled: z.boolean(),
@@ -53,10 +54,21 @@ export const requests = {
     copy: z.boolean(),
   }),
 }
-const outputs = { status, configure: status, run: status, conflicts: z.array(conflict), resolve: status }
+const outputs = {
+  prepareDeployment: z.strictObject({ directory: z.string() }),
+  status,
+  configure: status,
+  run: status,
+  conflicts: z.array(conflict),
+  resolve: status,
+}
 export type Method = keyof typeof requests
 export type Request<K extends Method> = z.input<(typeof requests)[K]>
-export type Value<K extends Method> = K extends 'conflicts' ? readonly SyncConflict[] : SyncStatus
+export type Value<K extends Method> = K extends 'prepareDeployment'
+  ? { directory: string }
+  : K extends 'conflicts'
+    ? readonly SyncConflict[]
+    : SyncStatus
 export type Result<T> = { ok: true; value: T } | { ok: false; error: { code: string; message: string } }
 export type SyncRemote = {
   [K in Method]: (request: Request<K>, signal?: AbortSignal) => Promise<RemoteResult<Result<Value<K>>>>

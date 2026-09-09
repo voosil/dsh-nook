@@ -9,7 +9,15 @@ function preview(data: Json) {
   if (data && typeof data === 'object' && !Array.isArray(data) && 'markdown' in data) return String(data.markdown)
   return JSON.stringify(data, null, 2)
 }
-export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (change: number) => void }) {
+export function SyncControl({
+  api,
+  onChanged,
+  onDeploy,
+}: {
+  api: SyncApi
+  onChanged: (change: number) => void
+  onDeploy: () => Promise<void>
+}) {
   const [guideOpen, setGuideOpen] = useState(window.location.hash === '#nook-sync-guide')
   useEffect(() => {
     const changed = () => setGuideOpen(window.location.hash === '#nook-sync-guide')
@@ -116,6 +124,7 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
       </button>
       {guideOpen && (
         <SyncGuidePage
+          onDeploy={onDeploy}
           onBack={() => {
             if (!open) {
               setUrl(status?.url ?? '')

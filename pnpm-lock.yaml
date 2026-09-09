@@ -540,6 +540,9 @@ importers:
       '@nook-dsh/capability-project':
         specifier: workspace:*
         version: link:../capability-project
+      '@nook-dsh/capability-sync':
+        specifier: workspace:*
+        version: link:../capability-sync
       '@nook-dsh/dsh-adapter':
         specifier: workspace:*
         version: link:../dsh-adapter

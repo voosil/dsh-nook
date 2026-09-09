@@ -12,10 +12,12 @@
     }
   },
   "files": [
-    "lib"
+    "lib",
+    "skills"
   ],
   "license": "MIT",
   "dependencies": {
+    "@nook-dsh/capability-sync": "workspace:*",
     "@nook-dsh/capability-project": "workspace:*",
     "@nook-dsh/dsh-adapter": "workspace:*",
     "@nook-dsh/feature-project": "workspace:*",

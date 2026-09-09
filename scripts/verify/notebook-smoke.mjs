@@ -171,6 +171,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await sync.waitFor({ state: 'hidden' })
       assert.equal(new URL(page.url()).hash, '#nook-sync-guide')
       await guide.getByRole('heading', { name: '部署家庭服务器', exact: true }).waitFor()
+      await guide.getByText('手动安装', { exact: true }).click()
       await guide.getByText('查看安装命令', { exact: true }).click()
       const assistantCommand = await guide.getByLabel('家庭服务器安装命令', { exact: true }).inputValue()
       assert.ok(assistantCommand.startsWith("bash -c '"))
@@ -256,6 +257,13 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await sync.getByRole('button', { name: '关闭同步', exact: true }).click()
       await sync.getByRole('status').filter({ hasText: '同步未开启' }).waitFor()
       await sync.getByRole('button', { name: '关闭同步设置', exact: true }).click()
+      await workspace.getByRole('button', { name: /数据同步/ }).click()
+      await sync.getByRole('link', { name: '配置指南' }).click()
+      await guide.getByRole('button', { name: '让 AI 帮我部署并连接', exact: true }).click()
+      await workspace.waitFor({ state: 'hidden' })
+      const composer = page.locator('[contenteditable="true"]').filter({ hasText: 'nook_sync_deployment_guide' })
+      await composer.waitFor()
+      assert.ok((await composer.innerText()).includes('nook_sync_import_connection'))
     }
     assert.deepEqual(errors, [])
     return { title, errors }

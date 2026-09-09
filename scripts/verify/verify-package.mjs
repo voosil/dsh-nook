@@ -76,6 +76,8 @@ try {
     }
   }
   for (const asset of [
+    'feature-agent/lib/sync-deployment.json',
+    'feature-agent/skills/nook-sync-deploy/SKILL.md',
     'adapter-video-platform/python/collect.py',
     'adapter-video-platform/python/nook_video/bilibili.py',
     'provider-video-editor/skills/video-to-essay/SKILL.md',
@@ -83,7 +85,7 @@ try {
     'provider-video-editor/skills/learning-notes/SKILL.md',
   ]) {
     if (!(await readFile(resolve(profile, 'node_modules', '@nook-dsh', asset), 'utf8')).trim())
-      throw new Error(`empty packed video asset: ${asset}`)
+      throw new Error(`empty packed asset: ${asset}`)
   }
   const installedApp = await realpath(resolve(profile, 'node_modules', '@nook-dsh', 'app-all'))
   if (installedApp.startsWith(`${ROOT}/`))

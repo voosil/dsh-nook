@@ -2,7 +2,7 @@
 
 同步运行于每台设备的本地 Host。工作区侧栏的“数据同步”用于填写 WebDAV 专用目录、存储用户名和密码或应用令牌，验证连接并开启同步。各设备填写同一目录；Nook 不需要产品账号。默认关闭，笔记保存及搜索无需连接存储。
 
-同步弹窗提供“部署家庭服务器 / 查看 NAS 配置指南”入口，点击进入独立的 `#nook-sync-guide` 页面；返回后保留未提交的配置。页面默认提供[家庭服务器安装助手](../../docs/sync-server.md)，其他部署方式和 NAS 说明位于展开项中。系统安装工具的范围和维护方式见[工具说明](../../scripts/sync-server/README.md)。
+同步弹窗提供“配置指南”入口，点击进入独立的 `#nook-sync-guide` 页面；返回后保留未提交的配置。页面提供 AI 部署入口和[家庭服务器安装助手](../../docs/sync-server.md)，其他部署方式和 NAS 说明位于展开项中。系统安装工具的范围和维护方式见[工具说明](../../scripts/sync-server/README.md)。
 
 ## 范围与状态
 
@@ -47,6 +47,10 @@
 ## 配置与隐私
 
 同步设置支持导入部署工具生成的 `connection.json`，或粘贴其 JSON 内容及安装助手输出的 `NOOK-SYNC-1:` 前缀 Base64 UTF-8 文本。编码只用于交接，不提供加密；解析允许复制时的换行，解码后复用相同的严格字段校验。当前文件格式为 `format: "nook-sync-connection"`、`version: 1`，包含 `url`、`username`、`password` 和 `caCert` 四个字符串字段；兼容仅含这四个字段的旧版导出。解析器拒绝未知字段、未知版本、超限内容及夹带凭据的 URL，最大文件大小为 32 KB。导入只填充表单，不连接服务器或保存设置；用户核对目标并点击“验证并开启同步”后复用现有 Host 校验、备份与同步流程，实际 CA 解析和 TLS 校验仍在 Host 执行。文件包含明文凭据，不上传为同步数据或记录到日志。
+
+AI 可通过 `nook_sync_import_connection` 提供当前 Host 的绝对文件路径及独立核实的 `expected_url`，直接执行 Host 导入。文件仅在 Host 内部读取；路径必须指向不超过 32 KB 的普通文件，拒绝符号链接和目标不匹配。成功后复用 `configure` 的备份、认证与原子写入验证并开启同步；`nook_sync_run` 执行首次对账，`nook_sync_status` 返回脱敏状态。工具不接收密码参数，也不返回连接文件、密码或 CA；浏览器的手动导入仍先填充表单。部署入口和内置 skill 见[家庭服务器指南](../../docs/sync-server.md)。
+
+`prepareDeployment` RPC 在同步配置目录内创建或复用 `sync-deployment` 工作目录并返回其绝对路径，供部署入口注册 DSH 工作区和绑定新会话。它不修改同步连接或用户已有会话，也不把这个目录当作已完成权限检查的凭据目录；AI 仍按 skill 准备私密交接子目录。
 
 [产品 Profile](../app-all/cordis.patch.yml)在 notebook Provider 设置 `projectsFile` 后启用统一存储；旧 projects.json 一次性导入 SQLite 并保留原文件，迁移回执和初始版本在同一事务提交。未设置该选项的独立 Provider 保留原有笔记能力。目录级迁移的限制见[正式运行环境](../../docs/runtime.md#导入仓库中的旧数据)。
 

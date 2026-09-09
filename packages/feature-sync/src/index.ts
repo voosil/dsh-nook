@@ -1,10 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, isAbsolute, resolve } from 'node:path'
+import { open, lstat, mkdir, realpath } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
   SyncError,
+  parseSyncConnection,
+  CONNECTION_FILE_LIMIT,
   type SyncReplica,
   type SyncStorageFactory,
   type SyncService,
@@ -105,6 +108,48 @@ export default class SyncFeature extends Service implements SyncService {
       this.configurationTask = undefined
     })
     return this.configurationTask
+  }
+  async prepareDeployment(): Promise<{ directory: string }> {
+    const directory = resolve(dirname(this.config.file), 'sync-deployment')
+    await mkdir(directory, { recursive: true, mode: 0o700 })
+    const info = await lstat(directory)
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new SyncError('部署工作目录不可用。')
+    return { directory: await realpath(directory) }
+  }
+  async importConnection(file: string, expectedUrl: string, signal: AbortSignal): Promise<SyncStatus> {
+    signal.throwIfAborted()
+    if (!isAbsolute(file)) throw new SyncError('请提供连接文件的绝对路径。')
+    let config
+    try {
+      const info = await lstat(file)
+      if (!info.isFile() || info.isSymbolicLink() || info.size > CONNECTION_FILE_LIMIT) throw new Error()
+      const handle = await open(file, 'r')
+      try {
+        const opened = await handle.stat()
+        if (!opened.isFile() || opened.dev !== info.dev || opened.ino !== info.ino) throw new Error()
+        const buffer = Buffer.alloc(CONNECTION_FILE_LIMIT + 1)
+        const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0)
+        if (bytesRead > CONNECTION_FILE_LIMIT) throw new Error()
+        config = parseSyncConnection(new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, bytesRead)))
+      } finally {
+        await handle.close()
+      }
+    } catch {
+      throw new SyncError('无法读取有效连接文件：请检查路径、读取权限、文件格式和 32 KB 大小限制。')
+    }
+    const normalize = (value: string) => {
+      try {
+        const url = new URL(value)
+        url.pathname = url.pathname.replace(/\/+$/, '') + '/'
+        return url.href
+      } catch {
+        throw new SyncError('请提供预期的完整同步地址。')
+      }
+    }
+    if (normalize(config.url) !== normalize(expectedUrl))
+      throw new SyncError('连接文件地址与预期服务器不一致；未连接或修改设置。')
+    signal.throwIfAborted()
+    return this.configure({ ...config, enabled: true }, signal)
   }
   private async applySettings(input: ConfigureSync, signal: AbortSignal): Promise<SyncStatus> {
     if (this.configuring) throw new SyncError('同步配置正在更新，请稍后重试。')

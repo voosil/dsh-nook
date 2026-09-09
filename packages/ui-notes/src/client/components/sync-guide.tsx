@@ -12,7 +12,7 @@ function Source({ href, children }: { href: string; children: ReactNode }) {
     </a>
   )
 }
-export function SyncGuidePage({ onBack }: { onBack: () => void }) {
+export function SyncGuidePage({ onBack, onDeploy }: { onBack: () => void; onDeploy: () => Promise<void> }) {
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
   return (
@@ -25,7 +25,7 @@ export function SyncGuidePage({ onBack }: { onBack: () => void }) {
       </header>
       <article className="nook-sync-guide-body">
         <h1>配置你的同步存储</h1>
-        <SyncAssistantGuide onConnect={onBack} />
+        <SyncAssistantGuide onConnect={onBack} onDeploy={onDeploy} />
         <details>
           <summary>手动部署、其他网络环境与 NAS</summary>
           <p>

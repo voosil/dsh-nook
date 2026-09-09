@@ -117,8 +117,10 @@ export interface ConfigureSync {
   readonly caCert?: string | undefined
 }
 export interface SyncService {
+  prepareDeployment(): Promise<{ directory: string }>
   status(): SyncStatus
   configure(config: ConfigureSync, signal: AbortSignal): Promise<SyncStatus>
+  importConnection(file: string, expectedUrl: string, signal: AbortSignal): Promise<SyncStatus>
   run(): Promise<SyncStatus>
   conflicts(): readonly SyncConflict[]
   resolve(key: string, expected: readonly string[], selected: string, copy: boolean): Promise<SyncStatus>

@@ -70,6 +70,8 @@ Profile names are resolved beneath `DSH_HOME/profiles` and reject path separator
 
 ## Product RPC and Client contracts
 
+The pinned Conversation Client publicly exposes `ctx.conversation.input.for(sessionScope).setDraft(text)`. The Session Controller exposes `create({ workspaceId })`, `scope(id)` and `open(id)`; `create()` resolves after the new binding is addressable. The Workspace Controller exposes idempotent `workspaces.create({ path })` for an existing Host directory. The official Hero composer is inert without a workspace label, so Nook prepares a deployment directory through its own RPC, registers its workspace and creates a bound session before seeding the draft. The Client contribution injects `workspaces`, `sessions` and `conversation`; no private React component, DOM modification, `send` or `submit` is involved. Contract tests and the packed browser smoke cover the draft handoff.
+
 The installed `dsh-client-ui-layout` Slot contract declares `shell.overlay` as a root list. Its owner uses a non-interactive overlay container; contributed interactive content sets its own pointer events. The sidebar footer is a root list with `wide`; session header actions are a session list with `sessionId` and the session kit.
 
 Client module discovery resolves `<package>/package.json`; contributing packages must export that path. Host entry points also need an applicable plugin export. Client mounting uses `ctx.remote.$mount({ package, descriptors })` followed by injection of the traced `remote.<namespace>` service before reading it. Package metadata or `$mount` completion alone is not proof that the namespace service is available.

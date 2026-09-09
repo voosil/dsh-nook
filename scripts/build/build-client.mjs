@@ -2,6 +2,7 @@ import { build } from 'esbuild'
 import { resolve } from 'node:path'
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { installerArtifacts, dockerArtifacts, assistantArtifacts } from '../sync-server/artifacts.mjs'
+import { deploymentGuide } from '../sync-server/agent-guide.mjs'
 
 const root = resolve(import.meta.dirname, '../..')
 const clients = [
@@ -15,6 +16,10 @@ const installer = await installerArtifacts()
 const docker = await dockerArtifacts()
 const assistant = await assistantArtifacts()
 const output = []
+output.push({
+  path: resolve(root, 'packages/feature-agent/lib/sync-deployment.json'),
+  contents: Buffer.from(JSON.stringify(await deploymentGuide(), null, 2)),
+})
 for (const client of clients) {
   const directory = resolve(root, 'packages', client.directory)
   const result = await build({

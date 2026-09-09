@@ -89,12 +89,20 @@ test('downloaded Docker archive contains exact allowlisted build sources and no 
     assert.deepEqual(artifact.archive, (await dockerArtifacts()).archive)
     const archive = join(directory, artifact.filename)
     await writeFile(archive, artifact.archive)
-    assert.deepEqual(execFileSync('tar', ['-tzf', archive], { encoding: 'utf8' }).trim().split('\n'), deploymentFiles)
-    execFileSync('tar', ['-xzf', archive, '-C', directory])
+    assert.deepEqual(
+      execFileSync('tar', ['-tzf', artifact.filename], { cwd: directory, encoding: 'utf8' }).trim().split(/\r?\n/),
+      deploymentFiles,
+    )
+    execFileSync('tar', ['-xzf', artifact.filename], { cwd: directory })
     for (const name of deploymentFiles)
       assert.deepEqual(
         await readFile(join(directory, name)),
-        await readFile(new URL('../../scripts/sync-server/' + name, import.meta.url)),
+        Buffer.from(
+          (await readFile(new URL('../../scripts/sync-server/' + name, import.meta.url), 'utf8')).replaceAll(
+            '\r\n',
+            '\n',
+          ),
+        ),
       )
     assert.match(await readFile(join(directory, 'compose.yaml'), 'utf8'), /ghcr\.io\/voosil\/nook-sync:0\.1\.0/)
   } finally {

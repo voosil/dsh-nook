@@ -9,6 +9,7 @@ import { descriptors as syncDescriptors, RPC_PACKAGE as SYNC_PACKAGE } from '@no
 import { notebookApi } from './lib/api.js'
 import { syncApi } from './lib/sync-api.js'
 import { NotebookApp } from './components/notebook-app.js'
+import { openSyncDeployment } from './lib/sync-deployment.js'
 import css from './styles/index.css'
 
 export type { Api } from './lib/api.js'
@@ -17,10 +18,15 @@ export const inject = ['slots', 'remote']
 export async function apply(ctx: ClientContext): Promise<void> {
   await ctx.remote.$mount({ package: RPC_PACKAGE, descriptors })
   await ctx.remote.$mount({ package: SYNC_PACKAGE, descriptors: syncDescriptors })
-  ctx.inject(['remote.nookNotebookRpc', 'remote.nookSyncRpc', 'slots'], mountWorkspace)
+  ctx.inject(
+    ['remote.nookNotebookRpc', 'remote.nookSyncRpc', 'slots', 'sessions', 'conversation', 'workspaces'],
+    mountWorkspace,
+  )
 }
 
 function mountWorkspace(ctx: ClientContext): void {
+  const lifecycle = new AbortController()
+  ctx.effect(() => () => lifecycle.abort())
   const api = notebookApi(ctx.remote.nookNotebookRpc)
   const sync = syncApi(ctx.remote.nookSyncRpc)
   let open = true
@@ -50,7 +56,16 @@ function mountWorkspace(ctx: ClientContext): void {
     return visible ? (
       <>
         <style>{css}</style>
-        <NotebookApp api={api} sync={sync} close={() => setOpen(false)} />
+        <NotebookApp
+          api={api}
+          sync={sync}
+          close={() => setOpen(false)}
+          onDeploy={async () => {
+            const { directory } = await sync('prepareDeployment', {}, lifecycle.signal)
+            await openSyncDeployment(ctx, directory, lifecycle.signal)
+            setOpen(false)
+          }}
+        />
       </>
     ) : null
   }
