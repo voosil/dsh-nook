@@ -12,6 +12,18 @@ test('development launcher defaults to port 3080', () => {
   assert.equal(resolveDevPort([]), 3080)
 })
 
+test('development launcher can select an ephemeral default without replacing an explicit port', () => {
+  assert.deepEqual(createProfileArgs(BIN, ROOT, [], { defaultPort: 0 }), [
+    BIN,
+    '--profile',
+    'nook',
+    '--no-open',
+    '--port',
+    '0',
+  ])
+  assert.equal(createProfileArgs(BIN, ROOT, ['--port=4000'], { defaultPort: 0 }).at(-1), '--port=4000')
+})
+
 test('development launcher accepts a port override and Safe UI mode', () => {
   assert.deepEqual(createProfileArgs(BIN, ROOT, ['--', '--safe-ui', '--port', '4000']), [
     BIN,

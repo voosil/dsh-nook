@@ -16,7 +16,7 @@ The [filesystem adapter](../../../packages/storage-backup/src/durability.ts) ope
 
 Node's Windows recursive mkdir result can include the extended-path prefix even when the input does not. Directory-fsync traversal therefore only runs on POSIX, avoiding an unmatched stop path on Windows. The documentation checker accepts both LF and CRLF, and subprocess test imports use file URLs.
 
-Windows can return `EACCES` when another process has bound the default port without a listening socket. This occurred with `verge-mihomo` on 3081 and was missed by the initial acceptance's explicit port 0. The [port selector](../../../scripts/profile/web-port.mjs) probes before preparing a new runtime: an unavailable default falls back to port 0, while an unavailable explicit port fails with an actionable error. Existing shared backends retain their port. The probe closes its socket; it does not reserve the port across startup or modify the existing owner.
+Windows can return `EACCES` when another process has bound the default port without a listening socket. This occurred with `verge-mihomo` on 3081 and was missed by the initial acceptance's explicit port 0. The [port selector](../../../scripts/profile/web-port.mjs) serves both Web usage and development before preparing a new runtime: an unavailable default falls back to port 0, while an unavailable explicit port fails with an actionable error. Development's default 3080 also returns `EACCES` in the verified environment. The development launcher selects a concrete available port before boot and retains it across Host restarts. Existing shared backends retain their port. The probe closes its socket; it does not reserve the port across startup or modify the existing owner.
 
 ## Alternatives considered
 

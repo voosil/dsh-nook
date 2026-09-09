@@ -5,7 +5,7 @@
 | `pnpm dev`   | 3080         | Watches packages; rebuilds Client plugins and restarts Host code       | A fresh temporary home, removed on exit     |
 | `pnpm start` | 3081         | Builds and installs a fixed snapshot; changes apply on the next launch | Shared formal data; see [usage](runtime.md) |
 
-Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port when creating a backend. An already-running shared backend keeps its existing port. Development keeps that selected port across Host restarts. An unavailable explicit port fails startup. Windows usage startup can automatically select a free port when its default is unavailable; see the [runtime guide](runtime.md#启动与退出). Neither launcher terminates another application's listener.
+Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port when creating a backend. An already-running shared backend keeps its existing port. Development keeps that selected port across Host restarts. An unavailable explicit port fails startup. On Windows, both commands automatically select a free port when their default is unavailable. Neither launcher terminates another application's listener.
 
 ## Development
 
@@ -18,6 +18,8 @@ Client HMR remounts the changed plugin. Local React state in that plugin can res
 `pnpm dev:safe-ui` uses the same watcher with Nook UI contributions disabled. After adding dependencies or changing Profile membership, run `pnpm install` and `pnpm dev:profile`, then restart development. Profile refresh preserves existing user patch files. Changes to launcher/build scripts also require restarting the command.
 
 Development starts with fresh data and credentials. Configure development models in that temporary instance when needed. The temporary directory is printed at startup and remains available through automatic Host restarts. It is removed when the launcher exits. The real user DSH home is never used.
+
+The temporary Profile owns its module directory and links each declared dependency to its resolved installed package directory. This preserves workspace updates on Windows and keeps runtime-generated dependency fallback links inside the temporary home.
 
 ## Usage while editing
 

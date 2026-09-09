@@ -17,7 +17,7 @@ export function checkWebPort(port) {
 
 export async function selectWebPort(
   port,
-  { explicit = false, platform = process.platform, check = checkWebPort, log = console.log } = {},
+  { explicit = false, platform = process.platform, check = checkWebPort, log = console.log, label = 'nook start' } = {},
 ) {
   if (platform !== 'win32' || port === 0) return port
   try {
@@ -30,7 +30,7 @@ export async function selectWebPort(
         cause: error,
       })
     log(
-      `[nook start] Port ${port} is unavailable (${error.code}); selecting an available port. Open the URL printed below.`,
+      `[${label}] Port ${port} is unavailable (${error.code}); selecting an available port. Open the URL printed below.`,
     )
     return 0
   }

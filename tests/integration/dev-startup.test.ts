@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { createServer } from 'node:net'
+import { dirname, join, relative, resolve } from 'node:path'
 import { test, type TestContext } from 'node:test'
 import { promisify } from 'node:util'
 import { ROOT } from '../../scripts/profile/profile-lib.mjs'
@@ -23,13 +24,25 @@ async function launcherFixture(t: TestContext) {
       await writeFile('lib/host.mjs', 'export default ' + JSON.stringify(source))
       await writeFile('lib/client.js', source)
     `,
-    '.dsh-dev/profiles/nook/package.json': '{}',
+    '.dsh-dev/profiles/nook/package.json': JSON.stringify({
+      dependencies: { '@fixture/plugin': 'link:../../../packages/plugin' },
+    }),
     '.dsh-dev/profiles/nook/cordis.patch.yml': '[]',
+    'packages/plugin/package.json': JSON.stringify({ name: '@fixture/plugin', type: 'module', exports: './index.js' }),
+    'packages/plugin/index.js': 'export default "linked plugin"',
     // A consumer of Host and Client output keeps this test focused on the real
     // launcher's preparation; profile-boot.test.ts covers the pinned DSH runtime.
     'node_modules/@deepseek-ai/dsh/lib/bin.js': `
       const { readFile, writeFile } = await import('node:fs/promises')
       const { pathToFileURL } = await import('node:url')
+      const { createRequire } = await import('node:module')
+      const { resolve } = await import('node:path')
+      const profile = resolve(process.env.DSH_HOME, 'profiles/nook')
+      const require = createRequire(resolve(profile, 'package.json'))
+      const { default: plugin } = await import(pathToFileURL(require.resolve('@fixture/plugin')))
+      if (plugin !== 'linked plugin') throw new Error('wrong plugin')
+      // DSH owns fallback entries in this directory; they must stay temporary.
+      await writeFile(resolve(profile, 'node_modules/fallback-probe'), 'temporary')
       const source = await readFile('source.txt', 'utf8')
       const { default: host } = await import(pathToFileURL(process.cwd() + '/lib/host.mjs'))
       const client = await readFile('lib/client.js', 'utf8')
@@ -42,11 +55,14 @@ async function launcherFixture(t: TestContext) {
     await mkdir(dirname(target), { recursive: true })
     await writeFile(target, content)
   }
-  await mkdir(resolve(root, '.dsh-dev/profiles/nook/node_modules'))
+  const pluginLink = resolve(root, '.dsh-dev/profiles/nook/node_modules/@fixture/plugin')
+  await mkdir(dirname(pluginLink), { recursive: true })
+  await symlink(relative(dirname(pluginLink), resolve(root, 'packages/plugin')), pluginLink, 'dir')
   for (const script of [
     'profile/run-profile.mjs',
     'profile/profile-lib.mjs',
     'profile/run-profile-args.mjs',
+    'profile/web-port.mjs',
     'shared/process-scope.mjs',
     'shared/corepack-command.mjs',
     'profile/dev-watch.mjs',
@@ -73,6 +89,10 @@ for (const args of [[], ['--safe-ui']]) {
     const { root, launch } = await launcherFixture(t)
     await launch(args)
     assert.equal(await readFile(resolve(root, 'booted.txt'), 'utf8'), 'first build')
+    await assert.rejects(readFile(resolve(root, '.dsh-dev/profiles/nook/node_modules/fallback-probe')), {
+      code: 'ENOENT',
+    })
+    assert.equal(await readFile(resolve(root, 'packages/plugin/index.js'), 'utf8'), 'export default "linked plugin"')
 
     await writeFile(resolve(root, 'source.txt'), 'updated source')
     await launch(args)
@@ -87,3 +107,19 @@ test('dev stops before boot when the build fails', async t => {
   await assert.rejects(launch(), /fixture build failure/)
   await assert.rejects(readFile(resolve(root, 'booted.txt')), { code: 'ENOENT' })
 })
+
+test(
+  'Windows dev rejects an unavailable explicit port before building',
+  { skip: process.platform !== 'win32' },
+  async t => {
+    const { root, launch } = await launcherFixture(t)
+    const server = createServer()
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+    t.after(() => new Promise<void>((resolve, reject) => server.close(error => (error ? reject(error) : resolve()))))
+    const address = server.address()
+    assert.ok(address && typeof address !== 'string')
+    await assert.rejects(launch(['--port', String(address.port)]), /Choose another --port or use --port 0/)
+    await assert.rejects(readFile(resolve(root, 'lib/host.mjs')), { code: 'ENOENT' })
+    assert.equal(server.listening, true)
+  },
+)

@@ -2,7 +2,8 @@ import { createServer } from 'node:net'
 import { once } from 'node:events'
 import { resolve } from 'node:path'
 import { dshBin, exists, PROFILE_DIR, ROOT, PNPM_VERSION, writeDevProfile } from './profile-lib.mjs'
-import { createProfileArgs } from './run-profile-args.mjs'
+import { createProfileArgs, resolveDevPort } from './run-profile-args.mjs'
+import { selectWebPort } from './web-port.mjs'
 import { ProcessScope } from '../shared/process-scope.mjs'
 import { createDevSandbox } from './dev-sandbox.mjs'
 import { sourceSnapshot, watchSources } from './dev-watch.mjs'
@@ -20,6 +21,15 @@ let runtime
 let restarting = false
 
 try {
+  const inputArgs = process.argv.slice(2)
+  const port = resolveDevPort(inputArgs)
+  const defaultPort =
+    port === undefined
+      ? undefined
+      : await selectWebPort(port, {
+          explicit: inputArgs.some(arg => arg === '--port' || arg.startsWith('--port=')),
+          label: 'nook dev',
+        })
   const initial = await sourceSnapshot(ROOT)
   const build = () =>
     processes.run('corepack', [`pnpm@${PNPM_VERSION}`, 'run', 'build'], {
@@ -39,7 +49,8 @@ try {
     }
     if (controller.signal.aborted) throw new Error('startup cancelled')
     sandbox = await createDevSandbox()
-    const args = createProfileArgs(dshBin(), ROOT, process.argv.slice(2), {
+    const args = createProfileArgs(dshBin(), ROOT, inputArgs, {
+      defaultPort,
       patches: [resolve(ROOT, 'dev/patches/hmr.cordis.yml')],
     })
     // Keep the selected ephemeral port stable across Host restarts.
