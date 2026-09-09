@@ -9,8 +9,18 @@ export interface SyncConnection {
   readonly caCert: string
 }
 export function parseSyncConnection(source: string): SyncConnection {
-  const invalid = () => new Error('连接文件无效。请选择部署工具导出的 connection.json。')
+  const invalid = () => new Error('连接信息无效。请完整复制安装助手输出的连接信息，或导入 connection.json。')
   if (new TextEncoder().encode(source).byteLength > CONNECTION_FILE_LIMIT) throw invalid()
+  source = source.trim().replace(/^\uFEFF/, '')
+  if (source.startsWith('NOOK-SYNC-1:')) {
+    const encoded = source.slice('NOOK-SYNC-1:'.length).replace(/\s/g, '')
+    if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) throw invalid()
+    try {
+      source = new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(atob(encoded), c => c.charCodeAt(0)))
+    } catch {
+      throw invalid()
+    }
+  }
   let value: unknown
   try {
     value = JSON.parse(source.replace(/^\uFEFF/, ''))

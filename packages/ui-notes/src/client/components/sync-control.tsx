@@ -18,6 +18,7 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
   }, [])
   const [caCert, setCaCert] = useState('')
   const [imported, setImported] = useState(false)
+  const [connectionText, setConnectionText] = useState('')
   const importInput = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<SyncStatus | null>(null)
   const [open, setOpen] = useState(false),
@@ -31,6 +32,16 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
     changed = useRef(onChanged)
   changed.current = onChanged
   const lifecycle = useRef<AbortController | null>(null)
+  function importConnection(source: string) {
+    const config = parseSyncConnection(source)
+    setUrl(config.url)
+    setUsername(config.username)
+    setPassword(config.password)
+    setCaCert(config.caCert)
+    setImported(true)
+    setConnectionText('')
+    setError('')
+  }
   useEffect(() => {
     const controller = new AbortController()
     lifecycle.current = controller
@@ -95,6 +106,7 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
           setUsername(status?.username ?? '')
           setPassword('')
           setImported(false)
+          setConnectionText('')
           setCaCert(status?.caCert ?? '')
           setOpen(true)
           void operation(async () => {})
@@ -134,7 +146,7 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
             </div>
             <p>连接自己的 WebDAV 存储，在多台设备间同步笔记和项目。每台设备都保留本地数据。</p>
             <a className="nook-sync-guide-entry" href="#nook-sync-guide">
-              查看服务器 / NAS 配置指南 ↗
+              部署家庭服务器 / 查看 NAS 配置指南 ↗
             </a>
             <p role="status">
               {label}
@@ -148,6 +160,43 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
             )}
             {!!status?.unsupported && <p>有 {status.unsupported} 条数据的类型或格式需要新版应用，原始内容已保留。</p>}
             <div className="nook-sync-import">
+              {!imported && (
+                <label>
+                  粘贴连接信息
+                  <textarea
+                    rows={3}
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={CONNECTION_FILE_LIMIT}
+                    placeholder="粘贴安装助手输出的 NOOK-SYNC-1:… 或 connection.json 内容"
+                    value={connectionText}
+                    disabled={busy}
+                    onChange={event => {
+                      const text = event.target.value
+                      setConnectionText(text)
+                      setError('')
+                      if (!text.trim()) return
+                      try {
+                        importConnection(text)
+                      } catch (error) {
+                        setError(error instanceof Error ? error.message : '无法识别连接信息。')
+                      }
+                    }}
+                  />
+                </label>
+              )}
+              {imported && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setImported(false)
+                    setPassword('')
+                  }}
+                >
+                  使用其他连接信息
+                </button>
+              )}
               <button type="button" disabled={busy} onClick={() => importInput.current?.click()}>
                 导入连接配置
               </button>
@@ -168,13 +217,9 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
                   void (async () => {
                     try {
                       if (file.size > CONNECTION_FILE_LIMIT) throw new Error('连接文件不能超过 32 KB。')
-                      const config = parseSyncConnection(await file.text())
+                      const text = await file.text()
                       if (!signal || signal.aborted) return
-                      setUrl(config.url)
-                      setUsername(config.username)
-                      setPassword(config.password)
-                      setCaCert(config.caCert)
-                      setImported(true)
+                      importConnection(text)
                     } catch (error) {
                       if (signal && !signal.aborted)
                         setError(error instanceof Error ? error.message : '无法读取连接文件。')
@@ -186,8 +231,8 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
               />
               <p className="nook-muted">
                 {imported
-                  ? '连接信息已填入。请核对下方服务器地址，点击“验证并开启同步”完成连接。'
-                  : '选择服务器导出的 connection.json，一次填入地址、凭据和 CA 证书。文件含密码，请妥善保管。'}
+                  ? '连接信息已识别。请核对服务器地址，点击“验证并开启同步”。使用家庭服务器时，此电脑也需登录同一 Tailscale 网络。'
+                  : '连接信息含密码，仅粘贴到自己的 Nook；也可导入 connection.json 文件。'}
               </p>
             </div>
             <form
@@ -216,42 +261,45 @@ export function SyncControl({ api, onChanged }: { api: SyncApi; onChanged: (chan
                   disabled={busy}
                 />
               </label>
-              <label>
-                存储用户名
-                <input
-                  autoComplete="off"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  disabled={busy}
-                />
-              </label>
-              <label>
-                存储密码或应用令牌
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder={status?.hasPassword ? '留空保留已保存的凭据' : ''}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  disabled={busy}
-                />
-              </label>
-              <label>
-                服务器 CA 证书（可选）
-                <textarea
-                  rows={3}
-                  placeholder="内网 / IP 部署：粘贴工具输出的完整 CA 证书；公开可信证书留空"
-                  value={caCert}
-                  onChange={e => setCaCert(e.target.value)}
-                  disabled={busy}
-                />
-              </label>
+              <details key={imported ? 'imported' : 'manual'}>
+                <summary>手动设置用户名、密码和证书</summary>
+                <label>
+                  存储用户名
+                  <input
+                    autoComplete="off"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    disabled={busy}
+                  />
+                </label>
+                <label>
+                  存储密码或应用令牌
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={status?.hasPassword ? '留空保留已保存的凭据' : ''}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    disabled={busy}
+                  />
+                </label>
+                <label>
+                  服务器 CA 证书（可选）
+                  <textarea
+                    rows={3}
+                    placeholder="内网 / IP 部署：粘贴工具输出的完整 CA 证书；公开可信证书留空"
+                    value={caCert}
+                    onChange={e => setCaCert(e.target.value)}
+                    disabled={busy}
+                  />
+                </label>
+              </details>
               <p className="nook-muted">
                 首次开启会先备份并校验本地数据，然后合并远端内容。请选择专供 Nook
                 使用的目录。独立文件、对话和模型配置不在同步范围内。
               </p>
               <div className="nook-actions">
-                <button type="submit" disabled={busy}>
+                <button type="submit" disabled={busy || !!connectionText.trim()}>
                   验证并开启同步
                 </button>
                 <button

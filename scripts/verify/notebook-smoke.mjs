@@ -92,11 +92,19 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       const sync = workspace.getByRole('dialog', { name: '数据同步', exact: true })
       await sync.getByLabel('WebDAV 同步目录').fill(dav.url)
       assert.equal(await sync.locator('.nook-sync-guide-body').count(), 0)
-      await sync.getByRole('link', { name: '查看服务器 / NAS 配置指南' }).click()
+      await sync.getByRole('link', { name: '部署家庭服务器 / 查看 NAS 配置指南' }).click()
       const guide = workspace.getByRole('region', { name: '同步配置指南' })
       await guide.waitFor()
       await sync.waitFor({ state: 'hidden' })
       assert.equal(new URL(page.url()).hash, '#nook-sync-guide')
+      await guide.getByRole('heading', { name: '部署家庭服务器', exact: true }).waitFor()
+      await guide.getByText('查看安装命令', { exact: true }).click()
+      const assistantCommand = await guide.getByLabel('家庭服务器安装命令', { exact: true }).inputValue()
+      assert.ok(assistantCommand.startsWith("bash -c '"))
+      assert.ok(assistantCommand.includes('/releases/download/sync-assistant-v'))
+      assert.ok(assistantCommand.includes('sha256sum -c'))
+      await guide.getByText('查看安装命令', { exact: true }).click()
+      await guide.getByText('手动部署、其他网络环境与 NAS', { exact: true }).click()
       await guide.getByRole('heading', { name: 'Linux 服务器一键配置', exact: true }).waitFor()
       await guide.getByRole('heading', { name: 'Docker / Compose 部署', exact: true }).waitFor()
       const deployment = guide.getByRole('link', { name: '下载 Docker 部署包', exact: true })
@@ -104,7 +112,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       assert.ok((await deployment.getAttribute('href')).startsWith('data:application/gzip;base64,'))
       assert.ok(
         await guide
-          .locator('article > p')
+          .locator('article p')
           .first()
           .evaluate(element => parseFloat(getComputedStyle(element).fontSize) >= 14),
         'Guide paragraphs must not inherit the navigation footer font size',
@@ -115,6 +123,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       assert.ok(!command.includes('\n'))
       await guide.getByText('查看完整的一行命令', { exact: true }).click()
       if (process.env.NOOK_SYNC_GUIDE_SCREENSHOT) {
+        await guide.getByText('手动部署、其他网络环境与 NAS', { exact: true }).click()
         await guide.evaluate(element => {
           element.scrollTop = 0
         })
@@ -137,7 +146,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
         mimeType: 'application/json',
         buffer: Buffer.from('{"password":"private-input"'),
       })
-      await sync.getByRole('alert').filter({ hasText: '连接文件无效' }).waitFor()
+      await sync.getByRole('alert').filter({ hasText: '连接信息无效' }).waitFor()
       assert.equal(await sync.getByLabel('WebDAV 同步目录').inputValue(), dav.url)
       assert.ok(!(await sync.innerText()).includes('private-input'))
       const connection = {
@@ -153,11 +162,18 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
         mimeType: 'application/json',
         buffer: Buffer.from(JSON.stringify(connection)),
       })
-      await sync.getByText('连接信息已填入。', { exact: false }).waitFor()
+      await sync.getByText('连接信息已识别。', { exact: false }).waitFor()
       assert.equal(await sync.getByLabel('存储用户名').inputValue(), 'tester')
       assert.equal(await sync.getByLabel('存储密码或应用令牌').inputValue(), 'secret')
       assert.equal(await sync.getByLabel('服务器 CA 证书（可选）').inputValue(), '')
       assert.equal(dav.data.size, 0, 'Import must not contact the remote or enable sync')
+      await sync.getByRole('button', { name: '使用其他连接信息' }).click()
+      await sync
+        .getByLabel('粘贴连接信息', { exact: true })
+        .fill('NOOK-SYNC-1:' + Buffer.from(JSON.stringify(connection)).toString('base64'))
+      await sync.getByText('连接信息已识别。', { exact: false }).waitFor()
+      assert.equal(await sync.getByLabel('粘贴连接信息', { exact: true }).count(), 0)
+      assert.equal(dav.data.size, 0, 'Pasting connection information must not contact the server')
       if (process.env.NOOK_SYNC_IMPORT_SCREENSHOT)
         await page.screenshot({ path: process.env.NOOK_SYNC_IMPORT_SCREENSHOT })
       await sync.getByRole('button', { name: '验证并开启同步', exact: true }).click()

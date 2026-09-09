@@ -2,7 +2,13 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { inflateSync } from 'node:zlib'
-import { installerArtifacts, dockerArtifacts, deploymentFiles } from '../../scripts/sync-server/artifacts.mjs'
+import {
+  installerArtifacts,
+  dockerArtifacts,
+  deploymentFiles,
+  assistantArtifacts,
+} from '../../scripts/sync-server/artifacts.mjs'
+import { createHash } from 'node:crypto'
 import { parseSyncConnection } from '../../packages/capability-sync/src/connection.ts'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -20,6 +26,19 @@ test('embedded one-line installer contains the exact downloadable source without
 })
 test('installer validates targets, preserves backups and refuses occupied ports', () => {
   execFileSync('python3', ['tests/sync-server/test_setup.py'], { stdio: 'pipe' })
+  execFileSync('python3', ['tests/sync-server/test_assistant.py'], { stdio: 'pipe' })
+})
+
+test('assistant pins the complete bootstrap/source/archive/image chain', async () => {
+  const artifact = await assistantArtifacts()
+  const digest = data => createHash('sha256').update(data).digest('hex')
+  assert.ok(artifact.command.includes(digest(artifact.bootstrap)))
+  assert.ok(artifact.bootstrap.includes(digest(artifact.source)))
+  assert.ok(artifact.source.includes(digest(artifact.archive)))
+  assert.match(artifact.source, /IMAGE = 'ghcr\.io\/voosil\/nook-sync@sha256:[a-f0-9]{64}'/)
+  assert.ok(!artifact.command.includes('\n'))
+  execFileSync('bash', ['-n'], { input: artifact.command })
+  execFileSync('bash', ['-n'], { input: artifact.bootstrap })
 })
 
 test('portable connection accepts versioned and legacy exports without leaking malformed secrets', () => {
@@ -32,6 +51,14 @@ test('portable connection accepts versioned and legacy exports without leaking m
   const versioned = { ...legacy, format: 'nook-sync-connection', version: 1 }
   assert.deepEqual(parseSyncConnection(JSON.stringify(legacy)), versioned)
   assert.deepEqual(parseSyncConnection('\uFEFF' + JSON.stringify(versioned)), versioned)
+  const encoded = Buffer.from(JSON.stringify({ ...versioned, password: '中文密码🔒' })).toString('base64')
+  assert.deepEqual(parseSyncConnection('NOOK-SYNC-1:' + encoded.match(/.{1,60}/g)!.join('\n')), {
+    ...versioned,
+    password: '中文密码🔒',
+  })
+  for (const invalid of ['NOOK-SYNC-1:!!!!', 'NOOK-SYNC-2:e30=', 'NOOK-SYNC-1:/w==', 'NOOK-SYNC-1:e30=']) {
+    assert.throws(() => parseSyncConnection(invalid))
+  }
   for (const value of [
     null,
     [],
