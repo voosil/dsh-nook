@@ -161,9 +161,11 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     if (dav) {
       await workspace.getByRole('button', { name: /数据同步/ }).click()
       const sync = workspace.getByRole('dialog', { name: '数据同步', exact: true })
+      if (process.env.NOOK_SYNC_SETTINGS_SCREENSHOT)
+        await page.screenshot({ path: process.env.NOOK_SYNC_SETTINGS_SCREENSHOT })
       await sync.getByLabel('WebDAV 同步目录').fill(dav.url)
       assert.equal(await sync.locator('.nook-sync-guide-body').count(), 0)
-      await sync.getByRole('link', { name: '部署家庭服务器 / 查看 NAS 配置指南' }).click()
+      await sync.getByRole('link', { name: '配置指南' }).click()
       const guide = workspace.getByRole('region', { name: '同步配置指南' })
       await guide.waitFor()
       await sync.waitFor({ state: 'hidden' })
@@ -233,7 +235,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
         mimeType: 'application/json',
         buffer: Buffer.from(JSON.stringify(connection)),
       })
-      await sync.getByText('连接信息已识别。', { exact: false }).waitFor()
+      await sync.getByText('连接信息已导入', { exact: true }).waitFor()
       assert.equal(await sync.getByLabel('存储用户名').inputValue(), 'tester')
       assert.equal(await sync.getByLabel('存储密码或应用令牌').inputValue(), 'secret')
       assert.equal(await sync.getByLabel('服务器 CA 证书（可选）').inputValue(), '')
@@ -242,7 +244,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await sync
         .getByLabel('粘贴连接信息', { exact: true })
         .fill('NOOK-SYNC-1:' + Buffer.from(JSON.stringify(connection)).toString('base64'))
-      await sync.getByText('连接信息已识别。', { exact: false }).waitFor()
+      await sync.getByText('连接信息已导入', { exact: true }).waitFor()
       assert.equal(await sync.getByLabel('粘贴连接信息', { exact: true }).count(), 0)
       assert.equal(dav.data.size, 0, 'Pasting connection information must not contact the server')
       if (process.env.NOOK_SYNC_IMPORT_SCREENSHOT)

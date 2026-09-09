@@ -700,8 +700,9 @@
 }
 
 .nook-sync-modal {
-  width: min(720px, 92vw);
-  max-width: 720px;
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
   max-height: 88vh;
   overflow-y: auto;
 }
@@ -717,13 +718,89 @@
 }
 .nook-sync-modal .nook-heading {
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 .nook-sync-modal .nook-heading h2 {
   margin-bottom: 0;
 }
 .nook-sync-modal .nook-actions {
   flex-wrap: wrap;
+  margin: 0;
+  gap: 8px;
+}
+.nook-sync-title,
+.nook-sync-import-heading,
+.nook-sync-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.nook-sync-title {
+  justify-content: flex-start;
+}
+.nook-sync-status {
+  border-radius: 20px;
+  background: var(--nook-hover, #edf0eb);
+  padding: 4px 9px;
+  font-size: 11px;
+}
+.nook-sync-modal .nook-sync-description {
+  margin: 0 0 20px;
+  font-size: 13px;
+}
+.nook-sync-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+}
+.nook-sync-progress:empty {
+  display: none;
+}
+.nook-sync-import {
+  border: 1px solid var(--nook-border, #e1e5dd);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 18px;
+}
+.nook-sync-import-heading {
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.nook-sync-import-heading button {
+  color: var(--nook-accent);
+  padding: 4px 0;
+  font-size: 12px;
+}
+.nook-sync-import .nook-muted,
+.nook-sync-info p {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 8px 0 0;
+}
+.nook-sync-modal summary {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 0;
+}
+.nook-sync-info {
+  margin-top: 6px;
+}
+.nook-sync-footer {
+  border-top: 1px solid var(--nook-border, #e1e5dd);
+  margin-top: 20px;
+  padding-top: 16px;
+}
+.nook-sync-footer .nook-sync-guide-entry {
+  color: var(--nook-accent);
+  font-size: 12px;
+  text-decoration: none;
+  margin: 0;
+}
+.nook-sync-footer .nook-sync-guide-entry:hover {
+  text-decoration: underline;
 }
 .nook-sync-conflicts article {
   border-top: 1px solid var(--background-modifier-border, #ddd);
