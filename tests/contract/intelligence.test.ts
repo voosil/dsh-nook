@@ -6,13 +6,24 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { Context, Service } from '@deepseek-ai/cordis'
 import Registry from '@deepseek-ai/dsh-typert-registry'
+import Gateway from '@deepseek-ai/dsh-api-gateway'
 import SystemPrompt, { renderContextSnapshot } from '@deepseek-ai/dsh-system-prompt'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import LlmRuntime, {
+  createUserMessage,
+  LlmAdapter,
+  LlmError,
+  type GenerateOptions,
+  type StreamChunk,
+  type FinishReason,
+} from '@deepseek-ai/dsh-llm'
 import * as Notebook from '../../packages/provider-notebook-local/src/index.ts'
 import Projects from '../../packages/provider-project-local/src/index.ts'
 import Knowledge from '../../packages/adapter-knowledge-dsh/src/index.ts'
 import * as Generation from '../../packages/adapter-intelligence-dsh/src/index.ts'
 import Reflection from '../../packages/feature-reflection/src/index.ts'
+import NotesFeature from '../../packages/feature-notes/src/index.ts'
+import NotesRpc from '../../packages/adapter-notes-dsh/src/index.ts'
+import type { Result } from '../../packages/adapter-notes-dsh/src/rpc.ts'
 import Video from '../../packages/feature-video/src/index.ts'
 import VideoSource from '../../packages/adapter-video-platform/src/index.ts'
 import * as VideoEditor from '../../packages/provider-video-editor/src/index.ts'
@@ -119,6 +130,159 @@ test('generation accepts only complete visible text and reflection retains sourc
       ),
       /完整/,
     )
+  } finally {
+    await ctx.fiber.dispose()
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('real DSH stream failures reach summary RPC as safe, actionable errors and retries can succeed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'nook-summary-errors-'))
+  const ctx = new Context()
+  let failure: Error | undefined
+  let finish: FinishReason | undefined = { kind: 'stop' }
+  let visible = true
+  let abortAtEnd: AbortController | undefined
+  let catalogFailure = false
+  const sessionIds: string[] = []
+  const request = { provider: 'fixture', model: 'model', instruction: 'test', text: 'test' }
+  try {
+    await ctx.plugin(Registry)
+    await ctx.plugin(Gateway)
+    await ctx.plugin(LlmRuntime)
+    ctx.llm.registerAdapter(
+      ['fixture'],
+      new (class extends LlmAdapter {
+        async listModels() {
+          if (catalogFailure) throw new LlmError('private credential', 'INVALID_CREDENTIAL')
+          return [{ provider: 'fixture', id: 'model', name: 'Model' }]
+        }
+        async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+          assert.ok(options.sessionId, 'every generation must provide a routing session')
+          sessionIds.push(options.sessionId)
+          if (failure) throw failure
+          yield { type: 'reasoning-delta', index: 0, text: 'hidden reasoning' }
+          if (visible) {
+            yield { type: 'text-delta', index: 1, text: '部分正文' }
+            yield { type: 'block-end', index: 1, block: { type: 'text', text: '完整复盘正文' } }
+          }
+          if (finish) yield { type: 'finish', reason: finish }
+          abortAtEnd?.abort()
+        }
+      })(),
+    )
+    const generation = await ctx.plugin(Generation)
+    await ctx.plugin(Projects, { file: join(root, 'projects.json') })
+    await ctx.plugin(Notebook, { file: join(root, 'notes.sqlite') })
+    await ctx.plugin(NotesFeature)
+    await ctx.plugin(Reflection)
+    await ctx.plugin(
+      class extends Service {
+        constructor(ctx: Context) {
+          super(ctx, 'nookVideo')
+        }
+      },
+    )
+    await ctx.plugin(NotesRpc)
+    const note = await ctx.nookNotes.create({
+      id: randomUUID(),
+      title: '学习',
+      markdown: '完整的学习记录。',
+      projectId: null,
+      pinned: false,
+      source: { kind: 'personal', url: null, author: null, basedOn: [] },
+    })
+    const summarize = () =>
+      ctx.typertGateway.invoke({
+        namespace: 'nookNotebookRpc',
+        method: 'summarize',
+        args: {
+          request: {
+            from: '2000-01-01T00:00:00.000Z',
+            to: '2100-01-01T00:00:00.000Z',
+            provider: 'fixture',
+            model: 'model',
+            projectId: null,
+            title: '日总结',
+          },
+        },
+      }) as Promise<Result<{ markdown: string }>>
+    for (const [code, message] of [
+      ['AUTH', '认证失败'],
+      ['INVALID_CREDENTIAL', '格式无效'],
+      ['NO_ADAPTER', '服务不可用'],
+      ['QUOTA', '额度不足'],
+      ['RATE_LIMIT', '过于频繁'],
+      ['TIMEOUT', '超时'],
+      ['TRANSPORT', '连接中断'],
+      ['CONTEXT_WINDOW_EXCEEDED', '上下文上限'],
+      ['SERVER', '暂时异常'],
+      ['EMPTY_RESPONSE', '没有返回正文'],
+      ['UNKNOWN', '模型生成失败'],
+    ]) {
+      failure = new LlmError('private credential and note text', code!)
+      const result = await summarize()
+      assert.equal(result.ok, false)
+      if (result.ok) throw new Error('expected model failure')
+      assert.equal(result.error.code, 'GENERATION_ERROR')
+      assert.ok(result.error.message.includes(message!), result.error.message)
+      assert.ok(!JSON.stringify(result).includes('private'))
+    }
+    failure = new LlmError('private response', 'UNKNOWN', { status: 401 })
+    assert.match(JSON.stringify(await summarize()), /认证失败/)
+    failure = undefined
+    for (const reason of ['max-tokens', 'tool-calls', 'aborted', 'missing', 'empty']) {
+      visible = reason !== 'empty'
+      finish =
+        reason === 'missing'
+          ? undefined
+          : reason === 'empty'
+            ? { kind: 'stop' }
+            : reason === 'aborted'
+              ? { kind: 'aborted', failure: { code: 'ABORTED', message: 'private' } }
+              : { kind: reason as 'max-tokens' | 'tool-calls' }
+      const result = await summarize()
+      assert.equal(result.ok, false, reason)
+      if (!result.ok) assert.equal(result.error.code, 'GENERATION_ERROR')
+      assert.ok(!JSON.stringify(result).includes('完整复盘正文'), 'partial output is not a preview')
+    }
+    finish = { kind: 'stop' }
+    visible = true
+    const success = await summarize()
+    assert.equal(success.ok, true)
+    if (success.ok) assert.equal(success.value.markdown, '完整复盘正文')
+    assert.equal((await ctx.nookNotes.list({})).total, 1)
+    assert.equal((await ctx.nookNotes.get(note.id))?.revision, 1)
+
+    // A multi-batch summary is one routing session; a new summary is independent.
+    const firstSession = sessionIds.at(-1)
+    await ctx.nookNotes.save({ ...note, markdown: '学习资料。'.repeat(6000) })
+    sessionIds.length = 0
+    assert.equal((await summarize()).ok, true)
+    assert.ok(sessionIds.length > 1)
+    assert.equal(new Set(sessionIds).size, 1)
+    assert.notEqual(sessionIds[0], firstSession)
+    await ctx.nookGeneration.generate(request, new AbortController().signal)
+    const standaloneSession = sessionIds.at(-1)
+    await ctx.nookGeneration.generate(request, new AbortController().signal)
+    assert.notEqual(sessionIds.at(-1), standaloneSession, 'ungrouped calls get independent fallback sessions')
+    await ctx.nookGeneration.generate({ ...request, sessionId: 'nook-workflow-fixture' }, new AbortController().signal)
+    assert.equal(sessionIds.at(-1), 'nook-workflow-fixture')
+
+    catalogFailure = true
+    assert.match(
+      JSON.stringify(
+        await ctx.typertGateway.invoke({
+          namespace: 'nookNotebookRpc',
+          method: 'models',
+          args: { request: {} },
+        }),
+      ),
+      /格式无效/,
+    )
+    abortAtEnd = new AbortController()
+    await assert.rejects(ctx.nookGeneration.generate(request, abortAtEnd.signal), { name: 'AbortError' })
+    await generation.dispose()
   } finally {
     await ctx.fiber.dispose()
     await rm(root, { recursive: true, force: true })
