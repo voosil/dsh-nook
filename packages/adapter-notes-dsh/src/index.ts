@@ -27,6 +27,7 @@ async function result<T>(signal: AbortSignal, action: () => Promise<T>): Promise
     const known = [
       'VIDEO_ERROR',
       'REFLECTION_ERROR',
+      'GENERATION_ERROR',
       'INVALID_NOTE',
       'NOT_FOUND',
       'CONFLICT',
@@ -90,6 +91,9 @@ export default class NotebookRpc extends TypertRemoteService {
     return result(signal, () =>
       this.ctx.nookNotebook.updateProject(request.id, { name: request.name, description: request.description }),
     )
+  }
+  reorderProjects(request: Request<'reorderProjects'>, signal: AbortSignal) {
+    return result(signal, () => this.ctx.nookNotebook.reorderProjects(request.ids))
   }
   deleteProject(request: Request<'deleteProject'>, signal: AbortSignal) {
     return result(signal, () => this.ctx.nookNotebook.deleteProject(request.id))

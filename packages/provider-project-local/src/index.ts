@@ -6,6 +6,8 @@ import z from '@deepseek-ai/schemastery'
 import { writeRecoveryRecord } from '@nook-dsh/storage-backup'
 import {
   ProjectError,
+  compareProjects,
+  reorderProjects,
   type CreateProjectRequest,
   type ProjectDto,
   type ProjectEvent,
@@ -46,6 +48,7 @@ function isProject(value: unknown): value is ProjectDto {
     project.name.length <= 120 &&
     typeof project.description === 'string' &&
     project.description.length <= 2_000 &&
+    (project.sortOrder === undefined || (Number.isSafeInteger(project.sortOrder) && project.sortOrder >= 0)) &&
     typeof project.createdAt === 'string' &&
     Number.isFinite(Date.parse(project.createdAt)) &&
     typeof project.updatedAt === 'string' &&
@@ -87,7 +90,14 @@ export default class LocalProjectProvider extends Service implements ProjectServ
   }
 
   async list(): Promise<readonly ProjectDto[]> {
-    return (await this.readStore()).projects.map(cloneProject)
+    return (await this.readStore()).projects.map(cloneProject).sort(compareProjects)
+  }
+
+  async reorder(ids: readonly string[]): Promise<readonly ProjectDto[]> {
+    let ordered: ProjectDto[] = []
+    await this.mutate(projects => (ordered = reorderProjects(projects, ids)))
+    for (const project of ordered) this.publish({ type: 'project.updated', project: cloneProject(project) })
+    return ordered.map(cloneProject)
   }
 
   async get(projectId: ProjectId): Promise<ProjectDto | undefined> {

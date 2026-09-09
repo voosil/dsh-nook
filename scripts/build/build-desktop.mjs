@@ -4,6 +4,7 @@ import { ROOT } from '../profile/profile-lib.mjs'
 
 for (const [name, extension] of [
   ['main', 'js'],
+  ['preload', 'cjs'],
   ['supervisor', 'mjs'],
   ['windows-shutdown', 'mjs'],
   ['payload', 'mjs'],
@@ -16,7 +17,7 @@ for (const [name, extension] of [
     outfile: resolve(ROOT, 'apps/desktop/dist', `${name}.${extension}`),
     bundle: true,
     platform: 'node',
-    format: 'esm',
+    format: extension === 'cjs' ? 'cjs' : 'esm',
     target: 'node24',
     external: ['electron'],
     logLevel: 'info',

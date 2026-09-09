@@ -6,6 +6,7 @@ directories:
   output: ../../.pack/desktop
 files:
   - dist/main.js
+  - dist/preload.cjs
   - package.json
 extraResources:
   - from: resources/runtime

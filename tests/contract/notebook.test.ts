@@ -104,6 +104,21 @@ test('strict DSH Gateway invokes Nook DTOs, rejects malformed calls, and withdra
       /boundary validation/,
     )
     const project = await ctx.nookNotebook.createProject({ name: '阅读' })
+    const ordered = (await ctx.typertGateway.invoke({
+      namespace: 'nookNotebookRpc',
+      method: 'reorderProjects',
+      args: { request: { ids: [project.id] } },
+    })) as { ok: true; value: { id: string; sortOrder: number }[] }
+    assert.equal(ordered.ok, true)
+    assert.equal(ordered.value[0]?.sortOrder, 0)
+    await assert.rejects(
+      ctx.typertGateway.invoke({
+        namespace: 'nookNotebookRpc',
+        method: 'reorderProjects',
+        args: { request: { ids: ['invalid'] } },
+      }),
+      /boundary validation/,
+    )
     const updated = await ctx.nookNotebook.save({ ...created.value, projectId: project.id })
     assert.equal((await ctx.nookNotebook.search({ query: '中文', projectId: project.id })).length, 1)
     assert.equal((await ctx.nookNotebook.search({ query: '中文', projectId: randomUUID() })).length, 0)
@@ -165,3 +180,48 @@ test('autosave serializes overlapping edits and preserves unsaved input on failu
   assert.equal(failed.current.markdown, '不能丢失的草稿')
   assert.equal(failed.dirty, true)
 })
+
+for (const integrated of [false, true]) {
+  test(`project order survives restart and rejects stale or duplicate lists (${integrated ? 'SQLite' : 'JSON'})`, async t => {
+    const root = await mkdtemp(join(tmpdir(), 'nook-project-order-'))
+    const contexts: Context[] = []
+    t.after(async () => {
+      for (const ctx of contexts) await ctx.fiber.dispose()
+      await rm(root, { recursive: true, force: true })
+    })
+    async function boot() {
+      const ctx = new Context()
+      contexts.push(ctx)
+      if (integrated)
+        await ctx.plugin(Notebook, { file: join(root, 'notes.sqlite'), projectsFile: join(root, 'projects.json') })
+      else await ctx.plugin(Projects, { file: join(root, 'projects.json') })
+      return ctx
+    }
+    let ctx = await boot()
+    const a = await ctx.nookProjects.create({ name: '甲' }),
+      b = await ctx.nookProjects.create({ name: '乙' }),
+      c = await ctx.nookProjects.create({ name: '丙' })
+    const ids = [c.id, a.id, b.id]
+    await ctx.nookProjects.reorder(ids)
+    await ctx.nookProjects.update(a.id, { name: '改名', description: '保留排序' })
+    await assert.rejects(ctx.nookProjects.reorder([a.id, a.id, b.id]), /列表已变化/)
+    await assert.rejects(ctx.nookProjects.reorder([a.id, b.id]), /列表已变化/)
+    await assert.rejects(ctx.nookProjects.reorder([a.id, b.id, randomUUID()]), /列表已变化/)
+    assert.deepEqual(
+      (await ctx.nookProjects.list()).map(p => p.id),
+      ids,
+    )
+    await ctx.fiber.dispose()
+    ctx = await boot()
+    assert.deepEqual(
+      (await ctx.nookProjects.list()).map(p => p.id),
+      ids,
+    )
+    assert.equal((await ctx.nookProjects.get(a.id))?.name, '改名')
+    const d = await ctx.nookProjects.create({ name: '新项目' })
+    assert.deepEqual(
+      (await ctx.nookProjects.list()).map(p => p.id),
+      [...ids, d.id],
+    )
+  })
+}

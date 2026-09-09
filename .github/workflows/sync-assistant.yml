@@ -1,0 +1,110 @@
+name: Publish Nook Sync Assistant
+
+on:
+  push:
+    tags: ['sync-assistant-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nook-sync-assistant-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify installer and real Docker lifecycle
+        run: |
+          python3 tests/sync-server/test_assistant.py
+          python3 tests/sync-server/verify_assistant.py
+          bash -n .pack/sync-server/install.sh
+          (cd .pack/sync-server && sha256sum -c SHA256SUMS)
+      - name: Verify generated systemd unit
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location('assistant', '.pack/sync-server/assistant.py')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          Path('/tmp/nook-sync-assistant.service').write_text(module.unit_text())
+          PY
+          systemd-analyze verify /tmp/nook-sync-assistant.service
+
+  dependencies:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        distro: ['debian:12-slim', 'ubuntu:24.04']
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node scripts/sync-server/package.mjs
+      - name: Verify official package installation in a disposable container
+        env:
+          DISTRO: ${{ matrix.distro }}
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/source:ro" "$DISTRO" sh -c \
+            'apt-get update && apt-get install -y python3 systemd ca-certificates && python3 /source/tests/sync-server/verify_dependencies.py'
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/sync-assistant-v')
+    needs: [verify, dependencies]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Package fixed release
+        run: |
+          node scripts/sync-server/package.mjs
+          VERSION=$(node --input-type=module -e "import {assistantVersion} from './scripts/sync-server/artifacts.mjs'; console.log(assistantVersion)")
+          test "$GITHUB_REF_NAME" = "sync-assistant-v$VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          printf '%s\n' 'Nook 家庭服务器安装助手。下载 install-command.txt，将完整命令粘贴到服务器。安装后复制连接信息到 Nook。支持 Ubuntu / Debian，自动配置 Docker 和 Tailscale。' > /tmp/nook-release-notes.md
+      - name: Publish immutable assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo 'Release exists; bump the assistant version instead of overwriting assets.' >&2
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" .pack/sync-server/* \
+            --verify-tag --title "Nook Sync Assistant $VERSION" --notes-file /tmp/nook-release-notes.md --latest=false
+      - name: Verify anonymous downloads
+        run: |
+          mkdir /tmp/nook-anonymous-download
+          cd /tmp/nook-anonymous-download
+          BASE="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME"
+          for FILE in SHA256SUMS assistant.py install.sh install-command.txt "nook-sync-assistant-$VERSION.tar.gz" nook-sync-0.1.0.tar.gz; do
+            curl --proto '=https' -fLsS --retry 5 --retry-all-errors "$BASE/$FILE" -o "$FILE"
+          done
+          sha256sum -c SHA256SUMS

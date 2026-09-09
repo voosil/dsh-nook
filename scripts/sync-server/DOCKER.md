@@ -1,5 +1,7 @@
 # Nook Sync Docker 部署
 
+希望自动安装依赖、配置 Tailscale 并复制连接信息的家庭服务器用户，使用[安装助手](../../docs/sync-server.md)。本页定义手动 Compose 部署方式；两种部署的数据卷相互独立。
+
 部署包包含 Nook Sync 0.1.0 的 Compose 配置及镜像源码。需要 Linux Docker Engine 和 Docker Compose v2。默认从 GHCR 拉取 `ghcr.io/voosil/nook-sync:0.1.0`，支持 linux/amd64 与 linux/arm64，无需在服务器编译或安装系统软件包。基础镜像固定到内容摘要，系统软件包在构建时从 Debian 软件源安装；交付的镜像归档由 SHA-256 校验。同一源码重新构建可能获取更新的软件包。
 
 ## 内网 / VPN 或公网 IP

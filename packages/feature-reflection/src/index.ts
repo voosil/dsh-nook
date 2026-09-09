@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { Context, Service } from '@deepseek-ai/cordis'
 import { noteTitle, type NoteService, type NoteDto } from '@nook-dsh/capability-note'
 import type { GenerationService } from '@nook-dsh/capability-generation'
@@ -59,17 +60,24 @@ export default class ReflectionFeature extends Service {
       }
     }
     if (batch) batches.push(batch)
+    const sessionId = `nook-summary-${randomUUID()}`
     let markdown: string
-    if (batches.length === 1) markdown = await this.generate(request, instruction, batches[0]!, signal)
+    if (batches.length === 1) markdown = await this.generate(request, instruction, batches[0]!, sessionId, signal)
     else {
       const sections: string[] = []
       for (const text of batches) {
         signal.throwIfAborted()
         sections.push(
-          await this.generate(request, instruction + '这是部分资料，保留引用，供后续整体复盘使用。', text, signal),
+          await this.generate(
+            request,
+            instruction + '这是部分资料，保留引用，供后续整体复盘使用。',
+            text,
+            sessionId,
+            signal,
+          ),
         )
       }
-      markdown = await this.generate(request, instruction, sections.join('\n\n'), signal)
+      markdown = await this.generate(request, instruction, sections.join('\n\n'), sessionId, signal)
     }
     signal.throwIfAborted()
     // Reject a stale preview if a source was edited or deleted during generation.
@@ -88,9 +96,9 @@ export default class ReflectionFeature extends Service {
       })),
     }
   }
-  private generate(request: SummaryRequest, instruction: string, text: string, signal: AbortSignal) {
+  private generate(request: SummaryRequest, instruction: string, text: string, sessionId: string, signal: AbortSignal) {
     return this.ctx.nookGeneration.generate(
-      { provider: request.provider, model: request.model, instruction, text, maxTokens: 6000 },
+      { provider: request.provider, model: request.model, instruction, text, maxTokens: 6000, sessionId },
       signal,
     )
   }

@@ -75,7 +75,22 @@ try {
   assert.deepEqual(preferences, { sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true })
   const artifact = resolve(ROOT, '.pack/desktop/nook-window.png')
   const { title } = await notebookSmoke(page.url(), artifact, page)
-  console.log('Notebook window acceptance passed.')
+  const exported = await readdir(join(state, 'exports'))
+  assert.equal(exported.filter(name => name.endsWith('.md')).length, 1)
+  assert.ok((await readFile(join(state, 'exports', exported[0]), 'utf8')).includes('右键操作必须保留刚输入的正文'))
+  assert.equal(
+    await page.evaluate(async () => {
+      try {
+        await window.nookDesktop.revealExport('/tmp')
+        return false
+      } catch {
+        return true
+      }
+    }),
+    true,
+    'Renderer-supplied paths must not be accepted as export receipts',
+  )
+  console.log('Notebook window and native export acceptance passed.')
   const unauthorized = await fetch(url)
   assert.equal(unauthorized.status, 401)
   const logs = join(state, 'logs')
@@ -199,5 +214,6 @@ try {
   await web?.stop()
   await browser?.close()
   await delay(100)
-  await rm(temporary, { recursive: true, force: true })
+  // Finder may finish writing .DS_Store after the reveal acceptance opens this directory.
+  await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 }

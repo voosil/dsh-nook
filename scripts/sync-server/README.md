@@ -1,5 +1,7 @@
 # 同步服务器部署
 
+家庭服务器优先使用[安装助手](../../docs/sync-server.md)：复制安装命令，按提示登录 Tailscale，再将连接信息粘贴到 Nook。以下为其他网络环境的系统安装方式。
+
 已有 Docker 的服务器使用 [Docker / Compose 部署包](DOCKER.md)，从 GHCR 拉取固定版本镜像。无 Docker 的 Linux 主机使用本页的系统安装工具。两种方式都导出 `connection.json`，可在 Nook → 数据同步直接导入，核对地址后点击“验证并开启同步”。连接文件包含密码，只通过可信渠道传输和保管。
 
 ## Linux 系统安装

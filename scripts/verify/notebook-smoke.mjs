@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { startWebDav } from '../../tests/helpers/webdav.mjs'
 
@@ -11,6 +12,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
   const browser = providedPage ? undefined : await chromium.launch({ channel: 'chrome', headless: true })
   const errors = []
   const page = providedPage ?? (await browser.newPage({ viewport: { width: 1440, height: 1000 } }))
+  page.setDefaultTimeout(30_000)
   const onError = error => errors.push(error.message)
   try {
     page.on('pageerror', onError)
@@ -29,12 +31,50 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     }
     const suffix = Date.now().toString(36)
     const title = `Nook 验收 ${suffix}`
-    const project = `验收项目 ${suffix}`
+    let project = `验收项目 ${suffix}`
     await workspace.getByRole('button', { name: '新建项目', exact: true }).click()
     await workspace.getByLabel('项目名称', { exact: true }).fill(project)
     await workspace.getByLabel('描述', { exact: true }).fill('仅用于自动化验收')
     await workspace.getByRole('button', { name: '保存项目', exact: true }).click()
     await workspace.getByRole('button', { name: project, exact: true }).waitFor()
+    const secondProject = `排序项目 ${suffix}`
+    await workspace.getByRole('button', { name: '新建项目', exact: true }).click()
+    await workspace.getByLabel('项目名称', { exact: true }).fill(secondProject)
+    await workspace.getByRole('button', { name: '保存项目', exact: true }).click()
+    const projectRow = name =>
+      workspace.locator('.nook-project-row').filter({ has: page.getByRole('button', { name, exact: true }) })
+    await projectRow(secondProject).waitFor()
+    await projectRow(secondProject).dragTo(projectRow(project))
+    await page.waitForFunction(
+      ({ first, second }) => {
+        const rows = [...document.querySelectorAll('.nook-project-row')].map(row => row.textContent)
+        return rows.indexOf(first) >= 0 && rows.indexOf(first) < rows.indexOf(second)
+      },
+      { first: secondProject, second: project },
+      { timeout: 30_000 },
+    )
+    await page.reload()
+    await workspace.waitFor()
+    await dismissOnboarding(page)
+    await projectRow(project).waitFor()
+    const orderedNames = await workspace.locator('.nook-project-row').allTextContents()
+    assert.ok(orderedNames.indexOf(secondProject) < orderedNames.indexOf(project))
+    await projectRow(project).hover()
+    await workspace.getByRole('button', { name: `项目操作：${project}`, exact: true }).click()
+    await workspace.getByRole('menuitem', { name: '编辑项目', exact: true }).click()
+    project += ' 改名'
+    await workspace.getByLabel('项目名称', { exact: true }).fill(project)
+    await workspace.getByLabel('描述', { exact: true }).fill('更新后的项目描述')
+    await workspace.getByRole('button', { name: '保存项目', exact: true }).click()
+    await projectRow(project).waitFor()
+    await projectRow(secondProject).click({ button: 'right' })
+    await workspace.getByRole('menuitem', { name: '删除项目', exact: true }).click()
+    await workspace
+      .getByRole('alertdialog', { name: '删除项目' })
+      .getByRole('button', { name: '删除项目', exact: true })
+      .click()
+    await projectRow(secondProject).waitFor({ state: 'hidden' })
+
     await workspace
       .getByRole('button', { name: /写一条笔记/ })
       .first()
@@ -59,18 +99,49 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     assert.ok(
       (await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()).includes('劳动异化'),
     )
-    await workspace.getByRole('button', { name: '移到回收站', exact: true }).click()
+    const noteCard = workspace.locator('.nook-note-card').filter({ hasText: title })
+    const draft = '劳动异化：右键操作必须保留刚输入的正文。'
+    await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).fill(draft)
+    await noteCard.click({ button: 'right' })
+    await workspace.getByRole('menuitem', { name: '取消置顶', exact: true }).click()
+    await workspace.getByRole('button', { name: '置顶', exact: true }).waitFor()
+    assert.ok((await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()).includes(draft))
+    await noteCard.click({ button: 'right' })
+    await workspace.getByRole('menuitem', { name: '置顶', exact: true }).click()
+    await workspace.getByRole('button', { name: '已置顶', exact: true }).waitFor()
+    await noteCard.click({ button: 'right' })
+    await page.keyboard.press('Escape')
+    await workspace.getByRole('menu').waitFor({ state: 'hidden' })
+    await workspace.waitFor()
+    const desktopExport = await page.evaluate(() => Boolean(window.nookDesktop))
+    const download = desktopExport ? undefined : page.waitForEvent('download')
+    await noteCard.click({ button: 'right' })
+    await workspace.getByRole('menuitem', { name: '导出', exact: true }).click()
+    await workspace.locator('.nook-export-toast').waitFor()
+    if (download) {
+      const file = await download
+      assert.ok((await readFile(await file.path(), 'utf8')).includes(draft))
+    } else await workspace.getByRole('button', { name: '打开文件夹', exact: true }).click()
+    await workspace.getByRole('button', { name: '关闭导出提示', exact: true }).click()
+    await noteCard.click({ button: 'right' })
+    await workspace.getByRole('menuitem', { name: '删除', exact: true }).click()
+
     await workspace.getByRole('button', { name: '回收站', exact: true }).click()
     await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
     await workspace.getByRole('button', { name: '恢复笔记', exact: true }).click()
-    await workspace.getByRole('button', { name: '项目', exact: true }).click()
-    const card = workspace.locator('.nook-project-grid article').filter({ hasText: project })
-    await card.getByRole('button', { name: '删除项目', exact: true }).click()
+    await workspace.getByRole('button', { name: project, exact: true }).click()
+    await noteCard.click()
+    await projectRow(project).hover()
+    await workspace.getByRole('button', { name: `项目操作：${project}`, exact: true }).click()
+    await workspace.getByRole('menuitem', { name: '删除项目', exact: true }).click()
     await workspace
       .getByRole('alertdialog', { name: '删除项目' })
       .getByRole('button', { name: '删除项目', exact: true })
       .click()
     await workspace.getByRole('alertdialog', { name: '删除项目' }).waitFor({ state: 'hidden' })
+    assert.equal(await workspace.getByRole('combobox', { name: '笔记所属项目' }).inputValue(), '')
+    await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).fill(draft + '删除项目后继续编辑。')
+    await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
     await workspace.getByRole('button', { name: '未分类', exact: true }).click()
     await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
     assert.equal(await workspace.getByRole('combobox', { name: '笔记所属项目' }).inputValue(), '')
@@ -92,11 +163,19 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       const sync = workspace.getByRole('dialog', { name: '数据同步', exact: true })
       await sync.getByLabel('WebDAV 同步目录').fill(dav.url)
       assert.equal(await sync.locator('.nook-sync-guide-body').count(), 0)
-      await sync.getByRole('link', { name: '查看服务器 / NAS 配置指南' }).click()
+      await sync.getByRole('link', { name: '部署家庭服务器 / 查看 NAS 配置指南' }).click()
       const guide = workspace.getByRole('region', { name: '同步配置指南' })
       await guide.waitFor()
       await sync.waitFor({ state: 'hidden' })
       assert.equal(new URL(page.url()).hash, '#nook-sync-guide')
+      await guide.getByRole('heading', { name: '部署家庭服务器', exact: true }).waitFor()
+      await guide.getByText('查看安装命令', { exact: true }).click()
+      const assistantCommand = await guide.getByLabel('家庭服务器安装命令', { exact: true }).inputValue()
+      assert.ok(assistantCommand.startsWith("bash -c '"))
+      assert.ok(assistantCommand.includes('/releases/download/sync-assistant-v'))
+      assert.ok(assistantCommand.includes('sha256sum -c'))
+      await guide.getByText('查看安装命令', { exact: true }).click()
+      await guide.getByText('手动部署、其他网络环境与 NAS', { exact: true }).click()
       await guide.getByRole('heading', { name: 'Linux 服务器一键配置', exact: true }).waitFor()
       await guide.getByRole('heading', { name: 'Docker / Compose 部署', exact: true }).waitFor()
       const deployment = guide.getByRole('link', { name: '下载 Docker 部署包', exact: true })
@@ -104,7 +183,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       assert.ok((await deployment.getAttribute('href')).startsWith('data:application/gzip;base64,'))
       assert.ok(
         await guide
-          .locator('article > p')
+          .locator('article p')
           .first()
           .evaluate(element => parseFloat(getComputedStyle(element).fontSize) >= 14),
         'Guide paragraphs must not inherit the navigation footer font size',
@@ -115,6 +194,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       assert.ok(!command.includes('\n'))
       await guide.getByText('查看完整的一行命令', { exact: true }).click()
       if (process.env.NOOK_SYNC_GUIDE_SCREENSHOT) {
+        await guide.getByText('手动部署、其他网络环境与 NAS', { exact: true }).click()
         await guide.evaluate(element => {
           element.scrollTop = 0
         })
@@ -137,7 +217,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
         mimeType: 'application/json',
         buffer: Buffer.from('{"password":"private-input"'),
       })
-      await sync.getByRole('alert').filter({ hasText: '连接文件无效' }).waitFor()
+      await sync.getByRole('alert').filter({ hasText: '连接信息无效' }).waitFor()
       assert.equal(await sync.getByLabel('WebDAV 同步目录').inputValue(), dav.url)
       assert.ok(!(await sync.innerText()).includes('private-input'))
       const connection = {
@@ -153,11 +233,18 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
         mimeType: 'application/json',
         buffer: Buffer.from(JSON.stringify(connection)),
       })
-      await sync.getByText('连接信息已填入。', { exact: false }).waitFor()
+      await sync.getByText('连接信息已识别。', { exact: false }).waitFor()
       assert.equal(await sync.getByLabel('存储用户名').inputValue(), 'tester')
       assert.equal(await sync.getByLabel('存储密码或应用令牌').inputValue(), 'secret')
       assert.equal(await sync.getByLabel('服务器 CA 证书（可选）').inputValue(), '')
       assert.equal(dav.data.size, 0, 'Import must not contact the remote or enable sync')
+      await sync.getByRole('button', { name: '使用其他连接信息' }).click()
+      await sync
+        .getByLabel('粘贴连接信息', { exact: true })
+        .fill('NOOK-SYNC-1:' + Buffer.from(JSON.stringify(connection)).toString('base64'))
+      await sync.getByText('连接信息已识别。', { exact: false }).waitFor()
+      assert.equal(await sync.getByLabel('粘贴连接信息', { exact: true }).count(), 0)
+      assert.equal(dav.data.size, 0, 'Pasting connection information must not contact the server')
       if (process.env.NOOK_SYNC_IMPORT_SCREENSHOT)
         await page.screenshot({ path: process.env.NOOK_SYNC_IMPORT_SCREENSHOT })
       await sync.getByRole('button', { name: '验证并开启同步', exact: true }).click()
@@ -170,6 +257,9 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     }
     assert.deepEqual(errors, [])
     return { title, errors }
+  } catch (error) {
+    await page.screenshot({ path: '/tmp/nook-smoke-failure.png' }).catch(() => {})
+    throw error
   } finally {
     page.off('pageerror', onError)
     await browser?.close()

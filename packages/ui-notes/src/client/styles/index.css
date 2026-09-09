@@ -876,3 +876,87 @@
 .nook-sync-guide-body dd {
   margin: 4px 0 12px;
 }
+
+.nook-project-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-radius: 7px;
+}
+.nook-project-row.dragging {
+  opacity: 0.45;
+}
+.nook-project-row.drop-target {
+  box-shadow: 0 -2px var(--nook-accent);
+  background: #e2e7da;
+}
+.nook-project-row > button:not(.nook-project-more) {
+  flex: 1;
+  min-width: 0;
+}
+.nook-project-row > button:not(.nook-project-more) span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nook-project-row svg {
+  flex-shrink: 0;
+}
+.nook-nav nav .nook-project-more {
+  flex-shrink: 0;
+  padding: 7px 4px;
+  visibility: hidden;
+  opacity: 0;
+}
+.nook-project-row:hover .nook-project-more {
+  visibility: visible;
+  opacity: 1;
+}
+.nook-action-menu {
+  position: fixed;
+  z-index: 240;
+  min-width: 150px;
+  padding: 5px;
+  background: #fffefb;
+  border: 1px solid var(--nook-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px #293a3226;
+}
+.nook-action-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.nook-action-menu .nook-danger {
+  color: #a74336;
+}
+.nook-export-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 250;
+  display: flex;
+  gap: 16px;
+  max-width: min(380px, calc(100vw - 48px));
+  padding: 16px;
+  background: #fffefb;
+  border: 1px solid var(--nook-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px #293a3226;
+}
+.nook-export-toast > div {
+  min-width: 0;
+}
+.nook-export-toast p {
+  overflow-wrap: anywhere;
+  color: var(--nook-muted);
+}
+.nook-export-toast > button {
+  align-self: flex-start;
+}
+.nook-export-toast div button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--nook-accent);
+  margin-top: 6px;
+}

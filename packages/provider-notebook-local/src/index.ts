@@ -20,6 +20,8 @@ import { Replica } from '@nook-dsh/storage-sync'
 import { SyncError, type Json, type RecordVersion, type SyncReplica } from '@nook-dsh/capability-sync'
 import {
   ProjectError,
+  compareProjects,
+  reorderProjects,
   type ProjectDto,
   type ProjectEvent,
   type ProjectEventListener,
@@ -528,6 +530,7 @@ function validateProjectVersion(v: RecordVersion) {
     p.name.length > 120 ||
     typeof p.description !== 'string' ||
     p.description.length > 2000 ||
+    (p.sortOrder !== undefined && (!Number.isSafeInteger(p.sortOrder) || p.sortOrder < 0)) ||
     !dateValid(p.createdAt) ||
     !dateValid(p.updatedAt)
   )
@@ -596,6 +599,10 @@ class SqliteProjects extends Service implements ProjectService {
       .prepare('SELECT data FROM projects WHERE deleted=0 ORDER BY id')
       .all()
       .map(row => JSON.parse(String(row.data)) as ProjectDto)
+      .sort(compareProjects)
+  }
+  async reorder(ids: readonly string[]) {
+    return this.store.transaction(() => reorderProjects(this.all(), ids).map(project => this.save(project)))
   }
   async list() {
     return this.all()

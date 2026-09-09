@@ -4,7 +4,7 @@ import { createReadStream } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { dockerArtifacts, serverVersion } from './artifacts.mjs'
+import { assistantArtifacts, dockerArtifacts, serverVersion } from './artifacts.mjs'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const output = resolve(root, '.pack/sync-server')
@@ -12,6 +12,16 @@ await mkdir(output, { recursive: true })
 const artifact = await dockerArtifacts()
 await writeFile(resolve(output, artifact.filename), artifact.archive)
 const files = [artifact.filename]
+const assistant = await assistantArtifacts()
+for (const [name, data] of [
+  [assistant.filename, assistant.archive],
+  ['assistant.py', assistant.source],
+  ['install.sh', assistant.bootstrap],
+  ['install-command.txt', assistant.command + '\n'],
+]) {
+  await writeFile(resolve(output, name), data)
+  files.push(name)
+}
 async function run(args, capture = false) {
   return new Promise((accept, reject) => {
     const child = spawn('docker', args, { cwd: root, stdio: capture ? ['ignore', 'pipe', 'inherit'] : 'inherit' })

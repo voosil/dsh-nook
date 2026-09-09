@@ -3,7 +3,8 @@ import { mkdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { app, BrowserWindow, Menu, shell } from 'electron'
+import { app, BrowserWindow, Menu, shell, ipcMain } from 'electron'
+import { NoteExports } from './note-export.js'
 import type { RuntimeConfig } from './payload.js'
 import { canonicalPath, externalUrl, redact, sameRuntimeUrl, within } from './policy.js'
 import { DesktopRuntime } from './runtime.js'
@@ -130,6 +131,7 @@ async function startDesktop() {
     title: 'Nook',
     backgroundColor: '#f7f7f5',
     webPreferences: {
+      preload: fileURLToPath(new URL('./preload.cjs', import.meta.url)),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -139,6 +141,23 @@ async function startDesktop() {
     },
   })
   const contents = window.webContents
+  const exports = new NoteExports(testRoot || devConfigPath ? join(state, 'exports') : app.getPath('downloads'))
+  const authorizeExport = (event: Electron.IpcMainInvokeEvent) => {
+    if (
+      event.sender !== contents ||
+      event.senderFrame !== contents.mainFrame ||
+      !sameRuntimeUrl(event.senderFrame.url, origin)
+    )
+      throw new Error('当前页面无法导出文件。')
+  }
+  ipcMain.handle('nook:export-note', async (event, request: unknown) => {
+    authorizeExport(event)
+    return exports.save(request)
+  })
+  ipcMain.handle('nook:reveal-export', (event, id: unknown) => {
+    authorizeExport(event)
+    shell.showItemInFolder(exports.path(id))
+  })
   const statusUrl = pathToFileURL(statusFile)
   const isStatus = (value: string) => {
     try {
@@ -177,6 +196,9 @@ async function startDesktop() {
   contents.on('render-process-gone', crashed)
   window.once('ready-to-show', () => window?.show())
   window.once('closed', () => {
+    ipcMain.removeHandler('nook:export-note')
+    ipcMain.removeHandler('nook:reveal-export')
+    exports.dispose()
     contents.off('will-navigate', navigate)
     contents.off('will-redirect', navigate)
     contents.off('render-process-gone', crashed)

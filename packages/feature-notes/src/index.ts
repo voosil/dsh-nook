@@ -46,6 +46,9 @@ export default class NotesFeature extends Service {
   projects() {
     return this.ctx.nookProjects.list()
   }
+  reorderProjects(ids: readonly string[]) {
+    return this.ctx.nookProjects.reorder(ids)
+  }
   createProject(request: CreateProjectRequest) {
     return this.ctx.nookProjects.create(request)
   }
