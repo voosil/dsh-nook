@@ -5,7 +5,7 @@
 | `pnpm dev`   | 3080         | Watches packages; rebuilds Client plugins and restarts Host code       | A fresh temporary home, removed on exit     |
 | `pnpm start` | 3081         | Builds and installs a fixed snapshot; changes apply on the next launch | Shared formal data; see [usage](runtime.md) |
 
-Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port when creating a backend. An already-running shared backend keeps its existing port. Development keeps that selected port across Host restarts. An unavailable explicit port fails startup. On Windows, both commands automatically select a free port when their default is unavailable. Neither launcher terminates another application's listener.
+Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port when creating a backend. An already-running shared backend keeps its existing port. Development keeps that selected port across Host restarts. An unavailable explicit port fails startup. When a command's default port is unavailable, the launcher probes the following ports and uses the first free one; if none of the next ten is free, it asks the OS for an available port. Neither launcher terminates another application's listener.
 
 ## Development
 

@@ -16,7 +16,7 @@ The [filesystem adapter](../../../packages/storage-backup/src/durability.ts) ope
 
 Node's Windows recursive mkdir result can include the extended-path prefix even when the input does not. Directory-fsync traversal therefore only runs on POSIX, avoiding an unmatched stop path on Windows. The documentation checker accepts both LF and CRLF, and subprocess test imports use file URLs.
 
-Windows can return `EACCES` when another process has bound the default port without a listening socket. This occurred with `verge-mihomo` on 3081 and was missed by the initial acceptance's explicit port 0. The [port selector](../../../scripts/profile/web-port.mjs) serves both Web usage and development before preparing a new runtime: an unavailable default falls back to port 0, while an unavailable explicit port fails with an actionable error. Development's default 3080 also returns `EACCES` in the verified environment. The development launcher selects a concrete available port before boot and retains it across Host restarts. Existing shared backends retain their port. The probe closes its socket; it does not reserve the port across startup or modify the existing owner.
+Windows can return `EACCES` when another process has bound the default port without a listening socket. This occurred with `verge-mihomo` on 3081 and was missed by the initial acceptance's explicit port 0. The [port selector](../../../scripts/profile/web-port.mjs) serves both Web usage and development before preparing a new runtime on every platform: an unavailable explicit port fails with an actionable error, while an unavailable default probes the following ten ports and uses the first free one, falling back to OS-assigned port 0 when none of them is free. Development's default 3080 also returns `EACCES` in the verified environment. The development launcher selects a concrete available port before boot and retains it across Host restarts. Existing shared backends retain their port. The probe closes its socket; it does not reserve the port across startup or modify the existing owner.
 
 ## Alternatives considered
 
@@ -26,13 +26,15 @@ Forcing only the DSH parent process to exit can orphan workers. IPC requests gra
 
 Ignoring all filesystem flush failures would also hide failed file writes. Only the unsupported Windows directory operation is excluded; regular-file flush and native publication failures still abort mutation. Backup contents remain checksum-verified.
 
+Falling straight back to OS-assigned port 0 was the initial fix for an unavailable default but produced unpredictable URLs and was wired for Windows only. Probing the following ports first keeps near-default ports such as 3081 and 3082 deterministic on every platform, and only the exhausted scan still defers to the OS. Terminating the existing listener through the [port release helper](../../../scripts/shared/release-port.mjs) was rejected because the selector must never stop an owner it did not create, such as the user's other development session.
+
 ## Consequences
 
 Windows source startup needs Node, Corepack/pnpm, access to package dependencies, and native build prerequisites. Runtime snapshots are retained and are not portable distributions. Windows desktop installer production remains outside this change. Explicit temporary test state never imports legacy repository usage data.
 
 The [Windows acceptance](../../../scripts/verify/verify-windows-start.mjs) passes on Node 22.20.0 / Windows x64: complete launcher, all packed Nook packages, authenticated browser notebook operations and sync, shared leases, repeated startup, preserved cookies on the same authority, verified backups, and released ports/data locks. The relevant regression suite reports 45 passing tests and one optional Apache integration skipped. Build/typecheck, documentation, package boundaries and peer policy pass. Windows process-tree tests run with normal process permissions because the restricted execution sandbox prevents taskkill enumeration.
 
-The acceptance now also passes with no initial port override while 3081 is unavailable. Two [port selection tests](../../../tests/contract/web-port.test.ts) cover default fallback, explicit-port errors, platform behavior and probe cleanup against a real occupied socket.
+The acceptance now also passes with no initial port override while 3081 is unavailable. Two [port selection tests](../../../tests/contract/web-port.test.ts) cover upward scanning of unavailable defaults, explicit-port errors, OS-assigned fallback and probe cleanup against a real occupied socket.
 
 The broader suite also reports unrelated environment failures for Python3 execution, a PowerShell port-inspection timeout and GNU tar handling of a Windows drive path. Those failures are outside the Web startup acceptance; no full-suite success is claimed. Failed probes use disposable temporary homes, and formal user data is not opened during verification.
 

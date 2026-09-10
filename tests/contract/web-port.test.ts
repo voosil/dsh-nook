@@ -4,27 +4,33 @@ import { once } from 'node:events'
 import { test } from 'node:test'
 import { selectWebPort, checkWebPort } from '../../scripts/profile/web-port.mjs'
 
-test('Windows defaults fall back for denied or occupied ports, preserving explicit requests', async () => {
-  for (const code of ['EACCES', 'EADDRINUSE']) {
-    const error = Object.assign(new Error('fixture port conflict'), { code })
-    const messages: string[] = []
-    const options = {
-      platform: 'win32',
-      check: async () => {
-        throw error
-      },
-      log: (line: string) => messages.push(line),
-    }
-    assert.equal(await selectWebPort(3081, options), 0)
-    assert.match(messages[0]!, new RegExp(code))
-    await assert.rejects(selectWebPort(3081, { ...options, explicit: true }), /--port 0/)
-    assert.equal(await selectWebPort(0, { ...options, explicit: true }), 0)
-    assert.equal(await selectWebPort(3081, { ...options, platform: 'darwin' }), 3081)
+function conflictError(code: string) {
+  return Object.assign(new Error('fixture port conflict'), { code })
+}
+
+test('unavailable defaults scan upward for a free port, explicit requests fail loudly', async () => {
+  const busyOnlyFirst: typeof checkWebPort = async port => {
+    if (port === 3081) throw conflictError('EADDRINUSE')
   }
-  assert.equal(await selectWebPort(3081, { platform: 'win32', check: async () => {} }), 3081)
+  const messages: string[] = []
+  const log = (line: string) => messages.push(line)
+  assert.equal(await selectWebPort(3081, { check: busyOnlyFirst, log }), 3082)
+  assert.match(messages[0]!, /EADDRINUSE/)
+  assert.match(messages[0]!, /using 3082 instead/)
+  await assert.rejects(selectWebPort(3081, { check: busyOnlyFirst, explicit: true }), /Choose another --port/)
+
+  const alwaysBusy: typeof checkWebPort = async () => {
+    throw conflictError('EACCES')
+  }
+  messages.length = 0
+  assert.equal(await selectWebPort(3081, { check: alwaysBusy, log }), 0)
+  assert.match(messages[0]!, /EACCES/)
+  assert.match(messages[0]!, /letting the OS assign a free port/)
+
+  assert.equal(await selectWebPort(0, { check: alwaysBusy, explicit: true }), 0)
+  assert.equal(await selectWebPort(3081, { check: async () => {} }), 3081)
   await assert.rejects(
     selectWebPort(3081, {
-      platform: 'win32',
       check: async () => {
         throw new Error('unexpected failure')
       },
@@ -33,14 +39,16 @@ test('Windows defaults fall back for denied or occupied ports, preserving explic
   )
 })
 
-test('a real conflicting listener is preserved and the probe releases its socket', async () => {
+test('a real conflicting listener yields a bindable port and the probe releases its socket', async () => {
   const owner = createServer()
   owner.listen({ host: '127.0.0.1', port: 0, exclusive: true })
   await once(owner, 'listening')
   const port = (owner.address() as { port: number }).port
   try {
-    assert.equal(await selectWebPort(port, { platform: 'win32', log: () => {} }), 0)
+    const selected = await selectWebPort(port, { log: () => {} })
+    assert.notEqual(selected, port)
     assert.ok(owner.listening)
+    if (selected !== 0) await checkWebPort(selected)
   } finally {
     await new Promise<void>(resolve => owner.close(() => resolve()))
   }

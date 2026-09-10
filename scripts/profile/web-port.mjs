@@ -15,23 +15,36 @@ export function checkWebPort(port) {
   })
 }
 
+const CONFLICT_CODES = ['EACCES', 'EADDRINUSE']
+const SCAN_ATTEMPTS = 10
+const MAX_PORT = 65_535
+
 export async function selectWebPort(
   port,
-  { explicit = false, platform = process.platform, check = checkWebPort, log = console.log, label = 'nook start' } = {},
+  { explicit = false, check = checkWebPort, log = console.log, label = 'nook start' } = {},
 ) {
-  if (platform !== 'win32' || port === 0) return port
+  if (port === 0) return port
+  let unavailable
   try {
     await check(port)
     return port
   } catch (error) {
-    if (!['EACCES', 'EADDRINUSE'].includes(error.code)) throw error
-    if (explicit)
-      throw new Error(`Nook port ${port} is unavailable (${error.code}). Choose another --port or use --port 0.`, {
-        cause: error,
-      })
-    log(
-      `[${label}] Port ${port} is unavailable (${error.code}); selecting an available port. Open the URL printed below.`,
-    )
-    return 0
+    if (!CONFLICT_CODES.includes(error.code)) throw error
+    unavailable = error
   }
+  if (explicit)
+    throw new Error(`Nook port ${port} is unavailable (${unavailable.code}). Choose another --port or use --port 0.`, {
+      cause: unavailable,
+    })
+  for (let candidate = port + 1; candidate <= Math.min(port + SCAN_ATTEMPTS, MAX_PORT); candidate += 1) {
+    try {
+      await check(candidate)
+      log(`[${label}] Port ${port} is unavailable (${unavailable.code}); using ${candidate} instead.`)
+      return candidate
+    } catch (error) {
+      if (!CONFLICT_CODES.includes(error.code)) throw error
+    }
+  }
+  log(`[${label}] Port ${port} is unavailable (${unavailable.code}); letting the OS assign a free port.`)
+  return 0
 }
