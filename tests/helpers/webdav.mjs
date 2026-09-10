@@ -51,6 +51,9 @@ export async function startWebDav({ brokenConditions = false, auth = 'tester:sec
     response.writeHead(405).end()
   }
   const server = tls ? createHttpsServer(tls, handler) : createServer(handler)
+  let connections = 0
+  const connected = () => connections++
+  server.on('connection', connected)
   await new Promise((resolve, reject) => {
     server.once('error', reject)
     server.listen(0, '127.0.0.1', resolve)
@@ -60,9 +63,13 @@ export async function startWebDav({ brokenConditions = false, auth = 'tester:sec
     url,
     data,
     methods,
+    connections: () => connections,
     close: () =>
       new Promise(resolve => {
-        server.close(resolve)
+        server.close(() => {
+          server.removeListener('connection', connected)
+          resolve()
+        })
         server.closeAllConnections()
       }),
   }

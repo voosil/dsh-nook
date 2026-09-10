@@ -16,6 +16,11 @@ import Rpc from '../../packages/adapter-sync-dsh/src/index.ts'
 import { synchronize } from '../../packages/feature-sync/src/engine.ts'
 import { startWebDav } from '../helpers/webdav.mjs'
 import { verifyBackup } from '../../packages/storage-backup/src/index.ts'
+function openWebDav(t: import('node:test').TestContext, config: ConstructorParameters<typeof WebDavStorage>[0]) {
+  const storage = new WebDavStorage(config)
+  t.after(() => storage.dispose())
+  return storage
+}
 const note = (markdown: string) => ({
   id: randomUUID(),
   title: '',
@@ -33,16 +38,13 @@ test('WebDAV verifies conditional writes, rejects incompatible or unauthorized e
     await good.close()
     await bad.close()
   })
-  await new WebDavStorage({ url: good.url, username: 'tester', password: 'secret' }).probe(signal())
+  await openWebDav(t, { url: good.url, username: 'tester', password: 'secret' }).probe(signal())
+  await assert.rejects(openWebDav(t, { url: bad.url, username: 'tester', password: 'secret' }).probe(signal()), /原子/)
   await assert.rejects(
-    new WebDavStorage({ url: bad.url, username: 'tester', password: 'secret' }).probe(signal()),
-    /原子/,
-  )
-  await assert.rejects(
-    new WebDavStorage({ url: good.url, username: 'tester', password: 'wrong' }).probe(signal()),
+    openWebDav(t, { url: good.url, username: 'tester', password: 'wrong' }).probe(signal()),
     /拒绝访问/,
   )
-  assert.throws(() => new WebDavStorage({ url: 'http://example.com/', username: '', password: '' }), /HTTPS/)
+  assert.throws(() => openWebDav(t, { url: 'http://example.com/', username: '', password: '' }), /HTTPS/)
   assert.equal([...good.data.keys()].filter(k => k.includes('/probes/')).length, 0)
 })
 
@@ -75,7 +77,7 @@ test('two notebooks migrate projects and sync notes, source versions, trash, con
   await legacy.fiber.dispose()
   const a = await boot('a'),
     b = await boot('b'),
-    remote = new WebDavStorage({ url: server.url, username: 'tester', password: 'secret' })
+    remote = openWebDav(t, { url: server.url, username: 'tester', password: 'secret' })
   await remote.probe(signal())
   const run = (ctx: Context) => synchronize(ctx.nookSyncReplica, remote, server.url, signal())
   const backups = await readdir(join(root, 'a', 'nook.sync-backups'))
@@ -193,7 +195,7 @@ test(
       await rm(root, { recursive: true, force: true })
     })
     for (const r of [a, b]) r.registerType({ type: 'task', schema: 1, validate: () => {} })
-    const remote = new WebDavStorage({ url: server.url, username: '', password: '' })
+    const remote = openWebDav(t, { url: server.url, username: '', password: '' })
     await remote.probe(signal())
     const run = (r: typeof a) => synchronize(r, remote, server.url, signal())
     a.capture('task', 'one', { text: 'base' })
@@ -286,19 +288,35 @@ test('private CA trust is connection-scoped and rejects missing trust or wrong c
     await rm(root, { recursive: true, force: true })
   })
   const base = { url: server.url, username: 'tester', password: 'secret' }
-  await assert.rejects(new WebDavStorage(base).probe(signal()), /证书/)
+  await assert.rejects(openWebDav(t, base).probe(signal()), /证书/)
   assert.equal(server.methods.length, 0)
   await assert.rejects(
-    new WebDavStorage({ ...base, url: server.url.replace('127.0.0.1', 'localhost'), caCert }).probe(signal()),
+    openWebDav(t, { ...base, url: server.url.replace('127.0.0.1', 'localhost'), caCert }).probe(signal()),
     /证书/,
   )
   assert.equal(server.methods.length, 0)
-  await new WebDavStorage({ ...base, caCert }).probe(signal())
+  await openWebDav(t, { ...base, caCert }).probe(signal())
   const calls = server.methods.length
-  await assert.rejects(new WebDavStorage(base).probe(signal()), /证书/)
+  await assert.rejects(openWebDav(t, base).probe(signal()), /证书/)
   assert.equal(server.methods.length, calls)
   assert.throws(
-    () => new WebDavStorage({ ...base, caCert: readFileSync(join(root, 'server.key'), 'utf8') }),
+    () => openWebDav(t, { ...base, caCert: readFileSync(join(root, 'server.key'), 'utf8') }),
     /不要粘贴私钥/,
   )
+})
+
+test('WebDAV reuses connections within a run and closes them on disposal', async t => {
+  const server = await startWebDav()
+  t.after(() => server.close())
+  const remote = openWebDav(t, { url: server.url, username: 'tester', password: 'secret' })
+  const body = Buffer.from('connection reuse')
+  await remote.put('objects/reuse', body, null, signal())
+  for (let n = 0; n < 12; n++) assert.deepEqual((await remote.get('objects/reuse', signal()))?.bytes, body)
+  assert.equal(server.connections(), 1)
+  await Promise.all(Array.from({ length: 18 }, () => remote.get('objects/reuse', signal())))
+  assert.ok(server.connections() <= 6)
+  remote.dispose()
+  const count = server.methods.length
+  await assert.rejects(remote.get('objects/reuse', signal()), /关闭/)
+  assert.equal(server.methods.length, count)
 })

@@ -298,3 +298,112 @@ test('offline versions survive process reopen and reject oversized records befor
   await synchronize(r, new Memory(), 'https://test/dav/', new AbortController().signal)
   assert.equal(r.stats().pending, 0)
 })
+
+/** Simulate round-trip latency and observe work left in flight on failure. */
+function measured(remote: Memory, delay = 10) {
+  const state = { active: 0, peak: 0, calls: new Map<string, number>() }
+  async function request<T>(method: string, path: string, signal: AbortSignal, action: () => Promise<T>) {
+    const { setTimeout } = await import('node:timers/promises')
+    state.active++
+    state.peak = Math.max(state.peak, state.active)
+    const key = `${method} ${path}`
+    state.calls.set(key, (state.calls.get(key) ?? 0) + 1)
+    try {
+      await setTimeout(delay, undefined, { signal })
+      return await action()
+    } finally {
+      state.active--
+    }
+  }
+  const storage: SyncStorage = {
+    probe: () => remote.probe(),
+    get: (path, signal) => request('GET', path, signal, () => remote.get(path)),
+    put: (path, bytes, expected, signal) => request('PUT', path, signal, () => remote.put(path, bytes, expected)),
+  }
+  return { state, storage }
+}
+
+test('bounded transfers converge full histories, deduplicate blobs and reuse verified objects on CAS retry', async t => {
+  const { replica, remote } = await setup(t),
+    a = replica('a'),
+    b = replica('b')
+  const content = Buffer.from('shared attachment')
+  const ref = { hash: digest(content), bytes: content.length, mediaType: 'text/plain' }
+  a.receiveBlob(ref, content)
+  for (let record = 0; record < 18; record++)
+    for (let version = 0; version < 3; version++) a.capture('task', `record-${record}`, { version }, false, [ref])
+  const pending = a.snapshot().pending
+  const originalPut = remote.put.bind(remote)
+  let raced = false
+  remote.put = async (path, bytes, expected) => {
+    if (path === 'index.json' && expected !== null) {
+      // Publication can only occur after every pending object and dependency is readable.
+      for (const id of pending) assert.ok(remote.data.has(`objects/${id}`))
+      assert.ok(remote.data.has(`blobs/${ref.hash}`))
+      if (!raced) {
+        raced = true
+        return false
+      }
+    }
+    return originalPut(path, bytes, expected)
+  }
+  const upload = measured(remote)
+  const start = performance.now()
+  await synchronize(a, upload.storage, 'https://test/dav/', new AbortController().signal)
+  t.diagnostic(
+    `54 versions, 10 ms/request: upload ${Math.round(performance.now() - start)} ms; serial request-delay floor ${(pending.length * 2 + 2) * 10} ms`,
+  )
+  assert.equal(upload.state.peak, 6)
+  assert.equal(upload.state.active, 0)
+  assert.equal(upload.state.calls.get(`PUT blobs/${ref.hash}`), 1)
+  for (const id of pending) assert.equal(upload.state.calls.get(`PUT objects/${id}`), 1)
+  assert.equal(a.stats().pending, 0)
+  const download = measured(remote)
+  await synchronize(b, download.storage, 'https://test/dav/', new AbortController().signal)
+  assert.equal(download.state.peak, 6)
+  assert.equal(download.state.active, 0)
+  assert.equal(download.state.calls.get(`GET blobs/${ref.hash}`), 1)
+  assert.deepEqual(a.records('task'), b.records('task'))
+  for (let record = 0; record < 18; record++) assert.equal(b.history('task', `record-${record}`).length, 3)
+})
+
+test('failed parallel upload drains requests, leaves the index unpublished and can retry safely', async t => {
+  const { replica, remote } = await setup(t),
+    a = replica('a')
+  for (let n = 0; n < 18; n++) a.capture('task', `record-${n}`, { n })
+  const original = remote.get.bind(remote)
+  remote.get = async path =>
+    path.startsWith('objects/') ? { bytes: Buffer.from('corrupt'), etag: '"bad"' } : original(path)
+  const upload = measured(remote)
+  await assert.rejects(synchronize(a, upload.storage, 'https://test/dav/', new AbortController().signal), /校验失败/)
+  assert.equal(upload.state.active, 0)
+  assert.equal(a.stats().pending, 18)
+  assert.deepEqual(JSON.parse(Buffer.from(remote.data.get('index.json')!.bytes).toString()).heads, {})
+  remote.get = original
+  await synchronize(a, upload.storage, 'https://test/dav/', new AbortController().signal)
+  assert.equal(a.stats().pending, 0)
+})
+
+test('failed or cancelled parallel download never applies a partial batch and leaves no active requests', async t => {
+  const { replica, remote, run } = await setup(t),
+    a = replica('a'),
+    b = replica('b')
+  for (let n = 0; n < 18; n++) a.capture('task', `record-${n}`, { n })
+  await run(a)
+  const original = remote.get.bind(remote)
+  const first = a.working('task', 'record-0')!
+  remote.get = async path => (path === `objects/${first}` ? null : original(path))
+  const download = measured(remote)
+  await assert.rejects(synchronize(b, download.storage, 'https://test/dav/', new AbortController().signal), /校验失败/)
+  assert.equal(download.state.active, 0)
+  assert.equal(b.records('task').length, 0)
+  remote.get = original
+  const controller = new AbortController()
+  remote.get = async path => {
+    if (path.startsWith('objects/')) controller.abort(new Error('cancelled by test'))
+    return original(path)
+  }
+  await assert.rejects(synchronize(b, download.storage, 'https://test/dav/', controller.signal), /cancelled by test/)
+  assert.equal(download.state.active, 0)
+  assert.equal(b.records('task').length, 0)
+})

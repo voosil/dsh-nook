@@ -33,6 +33,8 @@ export interface StorageConfig {
   readonly caCert?: string | undefined
 }
 export interface SyncStorage {
+  /** The caller releases connection resources after probing or completing a run. */
+  dispose?(): void
   get(path: string, signal: AbortSignal): Promise<RemoteObject | null>
   put(path: string, bytes: Uint8Array, expected: string | null, signal: AbortSignal): Promise<boolean>
   probe(signal: AbortSignal): Promise<void>

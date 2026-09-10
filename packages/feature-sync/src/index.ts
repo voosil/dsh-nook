@@ -14,6 +14,7 @@ import {
   type SyncStatus,
   type ConfigureSync,
   type StorageConfig,
+  type SyncStorage,
 } from '@nook-dsh/capability-sync'
 import { synchronize } from './engine.js'
 import { durableRename, syncPath } from '@nook-dsh/storage-backup/durability'
@@ -191,8 +192,12 @@ export default class SyncFeature extends Service implements SyncService {
       if (binding && binding.target !== settings.url)
         throw new SyncError('此数据已绑定另一目录。请使用独立本地库连接其他目标。')
       const remote = this.ctx.nookSyncStorage.open(settings)
-      this.ctx.nookSyncReplica.prepare()
-      await remote.probe(signal)
+      try {
+        this.ctx.nookSyncReplica.prepare()
+        await remote.probe(signal)
+      } finally {
+        remote.dispose?.()
+      }
       signal.throwIfAborted()
       this.persist(settings)
       this.state = 'idle'
@@ -223,13 +228,10 @@ export default class SyncFeature extends Service implements SyncService {
     this.state = 'syncing'
     this.error = null
     this.running = (async () => {
+      let remote: SyncStorage | undefined
       try {
-        await synchronize(
-          this.ctx.nookSyncReplica,
-          this.ctx.nookSyncStorage.open(this.settings),
-          this.settings.url,
-          controller.signal,
-        )
+        remote = this.ctx.nookSyncStorage.open(this.settings)
+        await synchronize(this.ctx.nookSyncReplica, remote, this.settings.url, controller.signal)
         this.lastSync = new Date().toISOString()
         this.state = 'idle'
         this.failures = 0
@@ -240,12 +242,15 @@ export default class SyncFeature extends Service implements SyncService {
           this.failures++
         } else this.state = this.settings.enabled ? 'idle' : 'disabled'
       } finally {
+        remote?.dispose?.()
         this.running = undefined
         this.controller = undefined
         this.schedule(
           this.failures
             ? Math.min(300000, 2000 * 2 ** Math.min(this.failures, 7)) * (0.8 + Math.random() * 0.4)
-            : 30000,
+            : this.ctx.nookSyncReplica.stats().pending
+              ? 1000
+              : 5000,
         )
       }
       return this.status()

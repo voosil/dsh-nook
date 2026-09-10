@@ -21,10 +21,11 @@ const replicas = ['a', 'b'].map(
       () => {},
     ),
 )
+const remote = new WebDavStorage(config)
+const untrusted = new WebDavStorage({ ...config, caCert: '' })
 try {
-  const remote = new WebDavStorage(config)
   const signal = () => AbortSignal.timeout(60000)
-  await assert.rejects(new WebDavStorage({ ...config, caCert: '' }).probe(signal()))
+  await assert.rejects(untrusted.probe(signal()))
   await remote.probe(signal())
   for (const replica of replicas) replica.registerType({ type: 'task', schema: 1, validate: () => {} })
   const [a, b] = replicas as [Replica, Replica]
@@ -51,6 +52,8 @@ try {
   assert.equal(b.stats().pending, 0)
   console.log('Nook adapter: real Linux TLS, private CA, two replicas, concurrent conflict and convergence passed')
 } finally {
+  remote.dispose()
+  untrusted.dispose()
   for (const replica of replicas) {
     replica.dispose()
     replica.db.close()

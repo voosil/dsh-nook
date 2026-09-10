@@ -1,6 +1,6 @@
 import { randomUUID, X509Certificate } from 'node:crypto'
-import { request as httpsRequest } from 'node:https'
-import { request as httpRequest } from 'node:http'
+import { Agent as HttpsAgent, request as httpsRequest } from 'node:https'
+import { Agent as HttpAgent, request as httpRequest } from 'node:http'
 import { Context, Service } from '@deepseek-ai/cordis'
 import { SyncError, type StorageConfig, type SyncStorage, type SyncStorageFactory } from '@nook-dsh/capability-sync'
 
@@ -31,6 +31,8 @@ export function normalizeTarget(input: string): string {
 }
 export class WebDavStorage implements SyncStorage {
   private readonly root: URL
+  private readonly agent: HttpAgent
+  private readonly lifecycle = new AbortController()
   constructor(private readonly config: StorageConfig) {
     this.root = new URL(normalizeTarget(config.url))
     if (config.caCert) {
@@ -48,6 +50,12 @@ export class WebDavStorage implements SyncStorage {
         throw new SyncError('服务器 CA 证书无效，请粘贴部署工具输出的完整证书，不要粘贴私钥。')
       }
     }
+    const Agent = this.root.protocol === 'https:' ? HttpsAgent : HttpAgent
+    this.agent = new Agent({ keepAlive: true, maxSockets: 6, maxFreeSockets: 6 })
+  }
+  dispose() {
+    this.lifecycle.abort(new SyncError('同步连接已关闭。'))
+    this.agent.destroy()
   }
   private async request(
     path: string,
@@ -56,6 +64,8 @@ export class WebDavStorage implements SyncStorage {
     bytes?: Uint8Array,
     condition?: string | null,
   ) {
+    signal = AbortSignal.any([signal, this.lifecycle.signal])
+    signal.throwIfAborted()
     if (!/^(?:[a-z0-9.-]+\/)*[a-zA-Z0-9.-]*$/.test(path) || path.split('/').some(p => p === '.' || p === '..'))
       throw new SyncError('无效的同步对象路径。')
     const controller = new AbortController()
@@ -77,7 +87,7 @@ export class WebDavStorage implements SyncStorage {
             method,
             headers,
             signal: controller.signal,
-            agent: false,
+            agent: this.agent,
             // A private CA is scoped to this connection; normal hostname and expiry checks remain enabled.
             ...(this.config.caCert ? { ca: this.config.caCert } : {}),
           },
@@ -116,6 +126,7 @@ export class WebDavStorage implements SyncStorage {
     }
   }
   async get(path: string, signal: AbortSignal) {
+    signal = AbortSignal.any([signal, this.lifecycle.signal])
     for (let attempt = 0; ; attempt++) {
       const r = await this.request(path, 'GET', signal)
       if (r.status === 404) return null
