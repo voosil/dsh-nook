@@ -1,0 +1,538 @@
+/* @nook-dsh/ui-kit 组件样式。只用 var(--nook-*)，不出现原始色值。 */
+
+.nui-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: var(--nook-color-button);
+  color: var(--nook-color-ink);
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  min-height: 32px;
+  border-radius: var(--nook-radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--nook-motion-fast) var(--nook-ease-enter),
+    color var(--nook-motion-fast) var(--nook-ease-enter);
+}
+.nui-btn:hover:not(:disabled) {
+  background: var(--nook-color-button-hover);
+}
+.nui-btn:active:not(:disabled) {
+  background: var(--nook-color-button-pressed);
+}
+.nui-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.nui-btn:focus-visible {
+  outline: 2px solid var(--nook-color-accent);
+  outline-offset: 2px;
+}
+.nui-btn--ghost {
+  background: transparent;
+}
+.nui-btn--ghost:hover:not(:disabled),
+.nui-btn--ghost:active:not(:disabled) {
+  background: var(--nook-color-hover);
+}
+.nui-btn--accent {
+  background: var(--nook-color-accent);
+  color: var(--nook-color-accent-contrast);
+}
+.nui-btn--accent:hover:not(:disabled),
+.nui-btn--accent:active:not(:disabled) {
+  background: var(--nook-color-accent-strong);
+}
+.nui-btn--accent:disabled {
+  background: var(--nook-color-accent);
+}
+.nui-btn--danger {
+  background: var(--nook-color-danger-soft);
+  color: var(--nook-color-danger);
+}
+.nui-btn--danger:hover:not(:disabled),
+.nui-btn--danger:active:not(:disabled) {
+  background: var(--nook-color-danger-hover);
+}
+.nui-btn--active {
+  background: var(--nook-color-hover);
+}
+.nui-btn--icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+.nui-input,
+.nui-textarea,
+.nui-select {
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--nook-color-control-border);
+  border-radius: var(--nook-radius);
+  background: var(--nook-color-surface);
+  padding: 8px 10px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.nui-input::placeholder,
+.nui-textarea::placeholder {
+  color: var(--nook-color-ink-faint);
+}
+.nui-input,
+.nui-textarea {
+  transition: border-color var(--nook-motion-fast) var(--nook-ease-enter);
+}
+.nui-input:focus,
+.nui-textarea:focus {
+  outline: none;
+  border-color: var(--nook-color-focus);
+}
+.nui-select:focus-visible {
+  outline: 2px solid var(--nook-color-accent);
+  outline-offset: 2px;
+}
+
+.nui-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--nook-color-backdrop);
+  z-index: var(--nook-z-dialog);
+}
+.nui-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: calc(var(--nook-z-dialog) + 1);
+  background: var(--nook-color-bg);
+  border-radius: var(--nook-radius-lg);
+  padding: var(--nook-space-6);
+  max-width: min(440px, calc(100vw - 32px));
+  width: calc(100% - 32px);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--nook-shadow-dialog);
+  box-sizing: border-box;
+  font: 14px/1.6 var(--nook-font-sans);
+  color: var(--nook-color-ink);
+  text-align: left;
+}
+.nui-dialog h1,
+.nui-dialog h2,
+.nui-dialog p {
+  margin: 0;
+}
+.nui-dialog small {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.nui-dialog-title {
+  font-size: 21px;
+  font-weight: 650;
+  margin-bottom: 20px;
+}
+.nui-dialog-description {
+  color: var(--nook-color-ink-muted);
+  font-size: 12px;
+  margin-bottom: 18px;
+}
+.nui-dialog-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--nook-color-ink);
+  font: inherit;
+  cursor: pointer;
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  padding: 4px;
+  line-height: 1;
+  border-radius: var(--nook-radius);
+  transition: background-color var(--nook-motion-fast) var(--nook-ease-enter);
+}
+.nui-dialog-close:hover {
+  background: var(--nook-color-hover);
+}
+.nui-dialog-close:focus-visible {
+  outline: 2px solid var(--nook-color-accent);
+  outline-offset: 2px;
+}
+.nui-dialog-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+.nui-dialog-footer button[type='submit'],
+.nui-dialog-footer .nui-btn--accent {
+  background: var(--nook-color-accent);
+  color: var(--nook-color-accent-contrast);
+}
+
+.nui-tabs {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid var(--nook-color-border);
+  margin-bottom: 20px;
+}
+.nui-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--nook-color-ink-muted);
+  font: inherit;
+  border-radius: 0;
+  padding: 10px 2px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.nui-tab:hover {
+  background: transparent;
+  color: var(--nook-color-ink);
+}
+.nui-tab[data-active] {
+  color: var(--nook-color-accent);
+  border-bottom-color: currentColor;
+}
+.nui-tab:focus-visible {
+  outline: 2px solid var(--nook-color-accent);
+  outline-offset: -2px;
+}
+
+.nui-menu-positioner {
+  z-index: calc(var(--nook-z-dialog) + 2);
+}
+.nui-menu {
+  min-width: 150px;
+  padding: 5px;
+  background: var(--nook-color-surface);
+  border: 1px solid var(--nook-color-border);
+  border-radius: var(--nook-radius-md);
+  box-shadow: var(--nook-shadow-menu);
+  box-sizing: border-box;
+  font: 14px/1.6 var(--nook-font-sans);
+  color: var(--nook-color-ink);
+}
+.nui-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--nook-radius);
+  color: inherit;
+  font: inherit;
+  background: transparent;
+}
+.nui-menu-item:hover,
+.nui-menu-item[data-highlighted] {
+  background: var(--nook-color-hover);
+}
+.nui-menu-item:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.nui-menu-item--danger {
+  color: var(--nook-color-danger);
+}
+
+.nui-switch {
+  appearance: none;
+  border: 0;
+  background: var(--nook-color-hover);
+  border-radius: 999px;
+  width: 30px;
+  height: 18px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background-color var(--nook-motion-fast) var(--nook-ease-enter);
+  box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+}
+.nui-switch[data-checked] {
+  background: var(--nook-color-accent);
+  justify-content: flex-end;
+}
+.nui-switch:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.nui-switch:focus-visible {
+  outline: 2px solid var(--nook-color-accent);
+  outline-offset: 2px;
+}
+.nui-switch-thumb {
+  width: 14px;
+  height: 14px;
+  margin: 2px;
+  border-radius: 999px;
+  background: var(--nook-color-surface);
+  display: block;
+  flex-shrink: 0;
+}
+
+.nui-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: var(--nook-z-dialog);
+  display: flex;
+  gap: 16px;
+  max-width: min(380px, calc(100vw - 48px));
+  padding: 16px;
+  background: var(--nook-color-surface);
+  border: 1px solid var(--nook-color-border);
+  border-radius: 12px;
+  box-shadow: var(--nook-shadow-menu);
+  box-sizing: border-box;
+  font: 14px/1.6 var(--nook-font-sans);
+  color: var(--nook-color-ink);
+  text-align: left;
+}
+.nui-toast-body {
+  min-width: 0;
+}
+.nui-toast-body strong {
+  font-weight: 650;
+}
+.nui-toast-body p {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--nook-color-ink-muted);
+  font-size: 13px;
+}
+.nui-toast-body small {
+  font-size: 11px;
+  color: var(--nook-color-ink-muted);
+}
+.nui-toast-body button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--nook-color-accent);
+  font: inherit;
+  font-size: 13px;
+  padding: 0;
+  margin-top: 6px;
+  border-radius: var(--nook-radius);
+}
+.nui-toast-body button:hover {
+  background: transparent;
+  color: var(--nook-color-accent-strong);
+}
+.nui-toast-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--nook-color-ink);
+  font: inherit;
+  align-self: flex-start;
+  padding: 4px;
+  line-height: 1;
+  border-radius: var(--nook-radius);
+  cursor: pointer;
+  transition: background-color var(--nook-motion-fast) var(--nook-ease-enter);
+}
+.nui-toast-close:hover {
+  background: var(--nook-color-hover);
+}
+.nui-toast-close:focus-visible {
+  outline: 2px solid var(--nook-color-accent);
+  outline-offset: 2px;
+}
+@keyframes nui-toast-in {
+  from {
+    opacity: 0;
+  }
+}
+.nui-toast {
+  animation: nui-toast-in var(--nook-motion-base) var(--nook-ease-enter);
+}
+
+.nui-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 7px 0 5px;
+  border-radius: var(--nook-radius);
+  background: var(--nook-color-hover);
+  color: var(--nook-color-ink-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 22px;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.nui-kbd {
+  font: 10px sans-serif;
+  opacity: 0.6;
+  margin-left: 18px;
+}
+
+/* Base UI keeps floating parts mounted through their exit transition. */
+.nui-dialog,
+.nui-dialog-backdrop,
+.nui-menu,
+.nui-select-popup {
+  opacity: 1;
+  transition: opacity var(--nook-motion-base) var(--nook-ease-enter);
+}
+.nui-dialog[data-starting-style],
+.nui-dialog[data-ending-style],
+.nui-dialog-backdrop[data-starting-style],
+.nui-dialog-backdrop[data-ending-style],
+.nui-menu[data-starting-style],
+.nui-menu[data-ending-style],
+.nui-select-popup[data-starting-style],
+.nui-select-popup[data-ending-style] {
+  opacity: 0;
+}
+.nui-dialog[data-ending-style],
+.nui-dialog-backdrop[data-ending-style],
+.nui-menu[data-ending-style],
+.nui-select-popup[data-ending-style] {
+  transition-timing-function: var(--nook-ease-exit);
+}
+.nui-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nook-space-2);
+  min-height: 36px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--nook-color-ink);
+  transition: border-color var(--nook-motion-fast) var(--nook-ease-enter);
+}
+.nui-select:hover:not(:disabled),
+.nui-select[data-popup-open] {
+  border-color: var(--nook-color-accent);
+}
+.nui-select--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--nook-color-ink-muted);
+  transition:
+    background-color var(--nook-motion-fast) var(--nook-ease-enter),
+    color var(--nook-motion-fast) var(--nook-ease-enter);
+}
+.nui-select--ghost:hover:not(:disabled),
+.nui-select--ghost[data-popup-open] {
+  background: var(--nook-color-hover);
+  border-color: transparent;
+  color: var(--nook-color-ink);
+}
+.nui-select--ghost .nui-select-icon {
+  width: 12px;
+  height: 12px;
+}
+.nui-select:disabled,
+.nui-input:disabled,
+.nui-textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.nui-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nui-select-icon {
+  flex-shrink: 0;
+}
+.nui-select-positioner {
+  z-index: calc(var(--nook-z-dialog) + 2);
+}
+.nui-select-popup {
+  min-width: var(--anchor-width);
+  max-width: calc(100vw - 16px);
+  max-height: var(--available-height);
+  overflow: auto;
+  padding: var(--nook-space-1);
+  border: 1px solid var(--nook-color-control-border);
+  border-radius: var(--nook-radius-md);
+  background: var(--nook-color-surface);
+  box-shadow: var(--nook-shadow-menu);
+  color: var(--nook-color-ink);
+  font: 14px/1.6 var(--nook-font-sans);
+  box-sizing: border-box;
+}
+.nui-select-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.nui-select-item {
+  position: relative;
+  padding: 8px 32px 8px 12px;
+  border-radius: var(--nook-radius);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.nui-select-item[data-highlighted] {
+  background: var(--nook-color-hover);
+}
+.nui-select-item[data-selected] {
+  color: var(--nook-color-accent-strong);
+  font-weight: 600;
+}
+.nui-select-item[data-disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.nui-select-check {
+  position: absolute;
+  right: 10px;
+}
+.nui-select-search {
+  width: 100%;
+  margin-bottom: 4px;
+}
+.nui-select-empty {
+  padding: 12px;
+  color: var(--nook-color-ink-muted);
+}
+.nui-select-empty:empty {
+  display: none;
+}
+
+.nui-switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.nui-input[aria-invalid='true'],
+.nui-textarea[aria-invalid='true'] {
+  border-color: var(--nook-color-danger);
+}
+.nui-input[readonly],
+.nui-textarea[readonly] {
+  background: var(--nook-color-sunken);
+}
+.nui-menu-separator {
+  height: 1px;
+  margin: 4px;
+  background: var(--nook-color-border);
+}

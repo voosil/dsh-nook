@@ -41,6 +41,9 @@
       "path": "packages/ui-notes"
     },
     {
+      "path": "packages/ui-kit"
+    },
+    {
       "path": "packages/capability-project"
     },
     {

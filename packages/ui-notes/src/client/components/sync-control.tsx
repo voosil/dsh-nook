@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { Cloud, RefreshCw, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Cloud, RefreshCw } from 'lucide-react'
+import { Button, Dialog, Input, TabPanel, Tabs, Textarea } from '@nook-dsh/ui-kit'
 import { SyncGuidePage } from './sync-guide.js'
 import type { SyncStatus } from '@nook-dsh/capability-sync'
 import { parseSyncConnection, CONNECTION_FILE_LIMIT } from '@nook-dsh/capability-sync'
@@ -15,7 +16,6 @@ export function SyncControl({
   onDeploy: () => Promise<void>
 }) {
   const [tab, setTab] = useState<'status' | 'configuration'>('status')
-  const tabId = useId()
   const [guideOpen, setGuideOpen] = useState(window.location.hash === '#nook-sync-guide')
   useEffect(() => {
     const changed = () => setGuideOpen(window.location.hash === '#nook-sync-guide')
@@ -105,8 +105,8 @@ export function SyncControl({
               : '等待首次同步'
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={() => {
           setUrl(status?.url ?? '')
           setUsername(status?.username ?? '')
@@ -120,7 +120,7 @@ export function SyncControl({
         }}
       >
         <Cloud size={16} aria-hidden="true" /> 数据同步 <small>{label}</small>
-      </button>
+      </Button>
       {guideOpen && (
         <SyncGuidePage
           onDeploy={onDeploy}
@@ -137,89 +137,61 @@ export function SyncControl({
         />
       )}
       {open && !guideOpen && (
-        <div
-          className="nook-modal-backdrop"
-          onKeyDown={event => {
-            if (event.key === 'Escape') {
-              event.stopPropagation()
-              if (!busy) setOpen(false)
-            }
+        <Dialog
+          open
+          onOpenChange={nextOpen => {
+            if (!nextOpen && !busy) setOpen(false)
           }}
+          title="数据同步"
+          description="让笔记与项目在你的设备间保持一致。"
+          className="nook-modal nook-sync-modal"
+          closeLabel="关闭同步设置"
         >
-          <section className="nook-modal nook-sync-modal" role="dialog" aria-modal="true" aria-label="数据同步">
-            <div className="nook-heading">
-              <div className="nook-sync-title">
-                <h2>数据同步</h2>
-                <span className="nook-sync-status" role="status">
-                  {label}
-                </span>
-              </div>
-              <button type="button" aria-label="关闭同步设置" disabled={busy} onClick={() => setOpen(false)}>
-                <X size={18} aria-hidden="true" />
-              </button>
-            </div>
-            {(error || status?.error) && (
-              <p className="nook-error" role="alert">
-                {error || status?.error}
+          <div className="nook-sync-overview">
+            <span className="nook-sync-symbol">
+              <Cloud size={22} aria-hidden="true" />
+            </span>
+            <div>
+              <p className="nook-sync-status" role="status">
+                {label}
               </p>
-            )}
-            <div className="nook-sync-tabs" role="tablist" aria-label="数据同步视图">
-              {(
-                [
-                  { key: 'status', label: '同步信息' },
-                  { key: 'configuration', label: '配置' },
-                ] as const
-              ).map(item => (
-                <button
-                  key={item.key}
-                  id={`${tabId}-${item.key}-tab`}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === item.key}
-                  aria-controls={`${tabId}-${item.key}-panel`}
-                  tabIndex={tab === item.key ? 0 : -1}
-                  onClick={() => setTab(item.key)}
-                  onKeyDown={event => {
-                    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-                    event.preventDefault()
-                    const next =
-                      event.key === 'Home'
-                        ? 'status'
-                        : event.key === 'End'
-                          ? 'configuration'
-                          : tab === 'status'
-                            ? 'configuration'
-                            : 'status'
-                    setTab(next)
-                    event.currentTarget.parentElement
-                      ?.querySelector<HTMLButtonElement>(`[id="${tabId}-${next}-tab"]`)
-                      ?.focus()
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
+              <p className="nook-muted">
+                {status?.enabled ? '自动同步 · 本地保留完整副本' : '本地笔记照常保存，随时可以开启同步'}
+              </p>
             </div>
-            <div
-              role="tabpanel"
-              id={`${tabId}-configuration-panel`}
-              aria-labelledby={`${tabId}-configuration-tab`}
-              hidden={tab !== 'configuration'}
-            >
-              <p className="nook-sync-manual-guide">
+          </div>
+          {(error || status?.error) && (
+            <p className="nook-error" role="alert">
+              {error || status?.error}
+            </p>
+          )}
+          <Tabs
+            value={tab}
+            onValueChange={next => setTab(next as typeof tab)}
+            tabs={[
+              { value: 'status', label: '同步信息' },
+              { value: 'configuration', label: '配置' },
+            ]}
+          >
+            <TabPanel value="configuration" className="nui-tab-panel">
+              <div className="nook-sync-manual-guide">
+                <div>
+                  <h3>连接你的同步服务</h3>
+                  <p className="nook-muted">导入连接信息，或填写已有 WebDAV 目录。</p>
+                </div>
                 <a className="nook-sync-guide-entry" href="#nook-sync-guide">
                   配置指南 ↗
                 </a>
-              </p>
+              </div>
               <div className="nook-sync-import">
                 <div className="nook-sync-import-heading">
                   <span>{imported ? '连接信息已导入' : '连接信息'}</span>
-                  <button type="button" disabled={busy} onClick={() => importInput.current?.click()}>
+                  <Button disabled={busy} onClick={() => importInput.current?.click()}>
                     导入连接配置
-                  </button>
+                  </Button>
                 </div>
                 {!imported && (
-                  <textarea
+                  <Textarea
                     aria-label="粘贴连接信息"
                     rows={2}
                     autoComplete="off"
@@ -242,8 +214,7 @@ export function SyncControl({
                   />
                 )}
                 {imported && (
-                  <button
-                    type="button"
+                  <Button
                     disabled={busy}
                     onClick={() => {
                       setImported(false)
@@ -251,11 +222,10 @@ export function SyncControl({
                     }}
                   >
                     使用其他连接信息
-                  </button>
+                  </Button>
                 )}
                 <input
                   ref={importInput}
-                  hidden
                   type="file"
                   accept=".json,application/json"
                   aria-label="连接配置文件"
@@ -285,6 +255,7 @@ export function SyncControl({
                 <p className="nook-muted">{imported ? '请核对下方地址与目标服务。' : '包含密码，请勿分享。'}</p>
               </div>
               <form
+                id="nook-sync-configuration"
                 onSubmit={event => {
                   event.preventDefault()
                   void operation(async () => {
@@ -302,7 +273,7 @@ export function SyncControl({
               >
                 <label>
                   WebDAV 同步目录
-                  <input
+                  <Input
                     required
                     type="url"
                     placeholder="https://example.com/dav/nook/"
@@ -315,7 +286,7 @@ export function SyncControl({
                   <summary>账号与证书</summary>
                   <label>
                     存储用户名
-                    <input
+                    <Input
                       autoComplete="off"
                       value={username}
                       onChange={e => setUsername(e.target.value)}
@@ -324,7 +295,7 @@ export function SyncControl({
                   </label>
                   <label>
                     存储密码或应用令牌
-                    <input
+                    <Input
                       type="password"
                       autoComplete="new-password"
                       placeholder={status?.hasPassword ? '留空保留已保存的凭据' : ''}
@@ -335,7 +306,7 @@ export function SyncControl({
                   </label>
                   <label>
                     服务器 CA 证书（可选）
-                    <textarea
+                    <Textarea
                       rows={3}
                       placeholder="粘贴 CA 证书；公开可信证书可留空"
                       value={caCert}
@@ -351,28 +322,25 @@ export function SyncControl({
                     Nook 专用目录。
                   </p>
                 </details>
-                <div className="nook-sync-footer">
-                  <div className="nook-actions">
-                    <button type="submit" disabled={busy || !!connectionText.trim()}>
-                      {busy ? '处理中…' : status?.enabled ? '保存配置' : '验证并开启同步'}
-                    </button>
-                  </div>
-                </div>
               </form>
-            </div>
-            <div
-              role="tabpanel"
-              id={`${tabId}-status-panel`}
-              aria-labelledby={`${tabId}-status-tab`}
-              hidden={tab !== 'status'}
-            >
+            </TabPanel>
+            <TabPanel value="status" className="nui-tab-panel">
               {!status ? (
                 <p role="status">正在读取同步信息…</p>
               ) : !status.url ? (
                 <div className="nook-sync-empty">
-                  <button type="button" disabled={busy} onClick={() => void operation(onDeploy)}>
+                  <span className="nook-sync-empty-icon">
+                    <Cloud size={32} aria-hidden="true" />
+                  </span>
+                  <h3>在每台设备上，接着记录</h3>
+                  <p className="nook-muted">
+                    连接同步服务后，笔记和项目会自动同步。
+                    <br />
+                    可以让安装助手协助配置，也可以在「配置」中接入已有服务。
+                  </p>
+                  <Button variant="accent" disabled={busy} onClick={() => void operation(onDeploy)}>
                     {busy ? '正在打开…' : '去配置'}
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <>
@@ -400,15 +368,14 @@ export function SyncControl({
                   <div className="nook-actions">
                     {status.enabled ? (
                       <>
-                        <button
-                          type="button"
+                        <Button
+                          variant="accent"
                           disabled={busy}
                           onClick={() => void operation(() => api('run', {}, lifecycle.current?.signal))}
                         >
                           <RefreshCw size={14} aria-hidden="true" /> 立即同步
-                        </button>
-                        <button
-                          type="button"
+                        </Button>
+                        <Button
                           disabled={busy}
                           onClick={() =>
                             void operation(() =>
@@ -421,11 +388,11 @@ export function SyncControl({
                           }
                         >
                           关闭同步
-                        </button>
+                        </Button>
                       </>
                     ) : (
-                      <button
-                        type="button"
+                      <Button
+                        variant="accent"
                         disabled={busy}
                         onClick={() =>
                           void operation(async () => {
@@ -439,14 +406,31 @@ export function SyncControl({
                         }
                       >
                         开启同步
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </>
               )}
-            </div>
-          </section>
-        </div>
+            </TabPanel>
+          </Tabs>
+          <div className="nook-sync-footer">
+            <span className="nook-muted">仅同步笔记与项目</span>
+            {tab === 'configuration' ? (
+              <Button
+                form="nook-sync-configuration"
+                type="submit"
+                variant="accent"
+                disabled={busy || !!connectionText.trim()}
+              >
+                {busy ? '处理中…' : status?.enabled ? '保存配置' : '验证并开启同步'}
+              </Button>
+            ) : (
+              <Button disabled={busy} onClick={() => setOpen(false)}>
+                完成
+              </Button>
+            )}
+          </div>
+        </Dialog>
       )}
     </>
   )

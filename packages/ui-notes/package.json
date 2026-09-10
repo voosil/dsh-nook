@@ -21,6 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "@nook-dsh/adapter-notes-dsh": "workspace:*",
+    "@nook-dsh/ui-kit": "workspace:*",
     "@nook-dsh/capability-note": "workspace:*",
     "@nook-dsh/capability-project": "workspace:*",
     "@tiptap/core": "3.31.3",

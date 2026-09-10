@@ -1,68 +1,42 @@
 import { NotebookPen } from 'lucide-react'
-import { useState, type CSSProperties } from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import { Button, uiKitStyles } from '@nook-dsh/ui-kit'
 
 export const inject = ['slots']
 
 type SidebarProps = PropsRuntime<'sidebar.footer.action'>
 
-const ROOT_STYLE: CSSProperties = {
-  position: 'relative',
-  display: 'flex',
-  width: '100%',
-}
+// Layout only; the button skin (colors, hover, press) comes from @nook-dsh/ui-kit.
+const styles = `${uiKitStyles}
+.nook-sidebar-action { display: flex; width: 100%; }
+.nook-sidebar-action .nui-btn { border-radius: 10px; }
+.nook-sidebar-action .nui-btn:not(.nui-btn--icon) {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 9px;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+}`
 
 function NookSidebarAction({ wide }: SidebarProps) {
-  const [active, setActive] = useState(false)
-  const [hovered, setHovered] = useState(false)
-
-  const buttonStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: wide ? 'flex-start' : 'center',
-    gap: 9,
-    width: wide ? '100%' : 36,
-    height: 36,
-    padding: wide ? '0 10px' : 0,
-    border: 0,
-    borderRadius: 10,
-    background: hovered ? 'var(--dsw-alias-interactive-bg-hover)' : 'transparent',
-    color: 'var(--dsw-alias-label-primary)',
-    font: 'inherit',
-    fontSize: 13,
-    fontWeight: 500,
-    lineHeight: '20px',
-    cursor: 'pointer',
-    touchAction: 'manipulation',
-    transform: active ? 'scale(0.96)' : 'scale(1)',
-    transition: 'transform 120ms cubic-bezier(0.16, 1, 0.3, 1)',
-  }
-
   return (
-    <div style={ROOT_STYLE}>
-      <button
-        type="button"
+    <div className="nook-sidebar-action">
+      <style>{styles}</style>
+      <Button
+        iconOnly={!wide}
         aria-label="打开 Nook"
-        style={buttonStyle}
         onClick={() => {
           window.location.hash = 'nook'
         }}
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => {
-          setHovered(false)
-          setActive(false)
-        }}
-        onPointerDown={() => setActive(true)}
-        onPointerUp={() => setActive(false)}
-        onFocus={() => setHovered(true)}
-        onBlur={() => setHovered(false)}
       >
-        <NotebookPen size={18} aria-hidden="true" style={{ flexShrink: 0, color: 'oklch(70% 0.13 55)' }} />
+        <NotebookPen size={18} aria-hidden="true" style={{ flexShrink: 0, color: 'var(--nook-color-accent)' }} />
         {wide && <span>Nook</span>}
-      </button>
+      </Button>
     </div>
   )
 }

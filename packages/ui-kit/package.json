@@ -1,0 +1,33 @@
+{
+  "name": "@nook-dsh/ui-kit",
+  "version": "0.1.0",
+  "description": "Nook shared UI kit: paper-tone design tokens and base-ui components",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "styles"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@base-ui-components/react": "1.0.0-rc.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web"
+    }
+  }
+}

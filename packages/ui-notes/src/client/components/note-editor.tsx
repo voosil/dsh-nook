@@ -6,7 +6,7 @@ import type { Api } from '../lib/api.js'
 import { NoteHistory } from './note-history.js'
 import { Autosave, type SavedDraft } from '../lib/autosave.js'
 import { fullDate, sourceLabels } from '../lib/note-format.js'
-import { Button } from './button.js'
+import { Button, Input, Select } from '@nook-dsh/ui-kit'
 import { RichEditor } from './rich-editor.js'
 
 const draftKey = (id: string) => `nook.note-draft.v1.${id}`
@@ -228,7 +228,7 @@ export function NoteEditor({
         </div>
       )}
       <div className="nook-paper">
-        <input
+        <Input
           className="nook-title"
           aria-label="笔记标题"
           placeholder="无标题笔记"
@@ -238,24 +238,24 @@ export function NoteEditor({
           onChange={event => change({ ...input, title: event.target.value })}
         />
         <div className="nook-meta">
-          <select
+          <Select
+            variant="ghost"
             aria-label="笔记所属项目"
             value={input.projectId ?? ''}
             disabled={disabled || busy || historyOpen || !!note.deletedAt}
-            onChange={event => change({ ...input, projectId: event.target.value || null })}
-          >
-            <option value="">未分类</option>
-            {projects.map(project => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
+            onValueChange={value => change({ ...input, projectId: value || null })}
+            options={[
+              { value: '', label: '未分类' },
+              ...projects.map(project => ({ value: project.id, label: project.name })),
+            ]}
+          />
           <span title={fullDate(note.createdAt)}>创建于 {fullDate(note.createdAt)}</span>
           <span title={fullDate(note.updatedAt)}>更新于 {fullDate(note.updatedAt)}</span>
           <Button
+            variant="ghost"
+            className="nook-pin"
             disabled={disabled || busy || historyOpen || !!note.deletedAt}
-            active={input.pinned}
+            aria-pressed={input.pinned}
             onClick={() => change({ ...input, pinned: !input.pinned })}
           >
             <Star size={14} fill={input.pinned ? 'currentColor' : 'none'} aria-hidden="true" />

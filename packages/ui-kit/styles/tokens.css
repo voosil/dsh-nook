@@ -1,0 +1,82 @@
+/*
+ * Nook 色卡 — 全部 UI 颜色的唯一来源。
+ *
+ * 值为 Nook 现有纸感调色板（取自 ui-notes 迁移前的样式），固定配色、不随宿主主题变化。
+ * 规则：
+ * - 仓库内任何其它文件禁止出现原始色值（stylelint + scripts/verify/verify-ui-tokens.mjs 双门禁）。
+ * - 新增颜色先在本文件加 token，页面只写 var(--nook-color-*)。
+ * - 近似色已合并：允许 ±10 以内的差异归入同一 token，保持色卡精简。
+ */
+:root {
+  /* 表面 —— 背景与浮面 */
+  --nook-color-bg: #fbfaf7; /* 工作台背景（纸面） */
+  --nook-color-surface: #fffefb; /* 输入框、菜单、浮卡底色 */
+  --nook-color-sunken: #f2f3ec; /* 凹陷表面：搜索框、页内选择器、代码块底 */
+  --nook-color-nav: #f1f0e9; /* 侧栏导航面板 */
+
+  /* 填充与描边 */
+  --nook-color-hover: #e9ece4; /* 悬停填充；也用于选中卡片、状态药丸 */
+  --nook-color-border: #e6e8df; /* 描边、分隔线、引用块竖线 */
+
+  --nook-color-button: #e7ece5; /* 次操作轻填充 */
+  --nook-color-button-hover: #dbe3d8;
+  --nook-color-button-pressed: #cdd9ca;
+  --nook-color-danger-soft: #f5e8e4;
+  --nook-color-danger-hover: #efd9d2;
+
+  --nook-color-control-border: #a8b3a8; /* 可交互控件描边 */
+  --nook-color-focus: #73917a;
+
+  /* 文字 */
+  --nook-color-ink: #293a32; /* 主文字 */
+  --nook-color-ink-muted: #66746b; /* 次要文字、正文内的弱化段落 */
+  --nook-color-ink-faint: #b5bcb0; /* 占位符、时间戳等装饰性弱文字 */
+
+  /* 品牌 —— 绿 */
+  --nook-color-accent: #42674e; /* 品牌绿：accent 按钮底、链接、强调文字 */
+  --nook-color-accent-strong: #36563e; /* accent 悬停底、导航选中文字 */
+  --nook-color-accent-soft: #a8b39d; /* 装饰性绿：欢迎页图标、项目卡小标 */
+  --nook-color-accent-contrast: #fff; /* accent 底上的文字 */
+
+  /* 语义色 */
+  --nook-color-danger: #a74336; /* 危险操作文字 */
+  --nook-color-warn-bg: #fff2e8; /* 警示底（错误条） */
+  --nook-color-warn-ink: #975a36; /* 警示文字 */
+
+  /* 特殊用途 */
+  --nook-color-backdrop: #293a3244; /* 弹窗遮罩（带透明度的墨色） */
+  --nook-color-mark: #d9b74c33; /* 历史差异高亮底 */
+
+  /* 尺寸与字体 */
+  --nook-radius: 6px; /* 按钮 / 输入框 */
+  --nook-radius-md: 10px; /* 侧栏按钮、弹层、卡片 */
+  --nook-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+
+  --nook-radius-lg: 16px;
+  --nook-space-1: 4px;
+  --nook-space-2: 8px;
+  --nook-space-3: 12px;
+  --nook-space-4: 16px;
+  --nook-space-6: 24px;
+  --nook-space-8: 32px;
+
+  /* 高频操作只变颜色；浮层只淡入淡出，不缩放或弹跳。 */
+  --nook-motion-fast: 120ms;
+  --nook-motion-base: 200ms;
+  --nook-motion-slow: 300ms;
+  --nook-ease-enter: cubic-bezier(0.2, 0, 0, 1);
+  --nook-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* 阴影与层级 */
+  --nook-shadow-dialog: 0 15px 65px #20302022; /* 弹窗阴影 */
+  --nook-shadow-menu: 0 8px 30px #293a3226; /* 菜单 / Toast 阴影 */
+  --nook-z-dialog: 300; /* 弹层 z-index（工作台 overlay 是 180，弹层须在其上） */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --nook-motion-fast: 0ms;
+    --nook-motion-base: 0ms;
+    --nook-motion-slow: 0ms;
+  }
+}

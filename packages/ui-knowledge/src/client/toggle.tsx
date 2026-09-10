@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { Api } from './index.js'
 import type { Value } from '@nook-dsh/adapter-knowledge-dsh/rpc'
+import { Button, Select, Switch, uiKitStyles } from '@nook-dsh/ui-kit'
+
+const rowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }
 
 export function KnowledgeToggle({
   sessionId,
@@ -49,36 +52,33 @@ export function KnowledgeToggle({
     }
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-      <label title="开启后，每次发送问题都会检索笔记并提供引用">
-        <input
-          type="checkbox"
-          aria-label="使用 Nook 知识库"
-          checked={selection?.enabled ?? false}
-          disabled={!selection || busy}
-          onChange={event => void change({ enabled: event.target.checked, projectId: selection?.projectId ?? null })}
-        />{' '}
+    <div style={rowStyle}>
+      <style>{uiKitStyles}</style>
+      <Switch
+        title="开启后，每次发送问题都会检索笔记并提供引用"
+        label="使用 Nook 知识库"
+        checked={selection?.enabled ?? false}
+        disabled={!selection || busy}
+        onCheckedChange={checked => void change({ enabled: checked, projectId: selection?.projectId ?? null })}
+      >
         知识库{busy ? '…' : ''}
-      </label>
+      </Switch>
       {selection?.enabled && (
-        <select
+        <Select
           aria-label="知识库检索项目"
-          style={{ maxWidth: 140, background: 'transparent', color: 'inherit' }}
+          style={{ maxWidth: 140 }}
           value={selection.projectId ?? ''}
           disabled={busy}
-          onChange={event => void change({ enabled: true, projectId: event.target.value || null })}
-        >
-          <option value="">全部项目</option>
-          {projects.map(project => (
-            <option value={project.id} key={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+          onValueChange={value => void change({ enabled: true, projectId: value || null })}
+          options={[
+            { value: '', label: '全部项目' },
+            ...projects.map(project => ({ value: project.id, label: project.name })),
+          ]}
+        />
       )}
       {error && (
         <span role="alert" title={error}>
-          设置失败 <button onClick={() => void change(selection ?? { enabled: false, projectId: null })}>重试</button>
+          设置失败 <Button onClick={() => void change(selection ?? { enabled: false, projectId: null })}>重试</Button>
         </span>
       )}
     </div>

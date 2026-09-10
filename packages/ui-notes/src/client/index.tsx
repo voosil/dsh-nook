@@ -10,6 +10,7 @@ import { notebookApi } from './lib/api.js'
 import { syncApi } from './lib/sync-api.js'
 import { NotebookApp } from './components/notebook-app.js'
 import { openSyncDeployment } from './lib/sync-deployment.js'
+import { uiKitStyles } from '@nook-dsh/ui-kit'
 import css from './styles/index.css'
 
 export type { Api } from './lib/api.js'
@@ -55,6 +56,7 @@ function mountWorkspace(ctx: ClientContext): void {
     )
     return visible ? (
       <>
+        <style>{uiKitStyles}</style>
         <style>{css}</style>
         <NotebookApp
           api={api}

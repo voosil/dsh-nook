@@ -5,7 +5,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from '@tiptap/markdown'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
 import { TextSelection } from '@tiptap/pm/state'
-import { Button } from './button.js'
+import { Button } from '@nook-dsh/ui-kit'
 
 export function RichEditor({
   markdown,
@@ -70,6 +70,7 @@ export function RichEditor({
       {!disabled && (
         <div className="nook-toolbar" role="toolbar" aria-label="正文格式">
           <Button
+            variant="ghost"
             title="标题"
             onClick={() => {
               editor?.chain().focus().toggleHeading({ level: 2 }).run()
@@ -78,6 +79,7 @@ export function RichEditor({
             <Heading2 size={16} aria-hidden="true" />
           </Button>
           <Button
+            variant="ghost"
             title="粗体"
             onClick={() => {
               editor?.chain().focus().toggleBold().run()
@@ -86,6 +88,7 @@ export function RichEditor({
             <Bold size={16} aria-hidden="true" />
           </Button>
           <Button
+            variant="ghost"
             title="斜体"
             onClick={() => {
               editor?.chain().focus().toggleItalic().run()
@@ -94,6 +97,7 @@ export function RichEditor({
             <Italic size={16} aria-hidden="true" />
           </Button>
           <Button
+            variant="ghost"
             title="无序列表"
             onClick={() => {
               editor?.chain().focus().toggleBulletList().run()
@@ -102,6 +106,7 @@ export function RichEditor({
             <List size={16} aria-hidden="true" /> 列表
           </Button>
           <Button
+            variant="ghost"
             title="待办清单"
             onClick={() => {
               editor?.chain().focus().toggleTaskList().run()
@@ -110,6 +115,7 @@ export function RichEditor({
             <ListChecks size={16} aria-hidden="true" /> 待办
           </Button>
           <Button
+            variant="ghost"
             title="引用"
             onClick={() => {
               editor?.chain().focus().toggleBlockquote().run()
@@ -118,6 +124,7 @@ export function RichEditor({
             <Quote size={16} aria-hidden="true" /> 引用
           </Button>
           <Button
+            variant="ghost"
             title="代码块"
             onClick={() => {
               editor?.chain().focus().toggleCodeBlock().run()
@@ -126,6 +133,7 @@ export function RichEditor({
             <Code size={16} aria-hidden="true" />
           </Button>
           <Button
+            variant="ghost"
             title="撤销"
             onClick={() => {
               editor?.chain().focus().undo().run()
@@ -134,6 +142,7 @@ export function RichEditor({
             <Undo2 size={16} aria-hidden="true" />
           </Button>
           <Button
+            variant="ghost"
             title="重做"
             onClick={() => {
               editor?.chain().focus().redo().run()

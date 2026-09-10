@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { Button, Textarea } from '@nook-dsh/ui-kit'
 import { syncConfigurationPrompt } from '../lib/sync-deployment.js'
-
 declare const __NOOK_SYNC_ASSISTANT_COMMAND__: string
 
 export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => void; onDeploy: () => Promise<void> }) {
@@ -16,8 +16,7 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
       <h2>配置同步</h2>
       <p>让 AI 帮你部署同步服务或连接已有服务，根据实际环境完成配置和验证。</p>
       <div className="nook-sync-guide-actions">
-        <button
-          type="button"
+        <Button
           disabled={opening}
           onClick={async () => {
             setOpening(true)
@@ -32,9 +31,8 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
           }}
         >
           {opening ? '正在打开同步配置对话…' : '让 AI 帮我配置'}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(prompt)
@@ -47,14 +45,14 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
           }}
         >
           {promptCopied ? '已复制提示词' : '复制提示词'}
-        </button>
+        </Button>
       </div>
       <p>进入对话后发送已填好的请求，或复制提示词交给其他 AI。提示词附有同步指南。</p>
       {openError && <p role="alert">{openError}</p>}
       {promptFailed && <p role="alert">无法访问剪贴板，请从下方复制提示词。</p>}
       <details open={promptFailed || undefined}>
         <summary>查看提示词</summary>
-        <textarea
+        <Textarea
           aria-label="同步配置提示词"
           rows={8}
           readOnly
@@ -64,9 +62,7 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
       </details>
       <details>
         <summary>手动配置</summary>
-        <button type="button" onClick={onConnect}>
-          连接已有服务
-        </button>
+        <Button onClick={onConnect}>连接已有服务</Button>
         <p>需要新建服务时，可使用以下安装助手。</p>
         <ol>
           <li>在服务器终端复制并执行下方安装命令。</li>
@@ -74,8 +70,7 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
           <li>复制终端输出的连接信息，返回数据同步粘贴并验证。</li>
         </ol>
         <div className="nook-sync-guide-actions">
-          <button
-            type="button"
+          <Button
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(__NOOK_SYNC_ASSISTANT_COMMAND__)
@@ -87,15 +82,13 @@ export function SyncAssistantGuide({ onConnect, onDeploy }: { onConnect: () => v
             }}
           >
             {copied ? '已复制安装命令' : '复制服务器安装命令'}
-          </button>
-          <button type="button" onClick={onConnect}>
-            已安装，粘贴连接信息
-          </button>
+          </Button>
+          <Button onClick={onConnect}>已安装，粘贴连接信息</Button>
         </div>
         {failed && <p role="alert">无法访问剪贴板，请展开下方命令并复制。</p>}
         <details open={failed || undefined}>
           <summary>查看安装命令</summary>
-          <textarea
+          <Textarea
             aria-label="服务器安装命令"
             rows={4}
             readOnly

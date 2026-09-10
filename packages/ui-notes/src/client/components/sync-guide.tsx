@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
+import { Button, Textarea } from '@nook-dsh/ui-kit'
 import { SyncAssistantGuide } from './sync-assistant-guide.js'
 declare const __NOOK_SYNC_SETUP_SOURCE__: string
 declare const __NOOK_SYNC_SETUP_COMMAND__: string
@@ -18,9 +19,7 @@ export function SyncGuidePage({ onBack, onDeploy }: { onBack: () => void; onDepl
   return (
     <section className="nook-sync-guide-page" aria-label="同步配置指南">
       <header className="nook-sync-guide-header">
-        <button type="button" onClick={onBack}>
-          ← 返回数据同步
-        </button>
+        <Button onClick={onBack}>← 返回数据同步</Button>
         <span>Nook / 使用指南</span>
       </header>
       <article className="nook-sync-guide-body">
@@ -105,8 +104,7 @@ export function SyncGuidePage({ onBack, onDeploy }: { onBack: () => void; onDepl
             <li>选择部署环境，填写访问地址和端口。域名模式还会询问证书通知邮箱及是否接受证书服务条款。</li>
           </ol>
           <div className="nook-sync-guide-actions">
-            <button
-              type="button"
+            <Button
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(__NOOK_SYNC_SETUP_COMMAND__)
@@ -118,7 +116,7 @@ export function SyncGuidePage({ onBack, onDeploy }: { onBack: () => void; onDepl
               }}
             >
               {copied ? '已复制配置命令' : '复制一键配置命令'}
-            </button>
+            </Button>
             <a
               download="nook-sync-setup.py"
               href={'data:text/x-python;charset=utf-8,' + encodeURIComponent(__NOOK_SYNC_SETUP_SOURCE__)}
@@ -133,7 +131,7 @@ export function SyncGuidePage({ onBack, onDeploy }: { onBack: () => void; onDepl
           {copyError && <p role="alert">剪贴板不可用，请展开完整命令后手动复制。</p>}
           <details>
             <summary>查看完整的一行命令</summary>
-            <textarea
+            <Textarea
               aria-label="一键配置命令"
               readOnly
               rows={4}

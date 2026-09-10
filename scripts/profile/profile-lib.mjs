@@ -39,6 +39,7 @@ export const LOCAL_PACKAGES = [
   'feature-notes',
   'adapter-notes-dsh',
   'ui-notes',
+  'ui-kit',
 
   'capability-project',
   'capability-browser',

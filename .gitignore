@@ -12,3 +12,4 @@ coverage/
 __pycache__/
 apps/desktop/dist/
 apps/desktop/resources/
+.playwright-mcp/
