@@ -26,6 +26,12 @@
     },
     {
       "path": "../capability-sync"
+    },
+    {
+      "path": "../capability-update"
+    },
+    {
+      "path": "../adapter-update-dsh"
     }
   ]
 }

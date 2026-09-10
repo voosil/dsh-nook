@@ -55,7 +55,10 @@
     "@nook-dsh/storage-sync": "workspace:*",
     "@nook-dsh/adapter-sync-webdav": "workspace:*",
     "@nook-dsh/feature-sync": "workspace:*",
-    "@nook-dsh/adapter-sync-dsh": "workspace:*"
+    "@nook-dsh/adapter-sync-dsh": "workspace:*",
+    "@nook-dsh/capability-update": "workspace:*",
+    "@nook-dsh/provider-update-local": "workspace:*",
+    "@nook-dsh/adapter-update-dsh": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.2",

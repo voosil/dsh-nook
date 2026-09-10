@@ -111,6 +111,15 @@
     },
     {
       "path": "packages/ui-knowledge"
+    },
+    {
+      "path": "packages/capability-update"
+    },
+    {
+      "path": "packages/provider-update-local"
+    },
+    {
+      "path": "packages/adapter-update-dsh"
     }
   ]
 }

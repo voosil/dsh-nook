@@ -8,6 +8,7 @@ import { NoteExports } from './note-export.js'
 import type { RuntimeConfig } from './payload.js'
 import { canonicalPath, externalUrl, redact, sameRuntimeUrl, within } from './policy.js'
 import { DesktopRuntime } from './runtime.js'
+import { readActiveUpdate } from './update.js'
 import { SharedRuntime } from './shared-client.js'
 import { userState } from './shared-paths.js'
 
@@ -98,6 +99,8 @@ async function startDesktop() {
           : new SharedRuntime(
               state,
               async () => {
+                const active = await readActiveUpdate(state)
+                if (active) return active.launch
                 const seed = join(process.resourcesPath, 'runtime')
                 return {
                   node: join(seed, 'payload/node/bin/node'),

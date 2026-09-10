@@ -6,6 +6,7 @@ import { createServer } from 'node:net'
 import { dirname, join, relative, resolve } from 'node:path'
 import { test, type TestContext } from 'node:test'
 import { promisify } from 'node:util'
+import { pathToFileURL } from 'node:url'
 import { ROOT } from '../../scripts/profile/profile-lib.mjs'
 
 const execute = promisify(execFile)
@@ -25,6 +26,9 @@ async function launcherFixture(t: TestContext) {
       await writeFile('lib/client.js', source)
     `,
     '.dsh-dev/profiles/nook/package.json': JSON.stringify({
+      dependencies: { '@fixture/plugin': 'link:../../../packages/plugin' },
+    }),
+    'profile-source.json': JSON.stringify({
       dependencies: { '@fixture/plugin': 'link:../../../packages/plugin' },
     }),
     '.dsh-dev/profiles/nook/cordis.patch.yml': '[]',
@@ -60,7 +64,6 @@ async function launcherFixture(t: TestContext) {
   await symlink(relative(dirname(pluginLink), resolve(root, 'packages/plugin')), pluginLink, 'dir')
   for (const script of [
     'profile/run-profile.mjs',
-    'profile/profile-lib.mjs',
     'profile/run-profile-args.mjs',
     'profile/web-port.mjs',
     'shared/process-scope.mjs',
@@ -72,6 +75,20 @@ async function launcherFixture(t: TestContext) {
     await mkdir(dirname(target), { recursive: true })
     await copyFile(resolve(ROOT, 'scripts', script), target)
   }
+  // Keep dependency installation real, with a local-only Profile in place of
+  // the product's external runtime. Profile generation has its own coverage.
+  await writeFile(
+    resolve(root, 'scripts/profile/profile-lib.mjs'),
+    `
+      import { copyFile } from 'node:fs/promises'
+      import { resolve } from 'node:path'
+      export * from ${JSON.stringify(pathToFileURL(resolve(ROOT, 'scripts/profile/profile-lib.mjs')).href)}
+      export const ROOT = resolve(import.meta.dirname, '../..')
+      export const PROFILE_DIR = resolve(ROOT, '.dsh-dev/profiles/nook')
+      export const dshBin = () => resolve(ROOT, 'node_modules/@deepseek-ai/dsh/lib/bin.js')
+      export const writeDevProfile = () => copyFile(resolve(ROOT, 'profile-source.json'), resolve(PROFILE_DIR, 'package.json'))
+    `,
+  )
 
   return {
     root,
@@ -99,6 +116,31 @@ for (const args of [[], ['--safe-ui']]) {
     assert.equal(await readFile(resolve(root, 'booted.txt'), 'utf8'), 'updated source')
   })
 }
+
+for (const declared of [false, true]) {
+  test(`dev repairs a missing dependency link when the cached manifest ${declared ? 'declares' : 'omits'} it`, async t => {
+    const { root, launch } = await launcherFixture(t)
+    const manifest = await readFile(resolve(root, 'profile-source.json'), 'utf8')
+    if (!declared) await writeFile(resolve(root, '.dsh-dev/profiles/nook/package.json'), '{"dependencies":{}}')
+    await rm(resolve(root, '.dsh-dev/profiles/nook/node_modules/@fixture/plugin'))
+    await launch()
+    assert.equal(await readFile(resolve(root, 'booted.txt'), 'utf8'), 'first build')
+    assert.deepEqual(
+      JSON.parse(await readFile(resolve(root, '.dsh-dev/profiles/nook/package.json'), 'utf8')),
+      JSON.parse(manifest),
+    )
+  })
+}
+
+test('dev stops before boot when Profile dependency installation fails', async t => {
+  const { root, launch } = await launcherFixture(t)
+  await writeFile(
+    resolve(root, 'profile-source.json'),
+    JSON.stringify({ dependencies: { '@fixture/missing': 'file:../../../missing-package' } }),
+  )
+  await assert.rejects(launch(), /missing-package/)
+  await assert.rejects(readFile(resolve(root, 'booted.txt')), { code: 'ENOENT' })
+})
 
 test('dev stops before boot when the build fails', async t => {
   const { root, launch } = await launcherFixture(t)

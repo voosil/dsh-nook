@@ -20,6 +20,8 @@ Local persistence providers share a [backup library](../packages/storage-backup/
 
 The [Sync capability](../packages/capability-sync/src/index.ts) separates type registration, transactional replica storage and remote object access. The notebook provider supplies projects, notes, knowledge and the replica from one SQLite transaction owner; the sync feature orchestrates records and blob dependencies through the WebDAV adapter. The [merge adapter](../packages/adapter-merge-automerge/README.md) isolates Automerge in a lifecycle-owned worker. The [sync contract](../packages/feature-sync/README.md) owns wire format, limits, automatic merge semantics, note history and target compatibility.
 
+The [Update capability](../packages/capability-update/src/index.ts) separates authenticated application commands from the local broker that owns source preparation and runtime replacement. The DSH adapter exposes fixed commands; the local provider sends them over the private control connection. Updating uses normal Host shutdown to stop active tasks. User behavior belongs in the [update guide](update.md).
+
 ## Host and Client
 
 Host plugins own persistence, subprocesses, model requests and workflow lifetimes. Client plugins contribute through additive official Slots. The notes workspace uses the shell overlay and sidebar footer; the knowledge toggle uses session header actions. Nook-owned, schema-validated JSON DTOs cross the verified DSH Typert Gateway. No Session, Cordis service or React element crosses the boundary.

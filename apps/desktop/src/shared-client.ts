@@ -1,3 +1,4 @@
+import type { UpdateSource } from './update.js'
 import { spawn } from 'node:child_process'
 import { connect, type Socket } from 'node:net'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -8,6 +9,7 @@ import type { RuntimeConfig } from './payload.js'
 
 export interface BrokerOptions {
   state: string
+  update?: UpdateSource
   seed?: string
   config?: RuntimeConfig
   snapshot?: { seedProfile: string; node: string; supervisor: string }
@@ -61,6 +63,7 @@ export class SharedRuntime {
     prepare: () => Promise<BrokerLaunch>,
     log: (line: string) => void,
     failed: (error: Error) => void,
+    restarted?: (url: string) => void,
   ) {
     let resolveReady!: (url: string) => void
     let rejectReady!: (error: Error) => void
@@ -69,6 +72,7 @@ export class SharedRuntime {
       rejectReady = reject
     })
     void this.ready.catch(() => {})
+    let readySeen = false
     let rejected = false
     const reject = (error: Error) => {
       if (rejected) return
@@ -117,7 +121,11 @@ export class SharedRuntime {
             const url = launchUrl(`dsh web: ${value.url}`)
             if (!url) throw new Error('Invalid shared Nook URL')
             clearTimeout(timer)
-            resolveReady(url)
+            if (readySeen) restarted?.(url)
+            else {
+              readySeen = true
+              resolveReady(url)
+            }
           } else if (value.type === 'log' && typeof value.text === 'string') log(redact(value.text))
           else if (value.type === 'failure' && typeof value.message === 'string')
             reject(new Error(redact(value.message)))

@@ -1,7 +1,7 @@
 import { createServer } from 'node:net'
 import { once } from 'node:events'
 import { resolve } from 'node:path'
-import { dshBin, exists, PROFILE_DIR, ROOT, PNPM_VERSION, writeDevProfile } from './profile-lib.mjs'
+import { dshBin, PROFILE_DIR, ROOT, PNPM_VERSION, writeDevProfile } from './profile-lib.mjs'
 import { createProfileArgs, resolveDevPort } from './run-profile-args.mjs'
 import { selectWebPort } from './web-port.mjs'
 import { ProcessScope } from '../shared/process-scope.mjs'
@@ -39,14 +39,12 @@ try {
   await build()
   if (controller.signal.aborted) process.exitCode = 130
   else {
-    if (!(await exists(resolve(PROFILE_DIR, 'package.json')))) await writeDevProfile()
-    if (!(await exists(resolve(PROFILE_DIR, 'node_modules')))) {
-      await processes.run(
-        'corepack',
-        [`pnpm@${PNPM_VERSION}`, 'install', '--dir', PROFILE_DIR, '--no-frozen-lockfile'],
-        { cwd: ROOT, env: { ...process.env, CI: 'true' } },
-      )
-    }
+    // Existing Profiles can be missing links after a pull adds packages.
+    await writeDevProfile()
+    await processes.run('corepack', [`pnpm@${PNPM_VERSION}`, 'install', '--dir', PROFILE_DIR, '--no-frozen-lockfile'], {
+      cwd: ROOT,
+      env: { ...process.env, CI: 'true' },
+    })
     if (controller.signal.aborted) throw new Error('startup cancelled')
     sandbox = await createDevSandbox()
     const args = createProfileArgs(dshBin(), ROOT, inputArgs, {

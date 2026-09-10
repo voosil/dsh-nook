@@ -1,3 +1,7 @@
+import { randomUUID } from 'node:crypto'
+import { Updater, candidateLaunch, type Candidate, type UpdateSource } from './update.js'
+import { retainHome, recoverHome, commitHome } from './update-backup.js'
+import type { RuntimeConfig } from './payload.js'
 import { createWriteStream } from 'node:fs'
 import { chmod, lstat, mkdir, unlink } from 'node:fs/promises'
 import { createServer, type Socket } from 'node:net'
@@ -29,6 +33,8 @@ async function serve(options: BrokerOptions) {
   let written = 0
   const sockets = new Set<Socket>()
   const leases = new Set<Socket>()
+  let config: RuntimeConfig | undefined
+  const updateToken = randomUUID()
   let runtime: DesktopRuntime | undefined
   let url: string | undefined
   let stopping: Promise<void> | undefined
@@ -46,6 +52,56 @@ async function serve(options: BrokerOptions) {
     }
     for (const socket of leases) send(socket, { type: 'log', text })
   }
+  const backupModule = createRequire(join(profile, 'package.json')).resolve('@nook-dsh/storage-backup')
+  const backup = await import(pathToFileURL(backupModule).href)
+  let switching = false
+  const health = async (address: string) => {
+    const response = await fetch(address, { redirect: 'manual', signal: AbortSignal.timeout(10000) })
+    if (response.status !== 302 && response.status !== 303) throw new Error('更新后鉴权检查失败。')
+    const cookie = response.headers
+      .getSetCookie()
+      .map(value => value.split(';')[0])
+      .join('; ')
+    const page = await fetch(new URL('/', address), { headers: { cookie }, signal: AbortSignal.timeout(10000) })
+    if (!page.ok) throw new Error('更新后页面检查失败。')
+  }
+  const switchRuntime = async (candidate: Candidate, source: UpdateSource) => {
+    if (!config || !url) throw new Error('后端尚未就绪。')
+    switching = true
+    const previous = config,
+      port = Number(new URL(url).port)
+    previous.port = port
+    try {
+      await runtime!.stop()
+      await retainHome(state, backup)
+      config = await activateProfile({ state, ...candidate.snapshot })
+      config.updateControl = { socket: path, token: updateToken }
+      config.updateValidating = true
+      config.port = 0
+      runtime = new DesktopRuntime(config, writeLog, failure)
+      await health(await runtime.ready)
+      await runtime.stop()
+      config.updateValidating = false
+      config.port = port
+      runtime = new DesktopRuntime(config, writeLog, failure)
+      url = await runtime.ready
+      await health(url)
+      const launch = candidateLaunch(state, candidate, source, port)
+      await commitHome(state, { protocol: 1, launch })
+      for (const socket of leases) send(socket, { type: 'ready', url })
+    } catch (error) {
+      await runtime?.stop()
+      await recoverHome(state, backup)
+      config = previous
+      runtime = new DesktopRuntime(config, writeLog, failure)
+      url = await runtime.ready
+      for (const socket of leases) send(socket, { type: 'ready', url })
+      throw error
+    } finally {
+      switching = false
+    }
+  }
+  const updater = new Updater(state, options.update, writeLog, switchRuntime)
   const server = createServer(socket => {
     if (stopping) {
       socket.destroy()
@@ -56,7 +112,20 @@ async function serve(options: BrokerOptions) {
     const reader = lineReader(line => {
       try {
         const value = JSON.parse(line)
-        if (value.type === 'attach' && value.version === 1 && !leases.has(socket)) {
+        if (
+          value.type === 'update' &&
+          value.token === updateToken &&
+          ['status', 'check', 'start'].includes(value.command)
+        ) {
+          clearTimeout(timer)
+          void updater
+            .command(value.command)
+            .then(
+              status => send(socket, { type: 'update', status }),
+              () => send(socket, { error: '更新操作不可用，请稍后重试。' }),
+            )
+            .finally(() => socket.end())
+        } else if (value.type === 'attach' && value.version === 1 && !leases.has(socket)) {
           clearTimeout(timer)
           clearTimeout(unclaimed)
           leases.add(socket)
@@ -89,6 +158,7 @@ async function serve(options: BrokerOptions) {
       clearTimeout(unclaimed)
       abort.abort()
       const closed = new Promise<void>(resolve => server.close(() => resolve()))
+      await updater.dispose()
       await runtime?.stop()
       await starting
       await runtime?.stop()
@@ -111,7 +181,7 @@ async function serve(options: BrokerOptions) {
       process.umask(previousMask)
     })())
   const failure = (error: Error) => {
-    if (stopping) return
+    if (stopping || switching) return
     writeLog(String(error))
     for (const socket of leases) send(socket, { type: 'failure', message: redact(error.message) })
     void stop()
@@ -142,7 +212,8 @@ async function serve(options: BrokerOptions) {
     })
     if (process.platform !== 'win32') await chmod(path, 0o600)
     starting = (async () => {
-      const config = seed
+      await recoverHome(state, backup)
+      config = seed
         ? await installPayload(seed, state, abort.signal)
         : options.snapshot
           ? await activateProfile({ state, ...options.snapshot })
@@ -155,6 +226,7 @@ async function serve(options: BrokerOptions) {
       resumeMigrations(join(config.home, 'nook'), join(state, 'backups'))
       if (stopping) return
       config.port = options.port ?? 0
+      config.updateControl = { socket: path, token: updateToken }
       runtime = new DesktopRuntime(config, writeLog, failure)
       url = await runtime.ready
       if (!stopping) for (const socket of leases) send(socket, { type: 'ready', url })

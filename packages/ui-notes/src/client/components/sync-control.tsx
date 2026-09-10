@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Cloud, RefreshCw } from 'lucide-react'
 import { Button, Input, TabPanel, Tabs, Textarea } from '@nook-dsh/ui-kit'
 import { SettingsDialog } from './settings-dialog.js'
@@ -10,6 +10,7 @@ import type { SyncApi } from '../lib/sync-api.js'
 
 export function SyncControl({
   api,
+  update,
   onChanged,
   onDeploy,
   open,
@@ -22,6 +23,7 @@ export function SyncControl({
   appearance: Appearance
   onAppearanceChange: (appearance: Appearance) => void
   api: SyncApi
+  update?: ReactNode
   onChanged: (change: number) => void
   onDeploy: () => Promise<void>
 }) {
@@ -37,7 +39,7 @@ export function SyncControl({
   const [connectionText, setConnectionText] = useState('')
   const importInput = useRef<HTMLInputElement>(null)
   const [status, setStatus] = useState<SyncStatus | null>(null)
-  const [section, setSection] = useState<'appearance' | 'sync'>('appearance')
+  const [section, setSection] = useState<'appearance' | 'sync' | 'update'>('appearance')
   const setOpen = onOpenChange
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('')
@@ -150,6 +152,7 @@ export function SyncControl({
           }}
           section={section}
           onSectionChange={setSection}
+          update={update}
           appearance={appearance}
           onAppearanceChange={onAppearanceChange}
         >

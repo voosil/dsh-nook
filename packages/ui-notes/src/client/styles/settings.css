@@ -235,3 +235,22 @@
     flex-wrap: wrap;
   }
 }
+
+.nook-update-panel {
+  max-width: 920px;
+  margin: 0 auto;
+}
+.nook-update-panel h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 550;
+}
+.nook-update-panel p {
+  margin: 0 0 16px;
+}
+.nook-update-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: var(--nook-space-3);
+  flex-wrap: wrap;
+}

@@ -33,6 +33,24 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     const settings = workspace.getByRole('dialog', { name: '设置', exact: true })
     await settings.waitFor()
     assert.deepEqual(await settings.boundingBox(), { x: 0, y: 0, ...page.viewportSize() })
+    await settings.getByRole('button', { name: '应用更新', exact: true }).click()
+    await settings.getByRole('region', { name: '应用更新', exact: true }).waitFor()
+    await settings
+      .getByText('请从源码运行 pnpm start 以启用更新。', { exact: true })
+      .or(settings.getByText('请先从源码运行 pnpm start 以启用应用更新。', { exact: true }))
+      .waitFor()
+    assert.ok(await settings.getByRole('button', { name: '检查更新', exact: true }).isDisabled())
+    assert.equal(
+      await settings.getByRole('button', { name: '应用更新', exact: true }).getAttribute('aria-current'),
+      'page',
+    )
+    if (process.env.NOOK_UPDATE_SCREENSHOT) {
+      await settings.evaluate(async element => {
+        await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {})))
+      })
+      await page.screenshot({ path: process.env.NOOK_UPDATE_SCREENSHOT })
+    }
+    await settings.getByRole('button', { name: '外观', exact: true }).click()
     for (const [name, theme] of [
       ['Claude 暖纸', 'claude'],
       ['夜晚', 'night'],

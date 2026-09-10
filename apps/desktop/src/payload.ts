@@ -39,6 +39,8 @@ export interface RuntimeConfig {
   cwd: string
   profile: string
   port?: number
+  updateControl?: { socket: string; token: string }
+  updateValidating?: boolean
 }
 
 export async function inventory(root: string, signal?: AbortSignal): Promise<TreeEntry[]> {

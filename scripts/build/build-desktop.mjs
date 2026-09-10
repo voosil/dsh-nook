@@ -4,6 +4,8 @@ import { ROOT } from '../profile/profile-lib.mjs'
 
 for (const [name, extension] of [
   ['main', 'js'],
+  ['runtime', 'mjs'],
+  ['update', 'mjs'],
   ['preload', 'cjs'],
   ['supervisor', 'mjs'],
   ['windows-shutdown', 'mjs'],

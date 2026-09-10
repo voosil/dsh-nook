@@ -11,11 +11,11 @@ Open the complete URL printed by the command to establish [browser authenticatio
 
 The [desktop development entry](../apps/desktop/README.md#开发与打包) builds a fixed snapshot and opens Electron with a disposable home. Its lifecycle and packaged data are separate from both browser modes described here.
 
-The development launcher builds before boot and polls package sources, assets and manifests plus root TypeScript/workspace configuration. Client-only changes rebuild bundles and activate the [verified official HMR chain](discovery.md#client-hot-reload). Host output or other package changes rebuild and restart the development runtime. Builds run serially; edits made during a build trigger another pass. A failed rebuild leaves the running Host and previous Client bundles available and retries on the next edit.
+The development launcher builds, refreshes the Profile manifest and installs its dependencies before boot. It polls package sources, assets and manifests plus root TypeScript/workspace configuration. Client-only changes rebuild bundles and activate the [verified official HMR chain](discovery.md#client-hot-reload). Host output or other package changes rebuild and restart the development runtime. Builds run serially; edits made during a build trigger another pass. A failed rebuild leaves the running Host and previous Client bundles available and retries on the next edit.
 
 Client HMR remounts the changed plugin. Local React state in that plugin can reset; it is not React Fast Refresh. Save content before editing its UI code. Other plugins and the browser document remain mounted during a Client-only update.
 
-`pnpm dev:safe-ui` uses the same watcher with Nook UI contributions disabled. After adding dependencies or changing Profile membership, run `pnpm install` and `pnpm dev:profile`, then restart development. Profile refresh preserves existing user patch files. Changes to launcher/build scripts also require restarting the command.
+`pnpm dev:safe-ui` uses the same watcher with Nook UI contributions disabled. After adding workspace dependencies, run `pnpm install` and restart development. Profile membership changes require a restart; the launcher refreshes dependency links automatically while preserving existing user patch files. `pnpm dev:profile` prepares the Profile independently. Changes to launcher/build scripts also require restarting the command.
 
 Development starts with fresh data and credentials. Configure development models in that temporary instance when needed. The temporary directory is printed at startup and remains available through automatic Host restarts. It is removed when the launcher exits. The real user DSH home is never used.
 

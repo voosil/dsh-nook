@@ -221,7 +221,8 @@ export default class SyncFeature extends Service implements SyncService {
   }
   run(): Promise<SyncStatus> {
     if (this.running) return this.running
-    if (this.stopped || this.configuring || !this.settings.enabled) return Promise.resolve(this.status())
+    if (process.env.NOOK_UPDATE_VALIDATING === '1' || this.stopped || this.configuring || !this.settings.enabled)
+      return Promise.resolve(this.status())
     clearTimeout(this.timer)
     this.controller = new AbortController()
     const controller = this.controller

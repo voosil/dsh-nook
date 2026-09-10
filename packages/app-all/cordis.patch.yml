@@ -78,3 +78,9 @@
       name: '@nook-dsh/adapter-knowledge-dsh'
     - id: nook-ui-knowledge
       name: '@nook-dsh/ui-knowledge'
+
+- insert:
+    - id: nook-update-provider
+      name: '@nook-dsh/provider-update-local'
+    - id: nook-update-rpc
+      name: '@nook-dsh/adapter-update-dsh'

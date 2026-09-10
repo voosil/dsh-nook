@@ -1,3 +1,5 @@
+import type { UpdateController } from '../hooks/use-update.js'
+import { UpdatePanel } from './update-panel.js'
 import {
   ArrowUpRight,
   FileText,
@@ -44,11 +46,15 @@ const personal = { kind: 'personal' as const, url: null, author: null, basedOn: 
 export function NotebookApp({
   api,
   sync,
+  updater,
+  registerUpdateSave,
   close,
   onDeploy,
 }: {
   api: Api
   sync: SyncApi
+  updater?: UpdateController
+  registerUpdateSave?: (save: () => Promise<void>) => () => void
   close: () => void
   onDeploy: () => Promise<void>
 }) {
@@ -84,6 +90,13 @@ export function NotebookApp({
   const operation = useRef(false)
   const handle = useRef<EditorHandle | null>(null)
   const panel = useRef<HTMLDivElement>(null)
+  useEffect(
+    () =>
+      registerUpdateSave?.(async () => {
+        if (handle.current && !(await handle.current.flush())) throw new Error('笔记尚未保存，请保存成功后重试更新。')
+      }),
+    [registerUpdateSave],
+  )
   const selectedRef = useRef(selected)
   selectedRef.current = selected
   useEffect(() => {
@@ -537,6 +550,7 @@ export function NotebookApp({
           </div>
         </aside>
         <SyncControl
+          update={updater && <UpdatePanel controller={updater} />}
           api={sync}
           onChanged={setSyncChange}
           onDeploy={() => navigate(onDeploy)}

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { DEV_HOME, ROOT, PNPM_VERSION, exists } from './profile-lib.mjs'
@@ -12,6 +12,7 @@ const { values } = parseArgs({
   options: {
     port: { type: 'string' },
     'no-open': { type: 'boolean', default: true },
+    source: { type: 'boolean', default: false },
     'test-state': { type: 'string' },
   },
 })
@@ -42,6 +43,24 @@ try {
   const { userState, testState } = await import('../../apps/desktop/dist/shared-paths.mjs')
   const { migrateData, migrationComplete } = await import('../../packages/storage-backup/lib/migration.js')
   const state = values['test-state'] ? testState(values['test-state']) : userState()
+  const { readActiveUpdate } = await import('../../apps/desktop/dist/update.mjs')
+  const active = values.source ? undefined : await readActiveUpdate(state)
+  let update = active?.launch.options.update
+  if (!update) {
+    try {
+      const git = async args => (await processes.run('git', ['-C', ROOT, ...args], { capture: true })).stdout.trim()
+      const branch = process.env.NOOK_UPDATE_BRANCH || (await git(['branch', '--show-current']))
+      const remote = process.env.NOOK_UPDATE_REMOTE || 'origin'
+      await git(['remote', 'get-url', remote])
+      if (branch) update = { repo: ROOT, branch, remote, current: await git(['rev-parse', 'HEAD']) }
+    } catch {
+      /* Unconfigured checkouts can still run normally. */
+    }
+  }
+  if (update) {
+    await mkdir(join(state, 'updates'), { recursive: true, mode: 0o700 })
+    await writeFile(join(state, 'updates/source.json'), JSON.stringify(update), { mode: 0o600 })
+  }
   const source = join(DEV_HOME, 'nook')
   const backups = join(state, 'backups')
   if (!values['test-state'] && (await exists(source)) && !migrationComplete(source, backups)) {
@@ -54,6 +73,7 @@ try {
     runtime = new SharedRuntime(
       state,
       async () => {
+        if (active) return active.launch
         const selectedPort = await selectWebPort(port, { explicit: values.port !== undefined })
         if (process.platform === 'win32') {
           const launch = await prepareWindowsWebRuntime(state, {
@@ -65,6 +85,7 @@ try {
               }),
           })
           launch.options.port = selectedPort
+          if (update) launch.options.update = update
           return launch
         }
         await mkdir(join(ROOT, '.pack'), { recursive: true })
@@ -73,7 +94,7 @@ try {
         return {
           node: join(seed, 'payload/node/bin/node'),
           broker: join(seed, 'payload/boot/shared-broker.mjs'),
-          options: { state, seed, port: selectedPort },
+          options: { state, seed, port: selectedPort, ...(update ? { update } : {}) },
         }
       },
       line => {
@@ -86,6 +107,7 @@ try {
           stop()
         }
       },
+      url => console.log(`dsh web: ${url}`),
     )
     const url = await runtime.ready
     // This interactive terminal URL is the authentication handoff, not a disk log.

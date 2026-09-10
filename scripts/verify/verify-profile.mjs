@@ -36,6 +36,8 @@ const requiredRows = [
   'nook-sync-storage',
   'nook-sync-feature',
   'nook-sync-rpc',
+  'nook-update-provider',
+  'nook-update-rpc',
   'nook-artifact-provider',
   'nook-project-feature',
   'nook-preview-feature',

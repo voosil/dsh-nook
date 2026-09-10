@@ -13,6 +13,9 @@ export const COMMUNITY_BROWSER_VERSION = '0.1.1'
 export const PNPM_VERSION = '12.1.0'
 
 export const LOCAL_PACKAGES = [
+  'capability-update',
+  'provider-update-local',
+  'adapter-update-dsh',
   'capability-sync',
   'adapter-merge-automerge',
   'storage-sync',

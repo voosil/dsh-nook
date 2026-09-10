@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Cloud, Palette, Check } from 'lucide-react'
+import { Cloud, Palette, Check, RefreshCw } from 'lucide-react'
 import { Button, Dialog } from '@nook-dsh/ui-kit'
 import type { Appearance } from '../hooks/use-appearance.js'
 
@@ -11,14 +11,16 @@ export function SettingsDialog({
   appearance,
   onAppearanceChange,
   children,
+  update,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  section: 'appearance' | 'sync'
-  onSectionChange: (section: 'appearance' | 'sync') => void
+  section: 'appearance' | 'sync' | 'update'
+  onSectionChange: (section: 'appearance' | 'sync' | 'update') => void
   appearance: Appearance
   onAppearanceChange: (appearance: Appearance) => void
   children: ReactNode
+  update?: ReactNode
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="设置" closeLabel="关闭设置" className="nook-settings">
@@ -41,6 +43,15 @@ export function SettingsDialog({
           >
             <Cloud size={18} aria-hidden="true" />
             数据同步
+          </Button>
+          <Button
+            variant="ghost"
+            active={section === 'update'}
+            aria-current={section === 'update' ? 'page' : undefined}
+            onClick={() => onSectionChange('update')}
+          >
+            <RefreshCw size={18} aria-hidden="true" />
+            应用更新
           </Button>
         </nav>
         <div className="nook-settings-content">
@@ -88,6 +99,8 @@ export function SettingsDialog({
               </div>
               <p className="nook-muted nook-theme-hint">立即生效，保存在当前设备。</p>
             </section>
+          ) : section === 'update' ? (
+            update
           ) : (
             children
           )}

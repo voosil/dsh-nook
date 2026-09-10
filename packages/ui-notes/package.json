@@ -32,7 +32,9 @@
     "@tiptap/starter-kit": "3.31.3",
     "lucide-react": "1.41.0",
     "@nook-dsh/adapter-sync-dsh": "workspace:*",
-    "@nook-dsh/capability-sync": "workspace:*"
+    "@nook-dsh/capability-sync": "workspace:*",
+    "@nook-dsh/capability-update": "workspace:*",
+    "@nook-dsh/adapter-update-dsh": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.2",

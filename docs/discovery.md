@@ -66,7 +66,7 @@ The installed Web Bundle's startup parser accepts `--no-open --host 127.0.0.1 --
 
 The installed app-boot validates `dsh.profile.patchReload` as `live` or `startup`; omitted values on custom Profiles default to `live`. Profile boot watches Profile/Home patch files only for `live`. `startup` is a verified option for a desktop Profile that applies configuration at the next launch; it does not disable unrelated plugin timers or storage watchers.
 
-Profile names are resolved beneath `DSH_HOME/profiles` and reject path separators. CLI boot rewrites its generated root configuration and heals module fallback links. A whole Profile cannot be assumed to work directly inside read-only application resources. The CLI handles `SIGTERM` and `SIGINT` through root disposal. Forced termination and cleanup of every descendant still require platform acceptance.
+Profile names are resolved beneath `DSH_HOME/profiles` and reject path separators. CLI boot rewrites its generated root configuration and heals module fallback links. The pinned app-boot source owns the shared `DSH_HOME/profiles/node_modules` fallback and each Profile’s `.dsh-module-fallback/node_modules`; these are generated links, separate from user data and Profile patches. A whole Profile cannot be assumed to work directly inside read-only application resources. The CLI handles `SIGTERM` and `SIGINT` through root disposal. Forced termination and cleanup of every descendant still require platform acceptance.
 
 ## Product RPC and Client contracts
 

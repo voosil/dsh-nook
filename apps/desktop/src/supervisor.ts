@@ -12,6 +12,15 @@ async function supervise() {
   if (!config.home || !config.bin || !config.profile || !process.send)
     throw new Error('Missing desktop supervisor configuration or parent IPC')
   const env = runtimeEnvironment(config.home, dirname(process.execPath))
+  if (config.updateControl) {
+    env.NOOK_UPDATE_SOCKET = config.updateControl.socket
+    env.NOOK_UPDATE_TOKEN = config.updateControl.token
+  } else {
+    delete env.NOOK_UPDATE_SOCKET
+    delete env.NOOK_UPDATE_TOKEN
+  }
+  if (config.updateValidating) env.NOOK_UPDATE_VALIDATING = '1'
+  else delete env.NOOK_UPDATE_VALIDATING
   let child: ChildProcess | undefined
   let release: (() => void) | undefined
   let stopping: Promise<void> | undefined
