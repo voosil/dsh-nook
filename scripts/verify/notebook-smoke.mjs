@@ -89,6 +89,76 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
     assert.ok((await workspace.innerText()).includes('创建于'))
     assert.ok((await workspace.innerText()).includes('更新于'))
+    // Both browser saves start from the same version; Host merging must be invisible.
+    const secondContext = await page
+      .context()
+      .browser()
+      .newContext({ storageState: await page.context().storageState() })
+    const secondWindow = await secondContext.newPage()
+    try {
+      await secondWindow.goto(new URL('/#nook', page.url()).href)
+      const otherWorkspace = secondWindow.getByRole('dialog', { name: 'Nook 笔记工作区', exact: true })
+      await otherWorkspace.waitFor()
+      await dismissOnboarding(secondWindow)
+      await otherWorkspace.getByRole('searchbox', { name: '搜索笔记' }).fill(suffix)
+      await otherWorkspace.locator('.nook-note-card').filter({ hasText: title }).click()
+      await otherWorkspace.getByRole('textbox', { name: '笔记正文', exact: true }).waitFor()
+      await workspace
+        .getByRole('textbox', { name: '笔记正文', exact: true })
+        .fill('左窗口补充。\n劳动异化与自由实践：今天学习了新的概念。\n保留完整的思考过程。')
+      await otherWorkspace
+        .getByRole('textbox', { name: '笔记正文', exact: true })
+        .fill('劳动异化与自由实践：今天学习了新的概念。\n保留完整的思考过程。\n右窗口补充。')
+      await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+      await otherWorkspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+    } finally {
+      await secondContext.close()
+    }
+    await page.reload()
+    await workspace.waitFor()
+    await dismissOnboarding(page)
+    await workspace.getByRole('searchbox', { name: '搜索笔记' }).fill(suffix)
+    await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
+    const mergedBody = await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()
+    assert.ok(mergedBody.includes('左窗口补充。') && mergedBody.includes('右窗口补充。'), mergedBody)
+    assert.ok(!(await workspace.innerText()).includes('有同步冲突'))
+    await workspace.getByRole('button', { name: '历史版本', exact: true }).click()
+    const history = workspace.getByRole('dialog', { name: '笔记历史', exact: true })
+    await history.waitFor()
+    const versions = history.getByRole('navigation', { name: '历史版本列表' }).getByRole('button')
+    await versions.first().waitFor()
+    let foundOriginal = false
+    for (let index = 0; index < (await versions.count()); index++) {
+      await versions.nth(index).click()
+      await history.locator('.nook-history-content').first().waitFor()
+      const content = await history.locator('.nook-history-content').first().innerText()
+      const historicalTitle = await history.locator('.nook-history-comparison h4').first().innerText()
+      if (historicalTitle === title && content.includes('劳动异化') && !content.includes('窗口补充')) {
+        foundOriginal = true
+        break
+      }
+    }
+    assert.ok(foundOriginal, 'Original saved content is available in note history')
+    if (screenshot) await page.screenshot({ path: screenshot.replace(/\.png$/, '-history.png') })
+    if (process.env.NOOK_NOTE_HISTORY_SCREENSHOT)
+      await page.screenshot({ path: process.env.NOOK_NOTE_HISTORY_SCREENSHOT })
+    const historyViewport = page.viewportSize()
+    await page.setViewportSize({ width: 600, height: 850 })
+    assert.ok(
+      await history.evaluate(element => element.scrollWidth <= element.clientWidth + 1),
+      'Note history fits a narrow viewport',
+    )
+    await page.setViewportSize(historyViewport)
+    await history.getByRole('button', { name: '恢复此版本', exact: true }).click()
+    await history.waitFor({ state: 'hidden' })
+    const restoredPin = workspace.getByRole('button', { name: '置顶', exact: true })
+    if (await restoredPin.count()) {
+      await restoredPin.click()
+      await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+    }
+    assert.ok(
+      !(await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()).includes('窗口补充'),
+    )
     if (screenshot) await page.screenshot({ path: screenshot })
     await page.reload()
     await workspace.waitFor()

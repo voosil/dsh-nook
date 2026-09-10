@@ -32,6 +32,7 @@ export function versionHash(value: RecordVersion): string {
 export type RecordHandler = SyncTypeHandler
 /** One transaction owner shared with business storage. Remote versions remain recoverable. */
 export class Replica implements SyncReplica {
+  private readonly lifecycle = new AbortController()
   private depth = 0
   private changed = false
   private readonly listeners = new Set<() => void>()
@@ -118,6 +119,7 @@ export class Replica implements SyncReplica {
     })
   }
   dispose() {
+    this.lifecycle.abort()
     this.listeners.clear()
     this.handlers.clear()
   }
@@ -325,6 +327,58 @@ export class Replica implements SyncReplica {
         const v = this.version(heads[0]!)!
         return { key, type: v.type, id: v.id, versions: heads.map(hash => ({ hash, value: this.version(hash)! })) }
       })
+  }
+  history(type: string, id: string): readonly VersionItem[] {
+    const hashes = new Set<string>()
+    for (const head of this.heads(recordKey(type, id)))
+      for (const hash of this.ancestors(head)) {
+        hashes.add(hash)
+        if (hashes.size > 100000) throw new SyncError('版本历史超出首版容量。')
+      }
+    return [...hashes].map(hash => ({ hash, value: this.version(hash)! }))
+  }
+  /** Durable local branch first; merging may run outside the SQLite transaction. */
+  writeBranch(type: string, id: string, data: Json, deleted: boolean, parents?: readonly string[]) {
+    return this.transaction(() => {
+      const old = this.working(type, id)
+      if (old) writeRecoveryRecord(this.backups, 'record-write', { versions: [this.version(old)] })
+      const hash = this.capture(type, id, data, deleted, [], parents)
+      this.handlers.get(type)!.apply?.(this.version(hash)!, hash)
+      this.afterApply()
+      return hash
+    })
+  }
+  async reconcile(signal?: AbortSignal): Promise<void> {
+    const cancellation = signal ? AbortSignal.any([signal, this.lifecycle.signal]) : this.lifecycle.signal
+    // Business registration order keeps project projections ahead of note projections.
+    for (const handler of this.handlers.values()) {
+      if (!handler.merge) continue
+      for (const conflict of this.conflicts().filter(c => c.type === handler.type)) {
+        for (let attempt = 0; attempt < 16; attempt++) {
+          cancellation.throwIfAborted()
+          const heads = this.heads(conflict.key)
+          if (heads.length < 2) break
+          const versions = this.history(conflict.type, conflict.id)
+          if (versions.some(v => v.value.schema !== handler.schema)) break
+          for (const item of versions) handler.validate(item.value)
+          const merged = await handler.merge({ heads, versions }, cancellation)
+          cancellation.throwIfAborted()
+          const committed = this.transaction(() => {
+            if (canonicalJson(this.heads(conflict.key)) !== canonicalJson(heads)) return false
+            const old = this.working(conflict.type, conflict.id)
+            writeRecoveryRecord(this.backups, 'sync-auto-merge', {
+              versions: [...new Set([...heads, ...(old ? [old] : [])])].map(hash => this.version(hash)),
+            })
+            const hash = this.capture(conflict.type, conflict.id, merged.data, merged.deleted, merged.blobs, heads)
+            handler.apply?.(this.version(hash)!, hash)
+            this.afterApply()
+            return true
+          })
+          if (committed) break
+          if (attempt === 15) throw new SyncError('内容仍在更新，自动合并将重试。')
+        }
+      }
+    }
   }
   resolve(key: string, expected: readonly string[], selected: string, copy: boolean) {
     this.transaction(() => {

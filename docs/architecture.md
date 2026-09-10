@@ -18,7 +18,7 @@ Capability packages contain DTOs, errors, events and interfaces. Features depend
 
 Local persistence providers share a [backup library](../packages/storage-backup/src/index.ts) for durable recovery records. The same library supports offline snapshots and recovery commands; it contributes no runtime service. Behavior and scope belong in the [backup guide](backup.md).
 
-The [Sync capability](../packages/capability-sync/src/index.ts) separates type registration, transactional replica storage and remote object access. The notebook provider supplies projects, notes, knowledge and the replica from one SQLite transaction owner; the sync feature orchestrates records and blob dependencies through the WebDAV adapter. The [sync contract](../packages/feature-sync/README.md) owns wire format, limits, conflict semantics and target compatibility.
+The [Sync capability](../packages/capability-sync/src/index.ts) separates type registration, transactional replica storage and remote object access. The notebook provider supplies projects, notes, knowledge and the replica from one SQLite transaction owner; the sync feature orchestrates records and blob dependencies through the WebDAV adapter. The [merge adapter](../packages/adapter-merge-automerge/README.md) isolates Automerge in a lifecycle-owned worker. The [sync contract](../packages/feature-sync/README.md) owns wire format, limits, automatic merge semantics, note history and target compatibility.
 
 ## Host and Client
 

@@ -39,7 +39,7 @@ test('notes persist, search Chinese, enforce revisions, and atomically update/re
     assert.equal((await ctx.nookNotes.list({ search: '异化' })).total, 1)
     assert.equal((await ctx.nookKnowledge.search({ query: '劳动异化' }))[0]?.documentId, note.id)
     assert.equal((await ctx.nookNotes.list({ search: '%' })).total, 0)
-    const saved = await ctx.nookNotes.save({ ...note, markdown: '哲学学习的新问题' })
+    const { note: saved } = await ctx.nookNotes.save({ ...note, markdown: '哲学学习的新问题' })
     await assert.rejects(ctx.nookNotes.save({ ...note, markdown: 'stale' }), /其他窗口/)
     assert.equal((await ctx.nookKnowledge.search({ query: '劳动异化' })).length, 0)
     assert.equal((await ctx.nookKnowledge.search({ query: '哲学' }))[0]?.revision, saved.revision)
@@ -119,7 +119,7 @@ test('strict DSH Gateway invokes Nook DTOs, rejects malformed calls, and withdra
       }),
       /boundary validation/,
     )
-    const updated = await ctx.nookNotebook.save({ ...created.value, projectId: project.id })
+    const { note: updated } = await ctx.nookNotebook.save({ ...created.value, projectId: project.id })
     assert.equal((await ctx.nookNotebook.search({ query: '中文', projectId: project.id })).length, 1)
     assert.equal((await ctx.nookNotebook.search({ query: '中文', projectId: randomUUID() })).length, 0)
     await ctx.nookKnowledge.setSession('scoped', { enabled: true, projectId: project.id })
@@ -156,7 +156,7 @@ test('autosave serializes overlapping edits and preserves unsaved input on failu
       requests.save.parse(request)
       versions.push(request.revision)
       if (versions.length === 1) await gate
-      return { ...note, ...request, revision: request.revision + 1 }
+      return { note: { ...note, ...request, revision: request.revision + 1 }, submittedVersionId: null }
     },
     () => {},
   )

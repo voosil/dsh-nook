@@ -248,6 +248,15 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  packages/adapter-merge-automerge:
+    dependencies:
+      '@automerge/automerge':
+        specifier: 3.4.1
+        version: 3.4.1
+      '@nook-dsh/capability-sync':
+        specifier: workspace:*
+        version: link:../capability-sync
+
   packages/adapter-notes-dsh:
     dependencies:
       '@deepseek-ai/cordis':
@@ -660,6 +669,9 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: 3.18.2
         version: 3.18.2
+      '@nook-dsh/adapter-merge-automerge':
+        specifier: workspace:*
+        version: link:../adapter-merge-automerge
       '@nook-dsh/capability-knowledge':
         specifier: workspace:*
         version: link:../capability-knowledge
@@ -889,6 +901,9 @@ packages:
     peerDependenciesMeta:
       zod:
         optional: true
+
+  '@automerge/automerge@3.4.1':
+    resolution: {integrity: sha512-zsZpbs/iDPvp+ZojIYd+gxmbcPVz2Xbkcx778G8zrt3E0zS+6saHJOm666lOuZyNRlTV4wHw9qzGTKueedeCsQ==}
 
   '@aws-crypto/sha256-browser@5.2.0':
     resolution: {integrity: sha512-AXfN/lGotSQwu6HNcEsIASo7kWXZ5HYWvfOmSNKDsEqC4OashTp8alTmaz+F7TC2L083SFv5RdB+qU3Vs1kZqw==}
@@ -4567,7 +4582,7 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Glob versions prior to v9 are no longer supported
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   global-agent@3.0.0:
     resolution: {integrity: sha512-PT6XReJ+D07JvGoxQMkT6qji/jVNfX/h364XHZOWeRzy64sSFr+xJ5OX7LI3b4MPQzdL4H8Y8M0xzPpsVMwA8Q==}
@@ -5628,6 +5643,8 @@ snapshots:
       standardwebhooks: 1.1.1
     optionalDependencies:
       zod: 4.4.3
+
+  '@automerge/automerge@3.4.1': {}
 
   '@aws-crypto/sha256-browser@5.2.0':
     dependencies:

@@ -1,0 +1,21 @@
+{
+  "name": "@nook-dsh/adapter-merge-automerge",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@automerge/automerge": "3.4.1",
+    "@nook-dsh/capability-sync": "workspace:*"
+  }
+}

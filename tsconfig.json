@@ -5,6 +5,9 @@
       "path": "packages/capability-sync"
     },
     {
+      "path": "packages/adapter-merge-automerge"
+    },
+    {
       "path": "packages/storage-sync"
     },
     {

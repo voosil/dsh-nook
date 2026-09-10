@@ -105,18 +105,16 @@ test('two notebooks migrate projects and sync notes, source versions, trash, con
   await Promise.all([run(a), run(b)])
   await run(a)
   await run(b)
-  const conflict = a.nookSyncReplica.conflicts()[0]!
-  assert.equal(conflict.type, 'note')
-  a.nookSyncReplica.resolve(
-    conflict.key,
-    conflict.versions.map(v => v.hash),
-    conflict.versions[0]!.hash,
-    true,
-  )
-  await run(a)
-  await run(b)
-  assert.equal((await b.nookNotes.list({})).total, 2)
+  assert.equal(a.nookSyncReplica.conflicts().length, 0)
   assert.equal(b.nookSyncReplica.conflicts().length, 0)
+  assert.equal((await b.nookNotes.list({})).total, 1)
+  assert.equal((await a.nookNotes.get(original.id))!.markdown, (await b.nookNotes.get(original.id))!.markdown)
+  const history = await b.nookNotes.history({ id: original.id })
+  const oldVersions = await Promise.all(
+    history.entries.map(v => b.nookNotes.getHistoryVersion(original.id, v.versionId)),
+  )
+  assert.ok(oldVersions.some(v => v.markdown === '左端编辑'))
+  assert.ok(oldVersions.some(v => v.markdown === '右端编辑'))
   bn = (await b.nookNotes.get(original.id))!
   await b.nookNotes.setDeleted(bn.id, bn.revision, true)
   await run(b)
@@ -133,7 +131,7 @@ test('two notebooks migrate projects and sync notes, source versions, trash, con
   assert.equal((await b.nookProjects.list()).length, 0)
   assert.ok((await b.nookNotes.list({})).notes.every(n => n.projectId === null))
   assert.equal((await b.nookKnowledge.session('session')).enabled, false)
-  assert.equal((await b.nookKnowledge.search({ query: '编辑' })).length, 2)
+  assert.equal((await b.nookKnowledge.search({ query: '编辑' })).length, 1)
 })
 
 test('sync RPC keeps credentials private, disabling preserves pending data, and disposal releases work', async t => {

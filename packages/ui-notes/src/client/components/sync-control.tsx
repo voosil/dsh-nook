@@ -1,14 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Cloud, RefreshCw, X } from 'lucide-react'
 import { SyncGuidePage } from './sync-guide.js'
-import type { SyncStatus, SyncConflict, Json } from '@nook-dsh/capability-sync'
+import type { SyncStatus } from '@nook-dsh/capability-sync'
 import { parseSyncConnection, CONNECTION_FILE_LIMIT } from '@nook-dsh/capability-sync'
 import type { SyncApi } from '../lib/sync-api.js'
 
-function preview(data: Json) {
-  if (data && typeof data === 'object' && !Array.isArray(data) && 'markdown' in data) return String(data.markdown)
-  return JSON.stringify(data, null, 2)
-}
 export function SyncControl({
   api,
   onChanged,
@@ -37,7 +33,6 @@ export function SyncControl({
   const [url, setUrl] = useState(''),
     [username, setUsername] = useState(''),
     [password, setPassword] = useState('')
-  const [conflicts, setConflicts] = useState<readonly SyncConflict[]>([])
   const change = useRef<number | undefined>(undefined),
     changed = useRef(onChanged)
   changed.current = onChanged
@@ -87,10 +82,8 @@ export function SyncControl({
       await fn()
       if (signal.aborted) return
       const next = await api('status', {}, signal)
-      const nextConflicts = await api('conflicts', {}, signal)
       if (signal.aborted) return
       setStatus(next)
-      setConflicts(nextConflicts)
     } catch (e) {
       if (!signal.aborted) setError(e instanceof Error ? e.message : '操作未完成。')
     } finally {
@@ -105,13 +98,11 @@ export function SyncControl({
         ? '同步失败'
         : status.unsupported
           ? '有数据需要升级'
-          : status.conflicts
-            ? '有同步冲突'
-            : status.pending
-              ? '等待同步'
-              : status.lastSync
-                ? '已同步'
-                : '等待首次同步'
+          : status.pending
+            ? '等待同步'
+            : status.lastSync
+              ? '已同步'
+              : '等待首次同步'
   return (
     <>
       <button
@@ -399,8 +390,8 @@ export function SyncControl({
                       <dd>{status.pending}</dd>
                     </div>
                     <div>
-                      <dt>同步冲突</dt>
-                      <dd>{status.conflicts}</dd>
+                      <dt>合并方式</dt>
+                      <dd>自动合并 · 保留历史</dd>
                     </div>
                   </dl>
                   {!!status.unsupported && (
@@ -452,69 +443,6 @@ export function SyncControl({
                     )}
                   </div>
                 </>
-              )}
-              {!!conflicts.length && (
-                <div className="nook-sync-conflicts">
-                  <h3>选择需要保留的版本</h3>
-                  <p>被替换的内容会先备份。保留全部会把其他版本另存为副本。</p>
-                  {conflicts.map(c => (
-                    <article key={c.key}>
-                      <h4>
-                        {c.type === 'note' ? '笔记' : c.type === 'project' ? '项目' : c.type} · {c.id}
-                      </h4>
-                      {c.versions.map(v => (
-                        <div key={v.hash}>
-                          <small>
-                            {v.value.deleted ? '已删除版本' : '内容版本'} · {v.hash.slice(0, 10)}
-                          </small>
-                          <textarea readOnly rows={5} aria-label="冲突版本内容" value={preview(v.value.data)} />
-                          <div className="nook-actions">
-                            <button
-                              disabled={busy}
-                              onClick={() =>
-                                void operation(() =>
-                                  api(
-                                    'resolve',
-                                    {
-                                      key: c.key,
-                                      expected: c.versions.map(x => x.hash),
-                                      selected: v.hash,
-                                      copy: false,
-                                    },
-                                    lifecycle.current?.signal,
-                                  ),
-                                )
-                              }
-                            >
-                              保留此版本
-                            </button>
-                            {['note', 'project'].includes(c.type) && (
-                              <button
-                                disabled={busy}
-                                onClick={() =>
-                                  void operation(() =>
-                                    api(
-                                      'resolve',
-                                      {
-                                        key: c.key,
-                                        expected: c.versions.map(x => x.hash),
-                                        selected: v.hash,
-                                        copy: true,
-                                      },
-                                      lifecycle.current?.signal,
-                                    ),
-                                  )
-                                }
-                              >
-                                保留此版本及其他副本
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </article>
-                  ))}
-                </div>
               )}
             </div>
           </section>

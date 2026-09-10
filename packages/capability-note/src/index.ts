@@ -41,6 +41,34 @@ export interface CreateNoteRequest extends NoteInput {
 export interface SaveNoteRequest extends NoteInput {
   readonly id: string
   readonly revision: number
+  readonly versionId?: string | undefined
+  readonly requestId?: string | undefined
+}
+export interface SaveNoteResult {
+  readonly note: NoteDto
+  readonly submittedVersionId: string | null
+}
+export interface NoteHistoryEntry {
+  readonly versionId: string
+  readonly title: string
+  readonly updatedAt: string
+  readonly deleted: boolean
+  readonly merged: boolean
+}
+export interface NoteHistoryPage {
+  readonly entries: readonly NoteHistoryEntry[]
+  readonly cursor: string | null
+}
+export interface NoteHistoryQuery {
+  readonly id: string
+  readonly cursor?: string | undefined
+  readonly limit?: number | undefined
+}
+export interface RestoreNoteRequest {
+  readonly id: string
+  readonly versionId: string
+  readonly requestId: string
+  readonly copy: boolean
 }
 
 export interface NoteQuery {
@@ -66,7 +94,10 @@ export interface NoteService {
   list(query: NoteQuery): Promise<NotePage>
   get(id: string): Promise<NoteDto | null>
   create(request: CreateNoteRequest): Promise<NoteDto>
-  save(request: SaveNoteRequest): Promise<NoteDto>
+  save(request: SaveNoteRequest): Promise<SaveNoteResult>
+  history(request: NoteHistoryQuery): Promise<NoteHistoryPage>
+  getHistoryVersion(id: string, versionId: string): Promise<NoteDto>
+  restoreHistoryVersion(request: RestoreNoteRequest): Promise<NoteDto>
   setDeleted(id: string, revision: number, deleted: boolean): Promise<NoteDto>
   detachProject(projectId: string): Promise<void>
 }

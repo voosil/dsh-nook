@@ -43,7 +43,6 @@ export function NotebookApp({
 }) {
   const [syncChange, setSyncChange] = useState(0)
   const [editorEpoch, setEditorEpoch] = useState(0)
-  const [remoteChanged, setRemoteChanged] = useState(false)
   const [projects, setProjects] = useState<readonly ProjectDto[]>([])
   const [notes, setNotes] = useState<readonly NoteDto[]>([])
   const [selected, setSelected] = useState<NoteDto | null>(null)
@@ -73,7 +72,6 @@ export function NotebookApp({
   const panel = useRef<HTMLDivElement>(null)
   const selectedRef = useRef(selected)
   selectedRef.current = selected
-  useEffect(() => setRemoteChanged(false), [selected?.id])
   useEffect(() => {
     const controller = new AbortController()
     setRefresh(value => value + 1)
@@ -89,12 +87,11 @@ export function NotebookApp({
           )
             return
           if (handle.current?.dirty()) {
-            setRemoteChanged(true)
+            void handle.current.flush()
             return
           }
           setSelected(next)
           setEditorEpoch(value => value + 1)
-          setRemoteChanged(false)
         })
         .catch(() => {})
     return () => controller.abort()
@@ -261,14 +258,18 @@ export function NotebookApp({
       const next =
         action === 'trash'
           ? await api('trash', { id: current.id, revision: current.revision, deleted: !current.deletedAt })
-          : await api('save', {
-              id: current.id,
-              revision: current.revision,
-              title: current.title,
-              markdown: current.markdown,
-              projectId: current.projectId,
-              pinned: !current.pinned,
-            })
+          : (
+              await api('save', {
+                id: current.id,
+                revision: current.revision,
+                title: current.title,
+                markdown: current.markdown,
+                projectId: current.projectId,
+                pinned: !current.pinned,
+                versionId: current.versionId,
+                requestId: crypto.randomUUID(),
+              })
+            ).note
       setNotes(notes =>
         action === 'trash'
           ? notes.filter(item => item.id !== next.id)
@@ -497,11 +498,6 @@ export function NotebookApp({
         </div>
       </aside>
       <main className="nook-main">
-        {remoteChanged && (
-          <p className="nook-error" role="status">
-            这条笔记在其他设备有更新，当前输入已保留。可另存为新笔记后重新打开。
-          </p>
-        )}
         {error && (
           <div className="nook-error" role="alert">
             {error}{' '}

@@ -76,6 +76,7 @@ export async function synchronize(
       [...loaded].map(([hash, value]) => ({ hash, value })),
       index,
     )
+    await replica.reconcile(signal)
     const snapshot = replica.snapshot()
     if (!snapshot.pending.length) return
     const pending = new Set(snapshot.pending)

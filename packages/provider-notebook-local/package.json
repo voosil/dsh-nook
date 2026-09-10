@@ -20,7 +20,8 @@
     "@nook-dsh/storage-backup": "workspace:*",
     "@nook-dsh/storage-sync": "workspace:*",
     "@nook-dsh/capability-sync": "workspace:*",
-    "@nook-dsh/capability-project": "workspace:*"
+    "@nook-dsh/capability-project": "workspace:*",
+    "@nook-dsh/adapter-merge-automerge": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.2",

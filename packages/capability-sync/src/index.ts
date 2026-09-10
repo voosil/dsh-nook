@@ -54,6 +54,11 @@ export interface ReplicaSnapshot {
   readonly heads: Readonly<Record<string, readonly string[]>>
   readonly pending: readonly string[]
 }
+export interface SyncMergeInput {
+  readonly heads: readonly string[]
+  readonly versions: readonly VersionItem[]
+}
+export type SyncMergeResult = Pick<RecordVersion, 'data' | 'deleted' | 'blobs'>
 /** Host-only type registration; no database or runtime object enters the wire protocol. */
 export interface SyncTypeHandler {
   readonly type: string
@@ -61,6 +66,7 @@ export interface SyncTypeHandler {
   validate(value: RecordVersion): void
   apply?(value: RecordVersion, hash: string): void
   copy?(value: RecordVersion, id: string): Json
+  merge?(input: SyncMergeInput, signal: AbortSignal): Promise<SyncMergeResult>
 }
 export interface RecordWrite {
   readonly type: string
@@ -79,6 +85,7 @@ export interface SyncReplica {
   snapshot(): ReplicaSnapshot
   version(hash: string): RecordVersion | null
   receive(versions: readonly VersionItem[], remote: SyncIndex): void
+  reconcile(signal?: AbortSignal): Promise<void>
   acknowledge(hashes: readonly string[]): void
   binding(): { readonly target: string; readonly vaultId: string } | null
   bind(target: string, vaultId: string): void

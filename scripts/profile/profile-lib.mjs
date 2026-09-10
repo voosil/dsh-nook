@@ -14,6 +14,7 @@ export const PNPM_VERSION = '12.1.0'
 
 export const LOCAL_PACKAGES = [
   'capability-sync',
+  'adapter-merge-automerge',
   'storage-sync',
   'adapter-sync-webdav',
   'feature-sync',

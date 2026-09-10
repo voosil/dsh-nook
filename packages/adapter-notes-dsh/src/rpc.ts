@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { InvocationDescriptor, RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 
 const id = z.uuid()
+const versionId = z.string().regex(/^[a-f0-9]{64}$/)
 const projectId = id.nullable()
 const date = z.iso.datetime()
 const source = z.strictObject({
@@ -98,12 +99,16 @@ export const requests = {
   create: input.extend({ id, source }),
   save: input.extend({
     id,
+    requestId: id.optional(),
     revision: z.int().positive(),
     versionId: z
       .string()
       .regex(/^[a-f0-9]{64}$/)
       .optional(),
   }),
+  history: z.strictObject({ id, cursor: versionId.optional(), limit: z.int().min(1).max(100).optional() }),
+  getHistoryVersion: z.strictObject({ id, versionId }),
+  restoreHistoryVersion: z.strictObject({ id, versionId, requestId: id, copy: z.boolean() }),
   trash: z.strictObject({ id, revision: z.int().positive(), deleted: z.boolean() }),
   projects: z.strictObject({}),
   createProject: z.strictObject({
@@ -151,7 +156,15 @@ const outputs = {
   list: z.strictObject({ notes: z.array(note), total: z.int().nonnegative() }),
   get: note.nullable(),
   create: note,
-  save: note,
+  save: z.strictObject({ note, submittedVersionId: versionId.nullable() }),
+  history: z.strictObject({
+    entries: z.array(
+      z.strictObject({ versionId, title: z.string(), updatedAt: date, deleted: z.boolean(), merged: z.boolean() }),
+    ),
+    cursor: versionId.nullable(),
+  }),
+  getHistoryVersion: note,
+  restoreHistoryVersion: note,
   trash: note,
   projects: z.array(project),
   createProject: project,

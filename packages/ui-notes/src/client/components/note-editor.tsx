@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { type NoteDto, type NoteInput } from '@nook-dsh/capability-note'
 import type { ProjectDto } from '@nook-dsh/capability-project'
 import type { Api } from '../lib/api.js'
-import { Autosave } from '../lib/autosave.js'
+import { NoteHistory } from './note-history.js'
+import { Autosave, type SavedDraft } from '../lib/autosave.js'
 import { fullDate, sourceLabels } from '../lib/note-format.js'
 import { Button } from './button.js'
 import { RichEditor } from './rich-editor.js'
@@ -39,10 +40,7 @@ export function NoteEditor({
 }) {
   const [recovery] = useState(() => {
     try {
-      const draft = JSON.parse(localStorage.getItem(draftKey(initial.id)) ?? 'null') as {
-        revision: number
-        input: NoteInput
-      } | null
+      const draft = JSON.parse(localStorage.getItem(draftKey(initial.id)) ?? 'null') as SavedDraft | null
       return draft &&
         typeof draft.input?.markdown === 'string' &&
         typeof draft.input.title === 'string' &&
@@ -58,7 +56,8 @@ export function NoteEditor({
   const [note, setNote] = useState(initial)
   const [state, setState] = useState('saved')
   const [error, setError] = useState('')
-  const [blocked, setBlocked] = useState(!!recovery && recovery.revision !== initial.revision)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const composing = useRef(false)
   const [busy, setBusy] = useState(false)
   const alive = useRef(true)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -68,19 +67,16 @@ export function NoteEditor({
     () =>
       new Autosave(
         initial,
-        async request => {
-          const next = await api('save', request)
-          if (alive.current) {
-            setNote(next)
-            saved.current(next)
-          }
-          return next
-        },
+        request => api('save', request),
         (status, message) => {
           if (!alive.current) return
           setState(status)
           setError(message ?? '')
+          if (status !== 'saved') preserve()
           if (status === 'saved') {
+            setNote(controller.note)
+            if (!composing.current) setInput(controller.current)
+            saved.current(controller.note)
             try {
               localStorage.removeItem(draftKey(initial.id))
             } catch {
@@ -91,9 +87,9 @@ export function NoteEditor({
       ),
   )
 
-  function preserve(next: NoteInput) {
+  function preserve() {
     try {
-      localStorage.setItem(draftKey(initial.id), JSON.stringify({ revision: controller.note.revision, input: next }))
+      localStorage.setItem(draftKey(initial.id), JSON.stringify(controller.draft))
     } catch {
       setError('浏览器无法保留临时草稿，请保持页面打开直至保存完成。')
     }
@@ -101,9 +97,9 @@ export function NoteEditor({
   function change(next: NoteInput) {
     setInput(next)
     controller.edit(next)
-    preserve(next)
+    preserve()
     clearTimeout(timer.current)
-    if (!blocked)
+    if (!composing.current)
       timer.current = setTimeout(() => {
         void controller.flush()
       }, 650)
@@ -111,14 +107,13 @@ export function NoteEditor({
   useEffect(() => {
     alive.current = true
     if (recovery) {
-      controller.edit(recovery.input)
-      if (recovery.revision === initial.revision && !initial.deletedAt) void controller.flush()
-      else setError('发现未保存草稿，但服务器版本已变化。请另存为新笔记，或导出草稿后重新载入。')
+      controller.recover(recovery)
+      void controller.flush()
     }
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (controller.dirty) {
         event.preventDefault()
-        preserve(controller.current)
+        preserve()
         event.returnValue = ''
       }
     }
@@ -127,20 +122,20 @@ export function NoteEditor({
       alive.current = false
       clearTimeout(timer.current)
       window.removeEventListener('beforeunload', beforeUnload)
-      if (controller.dirty) preserve(controller.current)
+      if (controller.dirty) preserve()
     }
   }, [])
   useEffect(() => {
     handle.current = {
-      flush: () => (blocked ? Promise.resolve(false) : controller.flush()),
-      dirty: () => controller.dirty,
+      flush: () => controller.flush(),
+      dirty: () => controller.dirty || historyOpen,
       revision: () => controller.note.revision,
       input: () => controller.current,
     }
     return () => {
       handle.current = null
     }
-  }, [controller, blocked, handle])
+  }, [controller, handle, historyOpen])
 
   async function trash() {
     setBusy(true)
@@ -155,25 +150,64 @@ export function NoteEditor({
     }
   }
   return (
-    <section className="nook-editor" aria-label="笔记编辑区">
+    <section
+      className="nook-editor"
+      aria-label="笔记编辑区"
+      onCompositionStart={() => {
+        composing.current = true
+        controller.pause()
+        clearTimeout(timer.current)
+      }}
+      onCompositionEnd={() => {
+        composing.current = false
+        void controller.resume()
+      }}
+    >
+      {historyOpen && (
+        <NoteHistory
+          note={note}
+          api={api}
+          close={() => setHistoryOpen(false)}
+          restored={(next, copy) => {
+            setHistoryOpen(false)
+            if (!copy) {
+              controller.adopt(next)
+              if (next.deletedAt !== note.deletedAt) onDeleted()
+            } else saved.current(next)
+          }}
+        />
+      )}
       <div className="nook-editor-top">
         <span className="nook-muted">{sourceLabels[note.source.kind]}</span>
         <div className="nook-actions">
           <span role="status" className={state === 'error' ? 'nook-error-text' : 'nook-muted'}>
-            {blocked
-              ? '草稿待处理'
-              : state === 'saving'
-                ? '正在保存…'
-                : state === 'dirty'
-                  ? '未保存'
-                  : state === 'error'
-                    ? '保存失败'
-                    : '已保存到本地 · 已入库'}
+            {state === 'saving'
+              ? '正在保存…'
+              : state === 'dirty'
+                ? '未保存'
+                : state === 'error'
+                  ? '保存失败'
+                  : '已保存到本地 · 已入库'}
           </span>
-          <Button disabled={disabled || busy} onClick={() => void onExport(input)}>
+          <Button
+            disabled={disabled || busy || historyOpen}
+            onClick={() =>
+              void (async () => {
+                setBusy(true)
+                try {
+                  if (await controller.flush()) setHistoryOpen(true)
+                } finally {
+                  setBusy(false)
+                }
+              })()
+            }
+          >
+            历史版本
+          </Button>
+          <Button disabled={disabled || busy || historyOpen} onClick={() => void onExport(input)}>
             导出
           </Button>
-          <Button disabled={disabled || busy || blocked} onClick={() => void trash()}>
+          <Button disabled={disabled || busy || historyOpen} onClick={() => void trash()}>
             {note.deletedAt ? '恢复笔记' : '移到回收站'}
           </Button>
         </div>
@@ -184,7 +218,6 @@ export function NoteEditor({
           <div className="nook-actions">
             <Button
               onClick={() => {
-                setBlocked(false)
                 void controller.flush()
               }}
             >
@@ -201,14 +234,14 @@ export function NoteEditor({
           placeholder="无标题笔记"
           maxLength={300}
           value={input.title}
-          disabled={disabled || busy || !!note.deletedAt}
+          disabled={disabled || busy || historyOpen || !!note.deletedAt}
           onChange={event => change({ ...input, title: event.target.value })}
         />
         <div className="nook-meta">
           <select
             aria-label="笔记所属项目"
             value={input.projectId ?? ''}
-            disabled={disabled || busy || !!note.deletedAt}
+            disabled={disabled || busy || historyOpen || !!note.deletedAt}
             onChange={event => change({ ...input, projectId: event.target.value || null })}
           >
             <option value="">未分类</option>
@@ -221,7 +254,7 @@ export function NoteEditor({
           <span title={fullDate(note.createdAt)}>创建于 {fullDate(note.createdAt)}</span>
           <span title={fullDate(note.updatedAt)}>更新于 {fullDate(note.updatedAt)}</span>
           <Button
-            disabled={disabled || busy || !!note.deletedAt}
+            disabled={disabled || busy || historyOpen || !!note.deletedAt}
             active={input.pinned}
             onClick={() => change({ ...input, pinned: !input.pinned })}
           >
@@ -249,7 +282,7 @@ export function NoteEditor({
         )}
         <RichEditor
           markdown={input.markdown}
-          disabled={disabled || busy || !!note.deletedAt}
+          disabled={disabled || busy || historyOpen || !!note.deletedAt}
           onChange={markdown => change({ ...controller.current, markdown })}
         />
       </div>

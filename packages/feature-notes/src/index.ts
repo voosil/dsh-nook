@@ -4,6 +4,8 @@ import {
   type NoteService,
   type CreateNoteRequest,
   type SaveNoteRequest,
+  type NoteHistoryQuery,
+  type RestoreNoteRequest,
   type NoteQuery,
 } from '@nook-dsh/capability-note'
 import type { KnowledgeService, KnowledgeQuery } from '@nook-dsh/capability-knowledge'
@@ -34,8 +36,17 @@ export default class NotesFeature extends Service {
     return this.ctx.nookNotes.create(request)
   }
   async save(request: SaveNoteRequest) {
-    await this.checkProject(request.projectId)
+    if (!request.versionId) await this.checkProject(request.projectId)
     return this.ctx.nookNotes.save(request)
+  }
+  history(request: NoteHistoryQuery) {
+    return this.ctx.nookNotes.history(request)
+  }
+  getHistoryVersion(id: string, versionId: string) {
+    return this.ctx.nookNotes.getHistoryVersion(id, versionId)
+  }
+  restoreHistoryVersion(request: RestoreNoteRequest) {
+    return this.ctx.nookNotes.restoreHistoryVersion(request)
   }
   setDeleted(id: string, revision: number, deleted: boolean) {
     return this.ctx.nookNotes.setDeleted(id, revision, deleted)

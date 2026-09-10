@@ -1077,3 +1077,78 @@
   color: var(--nook-accent);
   margin-top: 6px;
 }
+
+.nook-history {
+  width: min(1100px, 94vw);
+  max-width: 1100px;
+}
+.nook-history h2,
+.nook-history h3,
+.nook-history h4 {
+  margin: 0 0 8px;
+}
+.nook-history-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 20px;
+  min-height: 300px;
+}
+.nook-history nav {
+  max-height: 60vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nook-history nav > button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px;
+}
+.nook-history nav strong {
+  overflow-wrap: anywhere;
+}
+.nook-history nav [aria-current='true'] {
+  outline: 2px solid var(--nook-accent, #56705c);
+  outline-offset: -2px;
+}
+.nook-history nav span,
+.nook-history nav small {
+  font-size: 11px;
+  opacity: 0.75;
+}
+.nook-history-preview {
+  min-width: 0;
+}
+.nook-history-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.nook-history-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.7;
+  max-height: 46vh;
+  overflow: auto;
+}
+.nook-history-content mark {
+  color: inherit;
+  background: #d9b74c33;
+}
+@media (max-width: 700px) {
+  .nook-history-layout,
+  .nook-history-comparison {
+    grid-template-columns: 1fr;
+  }
+  .nook-history nav {
+    max-height: 150px;
+  }
+  .nook-history-content {
+    max-height: 180px;
+  }
+}

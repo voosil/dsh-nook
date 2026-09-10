@@ -21,7 +21,7 @@ macOS 正式根目录是 `~/Library/Application Support/Nook`；Windows 是 `%AP
 
 数据同步弹窗通过入口打开独立的 `#nook-sync-guide` 指南页。Linux 服务器的三种部署模式、配置工具及证书维护见[服务器配置说明](../scripts/sync-server/README.md)。
 
-正式笔记保存在后端 SQLite 中。网页和桌面的 cookie、页面状态以及尚未保存的编辑草稿仍属于各自的浏览器环境。工作区自动检查后端变化，未保存的草稿保留；同时编辑同一笔记受现有 revision 冲突检查约束。
+正式笔记保存在后端 SQLite 中。网页和桌面的 cookie、页面状态以及尚未保存的编辑草稿仍属于各自的浏览器环境。工作区自动检查后端变化，未保存的草稿按编辑基线保存并自动合并，同时编辑及历史恢复遵循[同步契约](../packages/feature-sync/README.md#自动合并与笔记历史)。
 
 ## 启动与退出
 

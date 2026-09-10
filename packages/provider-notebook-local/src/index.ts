@@ -1,5 +1,5 @@
 import { mkdirSync, existsSync, readFileSync } from 'node:fs'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { dirname, resolve } from 'node:path'
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite'
 import { Context, Service } from '@deepseek-ai/cordis'
@@ -15,9 +15,14 @@ import {
   type NotePage,
   type CreateNoteRequest,
   type SaveNoteRequest,
+  type SaveNoteResult,
+  type NoteHistoryQuery,
+  type NoteHistoryPage,
+  type RestoreNoteRequest,
 } from '@nook-dsh/capability-note'
 import { Replica } from '@nook-dsh/storage-sync'
-import { SyncError, type Json, type RecordVersion, type SyncReplica } from '@nook-dsh/capability-sync'
+import { AutomergeAdapter } from '@nook-dsh/adapter-merge-automerge'
+import { canonicalJson, SyncError, type Json, type RecordVersion, type SyncReplica } from '@nook-dsh/capability-sync'
 import {
   ProjectError,
   compareProjects,
@@ -95,6 +100,7 @@ class Notebook {
   readonly db: DatabaseSync
   readonly backups: string
   readonly replica?: Replica
+  readonly merger = new AutomergeAdapter()
   constructor(file: string, projectsFile?: string) {
     this.backups = `${resolve(file)}.backups`
     mkdirSync(dirname(resolve(file)), { recursive: true })
@@ -122,6 +128,7 @@ class Notebook {
           type: 'project',
           schema: 1,
           validate: validateProjectVersion,
+          merge: (input, signal) => this.merger.merge(input, signal),
           apply: value => {
             this.db
               .prepare(
@@ -141,6 +148,7 @@ class Notebook {
           type: 'note',
           schema: 1,
           validate: validateNoteVersion,
+          merge: (input, signal) => this.merger.merge(input, signal),
           apply: value => {
             const note = value.data as unknown as Omit<NoteDto, 'revision'>
             const previous = this.get(value.id)
@@ -380,17 +388,61 @@ class LocalNotes extends Service implements NoteService {
       return this.store.capture(note)
     })
   }
-  async save(request: SaveNoteRequest): Promise<NoteDto> {
+  async save(request: SaveNoteRequest): Promise<SaveNoteResult> {
     validate(request)
-    return this.store.transaction(() => {
+    const replica = this.store.replica
+    const fingerprint = canonicalJson({
+      id: request.id,
+      versionId: request.versionId ?? null,
+      revision: request.revision,
+      title: request.title,
+      markdown: request.markdown,
+      pinned: request.pinned,
+      projectId: request.projectId,
+    })
+    const submitted = this.store.transaction(() => {
+      const receipt = replica && request.requestId ? this.receipt(`save/${request.requestId}`, fingerprint) : null
+      if (receipt) return receipt
+      const current = this.store.get(request.id)
+      if (!current) throw new NoteError('NOT_FOUND', '笔记不存在。')
+      if (replica) {
+        const baseline = request.versionId ? replica.version(request.versionId) : null
+        if (
+          request.versionId &&
+          (!baseline || baseline.type !== 'note' || baseline.id !== request.id || baseline.schema !== 1)
+        )
+          throw new NoteError('INVALID_NOTE', '笔记编辑基线不存在或不匹配。')
+        if (!baseline) this.requireRevision(request.id, request.revision)
+        const base = baseline ? (baseline.data as unknown as NoteDto) : current
+        const data = json({
+          id: base.id,
+          title: request.title,
+          markdown: request.markdown,
+          pinned: request.pinned,
+          projectId: request.projectId,
+          source: base.source,
+          createdAt: base.createdAt,
+          updatedAt: new Date().toISOString(),
+          deletedAt: null,
+        })
+        const hash = replica.writeBranch(
+          'note',
+          request.id,
+          data,
+          false,
+          request.versionId ? [request.versionId] : undefined,
+        )
+        if (request.requestId) this.recordReceipt(`save/${request.requestId}`, fingerprint, hash)
+        return hash
+      }
       const previous = this.requireRevision(request.id, request.revision)
       if (previous.deletedAt !== null) throw new NoteError('CONFLICT', '这条笔记已进入回收站，请先恢复。')
       const note = {
         ...previous,
         title: request.title,
         markdown: request.markdown,
-        projectId: request.projectId,
         pinned: request.pinned,
+        projectId: request.projectId,
         revision: previous.revision + 1,
         updatedAt: new Date().toISOString(),
       }
@@ -398,8 +450,113 @@ class LocalNotes extends Service implements NoteService {
         .prepare('UPDATE notes SET title=?,markdown=?,project_id=?,pinned=?,revision=?,updated_at=? WHERE id=?')
         .run(note.title, note.markdown, note.projectId, note.pinned ? 1 : 0, note.revision, note.updatedAt, note.id)
       this.store.index(note)
-      return this.store.capture(note)
+      return null
     })
+    await replica?.reconcile()
+    return { note: this.store.get(request.id)!, submittedVersionId: submitted }
+  }
+  private receipt(key: string, fingerprint: string): string | null {
+    const row = this.store.db.prepare('SELECT value FROM sync_state WHERE key=?').get(`note-request/${key}`)
+    if (!row) return null
+    const value = JSON.parse(String(row.value)) as { fingerprint: string; result: string }
+    if (value.fingerprint !== createHash('sha256').update(fingerprint).digest('hex'))
+      throw new NoteError('INVALID_NOTE', '保存请求标识已被其他内容使用。')
+    return value.result
+  }
+  private recordReceipt(key: string, fingerprint: string, result: string) {
+    this.store.db
+      .prepare('INSERT INTO sync_state VALUES(?,?)')
+      .run(
+        `note-request/${key}`,
+        JSON.stringify({ fingerprint: createHash('sha256').update(fingerprint).digest('hex'), result }),
+      )
+  }
+  async history(request: NoteHistoryQuery): Promise<NoteHistoryPage> {
+    if (!this.store.get(request.id)) throw new NoteError('NOT_FOUND', '笔记不存在。')
+    const versions = this.store.replica?.history('note', request.id) ?? []
+    // Reverse topological order keeps children before ancestors even with clock skew.
+    const children = new Map<string, number>(versions.map(v => [v.hash, 0]))
+    const byHash = new Map(versions.map(v => [v.hash, v]))
+    for (const v of versions)
+      for (const parent of new Set(v.value.parents)) children.set(parent, (children.get(parent) ?? 0) + 1)
+    const ready = versions
+      .filter(v => !children.get(v.hash))
+      .map(v => v.hash)
+      .sort()
+    const ordered: (typeof versions)[number][] = []
+    while (ready.length) {
+      const hash = ready.shift()!,
+        v = byHash.get(hash)!
+      ordered.push(v)
+      for (const parent of new Set(v.value.parents)) {
+        children.set(parent, children.get(parent)! - 1)
+        if (!children.get(parent)) ready.push(parent)
+      }
+      ready.sort()
+    }
+    let start = 0
+    if (request.cursor) {
+      const index = ordered.findIndex(v => v.hash === request.cursor)
+      if (index < 0) throw new NoteError('INVALID_NOTE', '历史分页位置无效，请重新打开。')
+      start = index + 1
+    }
+    const limit = Math.min(100, Math.max(1, request.limit ?? 50))
+    const page = ordered.slice(start, start + limit)
+    return {
+      entries: page.map(({ hash, value }) => {
+        const n = value.data as unknown as NoteDto
+        return {
+          versionId: hash,
+          title: noteTitle(n),
+          updatedAt: n.updatedAt,
+          deleted: value.deleted,
+          merged: value.parents.length > 1,
+        }
+      }),
+      cursor: start + page.length < ordered.length ? page.at(-1)!.hash : null,
+    }
+  }
+  async getHistoryVersion(id: string, versionId: string): Promise<NoteDto> {
+    const value = this.store.replica?.version(versionId)
+    if (!value || value.type !== 'note' || value.id !== id || value.schema !== 1 || !this.store.get(id))
+      throw new NoteError('NOT_FOUND', '历史版本不存在。')
+    validateNoteVersion(value)
+    return { ...(value.data as unknown as NoteDto), revision: 1, versionId }
+  }
+  async restoreHistoryVersion(request: RestoreNoteRequest): Promise<NoteDto> {
+    const historical = await this.getHistoryVersion(request.id, request.versionId)
+    const replica = this.store.replica!
+    const fingerprint = canonicalJson(request)
+    const id = this.store.transaction(() => {
+      const receipt = this.receipt(`restore/${request.requestId}`, fingerprint)
+      if (receipt) return receipt
+      const id = request.copy ? randomUUID() : request.id
+      const now = new Date().toISOString()
+      const current = this.store.get(request.id)!
+      const { revision: _revision, versionId: _versionId, ...content } = historical
+      const projectId =
+        content.projectId &&
+        this.store.db.prepare('SELECT 1 FROM projects WHERE id=? AND deleted=0').get(content.projectId)
+          ? content.projectId
+          : null
+      replica.writeBranch(
+        'note',
+        id,
+        json({
+          ...content,
+          id,
+          projectId,
+          deletedAt: null,
+          createdAt: request.copy ? now : current.createdAt,
+          updatedAt: now,
+        }),
+        false,
+        request.copy ? [] : replica.snapshot().heads[`note/${id}`],
+      )
+      this.recordReceipt(`restore/${request.requestId}`, fingerprint, id)
+      return id
+    })
+    return this.store.get(id)!
   }
   async setDeleted(id: string, revision: number, deleted: boolean): Promise<NoteDto> {
     return this.store.transaction(() => {
@@ -502,6 +659,7 @@ export function apply(ctx: Context, config: Config): void {
       await sync?.dispose()
       await projects?.dispose()
       store.replica?.dispose()
+      await store.merger.dispose()
       store.db.close()
     }
   })
@@ -692,6 +850,9 @@ class ReplicaService extends Service implements SyncReplica {
   }
   receive(...args: Parameters<SyncReplica['receive']>) {
     return this.replica.receive(...args)
+  }
+  reconcile(signal?: AbortSignal) {
+    return this.replica.reconcile(signal)
   }
   acknowledge(...args: Parameters<SyncReplica['acknowledge']>) {
     return this.replica.acknowledge(...args)

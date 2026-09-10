@@ -47,6 +47,8 @@ export default class SyncFeature extends Service implements SyncService {
   private configurationController: AbortController | undefined
   private configurationTask: Promise<SyncStatus> | undefined
   private failures = 0
+  private localMerge: Promise<void> | undefined
+  private readonly mergeController = new AbortController()
   constructor(
     ctx: Context,
     private readonly config: Config,
@@ -63,11 +65,16 @@ export default class SyncFeature extends Service implements SyncService {
       const unsubscribe = ctx.nookSyncReplica.subscribe(() => {
         if (!this.running) this.schedule(1000)
       })
+      this.localMerge = ctx.nookSyncReplica.reconcile(this.mergeController.signal).catch(error => {
+        if (!this.stopped) this.error = error instanceof SyncError ? error.message : '自动合并未完成，原始版本已保留。'
+      })
       this.schedule(0)
       return async () => {
         this.stopped = true
         clearTimeout(this.timer)
         unsubscribe()
+        this.mergeController.abort()
+        await this.localMerge
         this.controller?.abort()
         this.configurationController?.abort()
         await this.configurationTask?.catch(() => {})

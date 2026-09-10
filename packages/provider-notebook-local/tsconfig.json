@@ -24,6 +24,9 @@
     },
     {
       "path": "../capability-project"
+    },
+    {
+      "path": "../adapter-merge-automerge"
     }
   ]
 }

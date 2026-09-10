@@ -78,6 +78,15 @@ export default class NotebookRpc extends TypertRemoteService {
   save(request: Request<'save'>, signal: AbortSignal) {
     return result(signal, () => this.ctx.nookNotebook.save(request))
   }
+  history(request: Request<'history'>, signal: AbortSignal) {
+    return result(signal, () => this.ctx.nookNotebook.history(request))
+  }
+  getHistoryVersion(request: Request<'getHistoryVersion'>, signal: AbortSignal) {
+    return result(signal, () => this.ctx.nookNotebook.getHistoryVersion(request.id, request.versionId))
+  }
+  restoreHistoryVersion(request: Request<'restoreHistoryVersion'>, signal: AbortSignal) {
+    return result(signal, () => this.ctx.nookNotebook.restoreHistoryVersion(request))
+  }
   trash(request: Request<'trash'>, signal: AbortSignal) {
     return result(signal, () => this.ctx.nookNotebook.setDeleted(request.id, request.revision, request.deleted))
   }

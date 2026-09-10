@@ -70,7 +70,9 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
   await runPnpm(['install', '--frozen-lockfile'], { cwd: root, capture: true })
   await runPnpm(['run', 'dev:profile'], { cwd: root, capture: true })
   await mkdir(resolve(root, '.dsh-dev/nook'), { recursive: true })
-  await writeFile(resolve(root, '.dsh-dev/nook/backup-acceptance.txt'), 'preserve before startup')
+  // Explicit test state skips legacy dev-data migration; seed the actual start data directory.
+  await mkdir(resolve(root, 'user-state/harness/nook'), { recursive: true })
+  await writeFile(resolve(root, 'user-state/harness/nook/backup-acceptance.txt'), 'preserve before startup')
   const launch = (script: string) => {
     let output = ''
     const urls: string[] = []
