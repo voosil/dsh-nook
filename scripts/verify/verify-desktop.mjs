@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
-import { dismissOnboarding, notebookSmoke } from './notebook-smoke.mjs'
+import { dismissOnboarding, notebookSmoke, waitForNoteSave } from './notebook-smoke.mjs'
 import { ROOT, run, runPnpm } from '../profile/profile-lib.mjs'
 
 const require = createRequire(import.meta.url)
@@ -140,12 +140,13 @@ try {
   const webWorkspace = webPage.getByRole('dialog', { name: 'Nook 笔记工作区', exact: true })
   await webWorkspace.getByRole('button', { name: '回收站', exact: true }).click()
   await webWorkspace.locator('.nook-note-card').filter({ hasText: title }).click()
-  await webWorkspace.getByRole('button', { name: '恢复笔记', exact: true }).click()
+  await webWorkspace.locator('.nook-note-card').filter({ hasText: title }).click({ button: 'right' })
+  await webWorkspace.getByRole('menuitem', { name: '恢复笔记', exact: true }).click()
   await webWorkspace.getByRole('button', { name: '所有笔记', exact: true }).click()
   await webWorkspace.locator('.nook-note-card').filter({ hasText: title }).click()
   const sharedTitle = `${title} 网页修改`
   await webWorkspace.getByRole('textbox', { name: '笔记标题', exact: true }).fill(sharedTitle)
-  await webWorkspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+  await waitForNoteSave(webPage)
   await desktop.close()
   desktop = undefined
   assert.equal((await fetch(url)).status, 401, 'Web lease must keep the authenticated backend running')

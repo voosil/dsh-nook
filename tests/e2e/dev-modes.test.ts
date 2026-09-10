@@ -8,7 +8,7 @@ import { join, relative, resolve } from 'node:path'
 import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { ROOT, runPnpm } from '../../scripts/profile/profile-lib.mjs'
-import { dismissOnboarding } from '../../scripts/verify/notebook-smoke.mjs'
+import { dismissOnboarding, waitForNoteSave } from '../../scripts/verify/notebook-smoke.mjs'
 import { verifyBackup } from '../../packages/storage-backup/src/index.ts'
 import { desktopNode, NODE_VERSION } from '../../scripts/desktop/desktop-node.mjs'
 
@@ -166,7 +166,7 @@ test('dev reloads Client and Host while start serves its fixed build', { timeout
     .first()
     .click()
   await workspace.getByRole('textbox', { name: '笔记标题', exact: true }).fill('saved after Host restart')
-  await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+  await waitForNoteSave(page)
   assert.equal(await page.evaluate(() => (window as Window & { nookHmrProbe?: string }).nookHmrProbe), 'same document')
   await stablePage.reload()
   await stablePage.getByRole('button', { name: '打开 Nook', exact: true }).waitFor()

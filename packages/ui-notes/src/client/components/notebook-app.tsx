@@ -5,13 +5,13 @@ import {
   MoreHorizontal,
   FolderOpen,
   Inbox,
-  ListChecks,
+  Settings,
+  Store,
   NotebookPen,
   Plus,
   Sprout,
   Star,
   Trash2,
-  Video,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { noteTitle, type NoteDto, type NoteInput } from '@nook-dsh/capability-note'
@@ -35,6 +35,8 @@ import { NoteEditor, type EditorHandle } from './note-editor.js'
 import { SummaryPanel } from './summary-panel.js'
 import { VideoPanel } from './video-panel.js'
 import { exportNote, type ExportReceipt } from '../lib/export-note.js'
+import { ToolMarket } from './tool-market.js'
+import { useAppearance } from '../hooks/use-appearance.js'
 import { SyncControl } from './sync-control.js'
 
 const personal = { kind: 'personal' as const, url: null, author: null, basedOn: [] }
@@ -50,6 +52,9 @@ export function NotebookApp({
   close: () => void
   onDeploy: () => Promise<void>
 }) {
+  const [appearance, setAppearance] = useAppearance()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [marketOpen, setMarketOpen] = useState(false)
   const [syncChange, setSyncChange] = useState(0)
   const [editorEpoch, setEditorEpoch] = useState(0)
   const [projects, setProjects] = useState<readonly ProjectDto[]>([])
@@ -362,11 +367,21 @@ export function NotebookApp({
         ref={panel}
         tabIndex={-1}
         className="nook-workspace"
+        data-nook-theme={appearance}
         role="dialog"
         aria-modal="true"
         aria-label="Nook 笔记工作区"
         onKeyDown={event => {
-          if (event.key === 'Escape' && !menu && !projectForm && !deleteProject && !summaryOpen && !videoOpen) {
+          if (
+            event.key === 'Escape' &&
+            !menu &&
+            !projectForm &&
+            !deleteProject &&
+            !summaryOpen &&
+            !videoOpen &&
+            !settingsOpen &&
+            !marketOpen
+          ) {
             event.stopPropagation()
             void navigate(close)
           }
@@ -374,7 +389,7 @@ export function NotebookApp({
             event.preventDefault()
             void handle.current?.flush()
           }
-          if (event.key === 'Tab') {
+          if (event.key === 'Tab' && !(event.target as HTMLElement).closest('.nui-dialog')) {
             const items = Array.from(
               panel.current?.querySelectorAll<HTMLElement>(
                 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [contenteditable="true"], a[href]',
@@ -507,12 +522,8 @@ export function NotebookApp({
             {!projects.length && <p className="nook-muted">想法可以先不分类。</p>}
           </nav>
           <div className="nook-nav-bottom">
-            <SyncControl api={sync} onChanged={setSyncChange} onDeploy={() => navigate(onDeploy)} />
-            <Button variant="ghost" disabled={busy} onClick={() => void navigate(() => setVideoOpen(true))}>
-              <Video size={16} aria-hidden="true" /> 视频转文稿
-            </Button>
-            <Button variant="ghost" disabled={busy} onClick={() => void navigate(() => setSummaryOpen(true))}>
-              <ListChecks size={16} aria-hidden="true" /> 日 / 周总结
+            <Button variant="ghost" disabled={busy} onClick={() => void navigate(() => setMarketOpen(true))}>
+              <Store size={16} aria-hidden="true" /> 工具市集
             </Button>
             <Button variant="ghost" disabled={busy} active={trash} onClick={() => view(undefined, true)}>
               <Trash2 size={16} aria-hidden="true" /> 回收站
@@ -520,8 +531,32 @@ export function NotebookApp({
             <Button variant="ghost" disabled={busy} onClick={() => void navigate(close)}>
               <ArrowUpRight size={16} aria-hidden="true" /> 返回 AI 对话
             </Button>
+            <Button variant="ghost" disabled={busy} onClick={() => setSettingsOpen(true)}>
+              <Settings size={16} aria-hidden="true" /> 设置
+            </Button>
           </div>
         </aside>
+        <SyncControl
+          api={sync}
+          onChanged={setSyncChange}
+          onDeploy={() => navigate(onDeploy)}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          appearance={appearance}
+          onAppearanceChange={setAppearance}
+        />
+        <ToolMarket
+          open={marketOpen}
+          onOpenChange={setMarketOpen}
+          onVideo={() => {
+            setMarketOpen(false)
+            setVideoOpen(true)
+          }}
+          onSummary={() => {
+            setMarketOpen(false)
+            setSummaryOpen(true)
+          }}
+        />
         <main className="nook-main">
           {error && (
             <div className="nook-error" role="alert">
@@ -646,7 +681,7 @@ export function NotebookApp({
                         )}
                         {noteTitle(note)}
                       </strong>
-                      <p>{note.markdown.replace(/[#*`>]/g, '').slice(0, 120) || '还没有正文，继续写下去…'}</p>
+                      <p>{note.markdown.replace(/[#*`>]/g, '').slice(0, 120) || '还没有正文…'}</p>
                       <footer>
                         <time dateTime={sort === 'created' ? note.createdAt : note.updatedAt}>
                           {date(sort === 'created' ? note.createdAt : note.updatedAt)}

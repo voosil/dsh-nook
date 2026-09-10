@@ -2,7 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import type { NoteDto, NoteHistoryEntry, RestoreNoteRequest } from '@nook-dsh/capability-note'
 import type { Api } from '../lib/api.js'
 import { Button, Dialog } from '@nook-dsh/ui-kit'
-import { fullDate } from '../lib/note-format.js'
+import { historyLabel, historyStages } from '../lib/note-history.js'
+
+const historyDate = (value: string) =>
+  new Date(value).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
 
 /** Highlight the changed span, retaining exact Markdown rather than re-rendering it. */
 function Difference({ value, other }: { value: string; other: string }) {
@@ -42,6 +52,7 @@ export function NoteHistory({
   const [error, setError] = useState('')
   const lifecycle = useRef<AbortController | null>(null)
   const request = useRef<RestoreNoteRequest | null>(null)
+  const stages = historyStages(entries)
   useEffect(() => {
     const controller = new AbortController()
     lifecycle.current = controller
@@ -92,7 +103,7 @@ export function NoteHistory({
     }
   }
   async function restore(copy: boolean) {
-    if (!selected) return
+    if (!selected || historical?.versionId !== selected) return
     setBusy(true)
     setError('')
     if (!request.current || request.current.versionId !== selected || request.current.copy !== copy)
@@ -105,6 +116,28 @@ export function NoteHistory({
     } finally {
       if (lifecycle.current) setBusy(false)
     }
+  }
+  function versionButton(entry: NoteHistoryEntry, stageSize = 1) {
+    return (
+      <Button
+        variant="ghost"
+        type="button"
+        key={entry.versionId}
+        className="nook-history-version"
+        disabled={busy}
+        aria-current={selected === entry.versionId ? 'true' : undefined}
+        onClick={() => setSelected(entry.versionId)}
+      >
+        <strong>{entry.title}</strong>
+        <span>{historyDate(entry.updatedAt)}</span>
+        <small>
+          {stageSize > 1 ? '连续编辑' : historyLabel(entry)}
+          {entry.deleted && entry.kind !== 'delete' ? ' · 已删除' : ''}
+          {entry.versionId === note.versionId ? ' · 当前版本' : ''}
+          {stageSize > 1 ? ` · ${stageSize} 次保存` : ''}
+        </small>
+      </Button>
+    )
   }
   return (
     <Dialog
@@ -123,33 +156,30 @@ export function NoteHistory({
       )}
       <div className="nook-history-layout">
         <nav aria-label="历史版本列表">
-          {entries.map(entry => (
-            <Button
-              variant="ghost"
-              type="button"
-              key={entry.versionId}
-              disabled={busy}
-              aria-current={selected === entry.versionId ? 'true' : undefined}
-              onClick={() => setSelected(entry.versionId)}
-            >
-              <strong>{entry.title}</strong>
-              <span>{fullDate(entry.updatedAt)}</span>
-              <small>
-                {entry.versionId === note.versionId ? '当前版本' : entry.merged ? '合并版本' : '保存版本'}
-                {entry.deleted ? ' · 已删除' : ''} · {entry.versionId.slice(0, 8)}
-              </small>
-            </Button>
+          {stages.map(stage => (
+            <div className="nook-history-stage" key={stage.id}>
+              {versionButton(stage.entries[0]!, stage.entries.length)}
+              {stage.entries.length > 1 && (
+                <details className="nook-history-details">
+                  <summary>展开其余 {stage.entries.length - 1} 次保存</summary>
+                  {stage.entries.slice(1).map(entry => versionButton(entry))}
+                </details>
+              )}
+            </div>
           ))}
           {loading && <p role="status">正在读取历史…</p>}
           {!loading && !entries.length && <p>暂无历史版本。</p>}
           {cursor && (
-            <Button disabled={loading || busy} onClick={() => void more()}>
-              加载更多
-            </Button>
+            <>
+              <p className="nook-muted">还有更早的版本，加载后会补全编辑阶段和保存次数。</p>
+              <Button disabled={loading || busy} onClick={() => void more()}>
+                加载更多
+              </Button>
+            </>
           )}
         </nav>
         <div className="nook-history-preview">
-          {historical ? (
+          {historical && historical.versionId === selected ? (
             <>
               <div className="nook-history-comparison">
                 <section>

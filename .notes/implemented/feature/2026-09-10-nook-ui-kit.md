@@ -17,7 +17,7 @@ Nook 的 UI 此前散落四处且互相独立实现按钮/弹窗/菜单/提示�
 新建 `packages/ui-kit`（`@nook-dsh/ui-kit`），四个 ui 包全部迁移为唯一消费方：
 
 - 交互组件基于已安装的 base-ui `@base-ui-components/react@1.0.0-rc.0` 公开部件：Button、Input、Field.Control（通过 render 组合 textarea）、Select / Combobox、Dialog / AlertDialog、Tabs、Menu、Switch、Toast。Select 对外采用值与选项契约，长列表提供搜索；Chip、Kbd 保持纯展示 HTML。图标由调用方传 lucide 节点，kit 不依赖 lucide。
-- 设计规范收敛为 `--nook-*` tokens（Nook 纸感色卡）：值取自迁移前的调色板并做了归并——十余个只差一两档的灰绿近似色统一为 `ink` / `ink-muted` / `ink-faint`、`hover` / `sunken`、`accent` / `accent-strong` / `accent-soft` 等少量 token；色卡全文表见 `docs/ui-packages.md`。固定纸感配色，不引用 `--dsw-alias-*`，不随宿主主题变化。
+- 设计规范收敛为 `--nook-*` tokens（Nook 纸感色卡）：值取自迁移前的调色板并做了归并——十余个只差一两档的灰绿近似色统一为 `ink` / `ink-muted` / `ink-faint`、`hover` / `sunken`、`accent` / `accent-strong` / `accent-soft` 等少量 token；色卡以 `tokens.css` 为唯一来源。主题扩展及设置入口见[外观与工具市集](2026-09-10-appearance-settings.md)，不引用 `--dsw-alias-*`，不随宿主主题变化。
 - CSS 注入沿用包内 `import css from '*.css'`（字符串）加根部 `<style>` 的既有模式；`uiKitStyles` 在消费端自身 CSS 之前注入，重复注入同文本无副作用。kit 的 CSS 放包根 `styles/`：tsc 不复制资源进 `lib`，消费端 bundle 经 `lib` 解析 kit，`src` 内用 `../styles/*.css` 兄弟相对路径使 src 与 lib 解析到同一文件。
 - 双门禁：根 `stylelint.config.mjs`（`color-no-hex` + `function-disallowed-list`，仅 `packages/ui-kit/styles/tokens.css` 豁免）与 `scripts/verify/verify-ui-tokens.mjs`（扫描 ui-* 包 ts/tsx/css，tokens.css 豁免），`pnpm lint:css` / `pnpm verify:ui-tokens` 已插入 `pnpm verify` 链的 `verify:boundaries` 之后。
 - 迁移即清理：删除 ui-notes 本地 `button.tsx` / `action-menu.tsx` / `export-toast.tsx`，`index.css` 删除全部被 kit 覆盖的组件样式块（按钮/输入全局重置、`.nook-modal` 弹窗、`.nook-action-menu`、`.nook-export-toast`、`.nook-sync-tabs` 等），保留布局/响应式/tiptap 内容样式并把颜色全部换成 token。
@@ -44,7 +44,7 @@ Nook 的 UI 此前散落四处且互相独立实现按钮/弹窗/菜单/提示�
 
 - 任何 UI 颜色改动只有一个入口（tokens.css），近似色继续归并；`pnpm verify` 中两道门禁拦截字面量回归。
 - base-ui 固定在 `1.0.0-rc.0`；升级到 1.0.0 稳定版时以安装后 `node_modules` 的 parts 类型为准核对组合方式，kit 对外签名不变。
-- 深色宿主下的对比度风险维持「按需调 tokens 值」的处置，不引入第二套 token 层。
+- 明暗外观使用相同语义 tokens，由 Nook 自己的主题选择器控制，不依赖宿主主题。
 - kit 是纯库（无 `dsh.client.inject`、无 slot 贡献、无 Cordis 服务），不参与 Profile slot 组合，仅经 esbuild 打进各消费端 bundle。
 
 ## Validation

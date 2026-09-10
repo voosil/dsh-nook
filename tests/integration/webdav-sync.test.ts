@@ -117,6 +117,17 @@ test('two notebooks migrate projects and sync notes, source versions, trash, con
   )
   assert.ok(oldVersions.some(v => v.markdown === '左端编辑'))
   assert.ok(oldVersions.some(v => v.markdown === '右端编辑'))
+  const restored = await a.nookNotes.restoreHistoryVersion({
+    id: original.id,
+    versionId: oldVersions.find(v => v.markdown === '左端编辑')!.versionId!,
+    requestId: randomUUID(),
+    copy: false,
+  })
+  await run(a)
+  await run(b)
+  const receivedHistory = await b.nookNotes.history({ id: original.id })
+  assert.equal(receivedHistory.entries[0]!.versionId, restored.versionId)
+  assert.equal(receivedHistory.entries[0]!.kind, 'restore')
   bn = (await b.nookNotes.get(original.id))!
   await b.nookNotes.setDeleted(bn.id, bn.revision, true)
   await run(b)

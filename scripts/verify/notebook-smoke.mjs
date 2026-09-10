@@ -29,6 +29,43 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await entry.click()
       await workspace.waitFor()
     }
+    await workspace.getByRole('button', { name: '设置', exact: true }).click()
+    const settings = workspace.getByRole('dialog', { name: '设置', exact: true })
+    await settings.waitFor()
+    assert.deepEqual(await settings.boundingBox(), { x: 0, y: 0, ...page.viewportSize() })
+    for (const [name, theme] of [
+      ['Claude 暖纸', 'claude'],
+      ['夜晚', 'night'],
+      ['Nook 纸感', 'paper'],
+      ['孟菲斯', 'memphis'],
+    ]) {
+      await settings.getByRole('button', { name: new RegExp(name) }).click()
+      assert.equal(await workspace.getAttribute('data-nook-theme'), theme)
+      assert.equal(await settings.getByRole('button', { name: new RegExp(name) }).getAttribute('aria-pressed'), 'true')
+      await settings.evaluate(async element => {
+        await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {})))
+      })
+      if (process.env.NOOK_APPEARANCE_SCREENSHOT)
+        await page.screenshot({ path: process.env.NOOK_APPEARANCE_SCREENSHOT.replace('.png', `-${theme}.png`) })
+    }
+    await settings.getByRole('button', { name: /夜晚/ }).click()
+    await page.keyboard.press('Escape')
+    await settings.waitFor({ state: 'hidden' })
+    assert.ok(await workspace.isVisible(), 'Escape closes only settings')
+    await page.reload()
+    await workspace.waitFor()
+    await dismissOnboarding(page)
+    assert.equal(await workspace.getAttribute('data-nook-theme'), 'night', 'Appearance survives reload')
+    await workspace.getByRole('button', { name: '设置', exact: true }).click()
+    const viewport = page.viewportSize()
+    await page.setViewportSize({ width: 390, height: 720 })
+    assert.deepEqual(await settings.boundingBox(), { x: 0, y: 0, width: 390, height: 720 })
+    assert.ok(await settings.evaluate(element => element.scrollWidth <= element.clientWidth))
+    if (process.env.NOOK_APPEARANCE_SCREENSHOT)
+      await page.screenshot({ path: process.env.NOOK_APPEARANCE_SCREENSHOT.replace('.png', '-narrow.png') })
+    await page.setViewportSize(viewport)
+    await settings.getByRole('button', { name: /Nook 纸感/ }).click()
+    await settings.getByRole('button', { name: '关闭设置', exact: true }).click()
     const suffix = Date.now().toString(36)
     const title = `Nook 验收 ${suffix}`
     let project = `验收项目 ${suffix}`
@@ -85,9 +122,13 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       .fill('劳动异化与自由实践：今天学习了新的概念。\n保留完整的思考过程。')
     await workspace.getByRole('combobox', { name: '笔记所属项目' }).click()
     await workspace.getByRole('option', { name: project, exact: true }).click()
-    await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+    await waitForNoteSave(page)
     await workspace.getByRole('button', { name: '置顶', exact: true }).click()
-    await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+    await waitForNoteSave(page)
+    await workspace.getByRole('button', { name: '已置顶', exact: true }).click()
+    await waitForNoteSave(page)
+    await workspace.getByRole('button', { name: '置顶', exact: true }).click()
+    await waitForNoteSave(page)
     assert.ok((await workspace.innerText()).includes('创建于'))
     assert.ok((await workspace.innerText()).includes('更新于'))
     // Both browser saves start from the same version; Host merging must be invisible.
@@ -110,8 +151,8 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await otherWorkspace
         .getByRole('textbox', { name: '笔记正文', exact: true })
         .fill('劳动异化与自由实践：今天学习了新的概念。\n保留完整的思考过程。\n右窗口补充。')
-      await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
-      await otherWorkspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+      await waitForNoteSave(page)
+      await waitForNoteSave(secondWindow)
     } finally {
       await secondContext.close()
     }
@@ -123,11 +164,30 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     const mergedBody = await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()
     assert.ok(mergedBody.includes('左窗口补充。') && mergedBody.includes('右窗口补充。'), mergedBody)
     assert.ok(!(await workspace.innerText()).includes('有同步冲突'))
-    await workspace.getByRole('button', { name: '历史版本', exact: true }).click()
+    const editorTop = workspace.locator('.nook-editor-top')
+    assert.equal(await editorTop.getByRole('button').count(), 1)
+    assert.equal(await editorTop.getByRole('status').count(), 0)
+    assert.ok(!(await editorTop.innerText()).includes('已保存'))
+    const noteActions = editorTop.getByRole('button', { name: '笔记操作', exact: true })
+    await noteActions.focus()
+    await page.keyboard.press('Enter')
+    await workspace.getByRole('menu').waitFor()
+    assert.deepEqual(await workspace.getByRole('menuitem').allTextContents(), ['历史版本', '导出'])
+    await page.keyboard.press('Escape')
+    await workspace.getByRole('menu').waitFor({ state: 'hidden' })
+    await noteActions.click()
+    await workspace.getByRole('menuitem', { name: '历史版本', exact: true }).click()
     const history = workspace.getByRole('dialog', { name: '笔记历史', exact: true })
     await history.waitFor()
-    const versions = history.getByRole('navigation', { name: '历史版本列表' }).getByRole('button')
+    const versions = history.locator('.nook-history-version:visible')
     await versions.first().waitFor()
+    const stages = history.locator('.nook-history-stage')
+    const details = history.locator('.nook-history-details')
+    assert.ok((await details.count()) > 0, 'Continuous saves are grouped by default')
+    const collapsedCount = await versions.count()
+    for (const summary of await details.locator('summary').all()) await summary.click()
+    assert.ok((await versions.count()) > collapsedCount, 'Expanding reveals individual saved versions')
+    assert.ok((await stages.count()) < (await versions.count()), 'Grouping keeps every raw version accessible')
     let foundOriginal = false
     for (let index = 0; index < (await versions.count()); index++) {
       await versions.nth(index).click()
@@ -152,10 +212,16 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     await page.setViewportSize(historyViewport)
     await history.getByRole('button', { name: '恢复此版本', exact: true }).click()
     await history.waitFor({ state: 'hidden' })
+    await noteActions.click()
+    await workspace.getByRole('menuitem', { name: '历史版本', exact: true }).click()
+    await history.waitFor()
+    await history.locator('.nook-history-stage').first().getByText('恢复版本 · 当前版本', { exact: true }).waitFor()
+    await page.keyboard.press('Escape')
+    await history.waitFor({ state: 'hidden' })
     const restoredPin = workspace.getByRole('button', { name: '置顶', exact: true })
     if (await restoredPin.count()) {
       await restoredPin.click()
-      await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+      await waitForNoteSave(page)
     }
     assert.ok(
       !(await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).innerText()).includes('窗口补充'),
@@ -187,7 +253,7 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     await workspace.waitFor()
     const desktopExport = await page.evaluate(() => Boolean(window.nookDesktop))
     const download = desktopExport ? undefined : page.waitForEvent('download')
-    await noteCard.click({ button: 'right' })
+    await noteActions.click()
     await workspace.getByRole('menuitem', { name: '导出', exact: true }).click()
     await workspace.locator('.nui-toast').waitFor()
     if (download) {
@@ -200,7 +266,8 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
 
     await workspace.getByRole('button', { name: '回收站', exact: true }).click()
     await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
-    await workspace.getByRole('button', { name: '恢复笔记', exact: true }).click()
+    await noteCard.click({ button: 'right' })
+    await workspace.getByRole('menuitem', { name: '恢复笔记', exact: true }).click()
     await workspace.getByRole('button', { name: project, exact: true }).click()
     await noteCard.click()
     await projectRow(project).hover()
@@ -213,17 +280,20 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     await workspace.getByRole('alertdialog', { name: '删除项目' }).waitFor({ state: 'hidden' })
     assert.equal(await workspace.getByRole('combobox', { name: '笔记所属项目' }).innerText(), '未分类')
     await workspace.getByRole('textbox', { name: '笔记正文', exact: true }).fill(draft + '删除项目后继续编辑。')
-    await workspace.getByRole('status').filter({ hasText: '已保存' }).waitFor()
+    await waitForNoteSave(page)
     await workspace.getByRole('button', { name: '未分类', exact: true }).click()
     await workspace.locator('.nook-note-card').filter({ hasText: title }).click()
     assert.equal(await workspace.getByRole('combobox', { name: '笔记所属项目' }).innerText(), '未分类')
-    await workspace.getByRole('button', { name: '移到回收站', exact: true }).click()
+    await noteCard.click({ button: 'right' })
+    await workspace.getByRole('menuitem', { name: '删除', exact: true }).click()
+    await workspace.getByRole('button', { name: '工具市集', exact: true }).click()
     await workspace.getByRole('button', { name: '日 / 周总结', exact: true }).click()
     await workspace.getByRole('dialog', { name: '笔记总结', exact: true }).waitFor()
     await workspace
       .getByRole('dialog', { name: '笔记总结', exact: true })
       .getByRole('button', { name: '关闭', exact: true })
       .click()
+    await workspace.getByRole('button', { name: '工具市集', exact: true }).click()
     await workspace.getByRole('button', { name: '视频转文稿', exact: true }).click()
     await workspace.getByRole('dialog', { name: '视频转文稿', exact: true }).waitFor()
     await workspace
@@ -231,8 +301,9 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       .getByRole('button', { name: '关闭', exact: true })
       .click()
     if (dav) {
-      await workspace.getByRole('button', { name: /数据同步/ }).click()
-      const sync = workspace.getByRole('dialog', { name: '数据同步', exact: true })
+      await workspace.getByRole('button', { name: '设置', exact: true }).click()
+      await workspace.getByRole('button', { name: '数据同步', exact: true }).click()
+      const sync = workspace.getByRole('dialog', { name: '设置', exact: true })
       assert.equal(await sync.getByRole('tab', { name: '同步信息', exact: true }).getAttribute('aria-selected'), 'true')
       assert.equal(await sync.getByRole('link', { name: '配置指南' }).count(), 0)
       assert.equal(await sync.getByLabel('WebDAV 同步目录').isVisible(), false)
@@ -250,11 +321,12 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       const initialPrompt = await initialComposer.innerText()
       await page.getByRole('button', { name: '打开 Nook', exact: true }).click()
       await workspace.waitFor()
-      await workspace.getByRole('button', { name: /数据同步/ }).click()
+      await workspace.getByRole('button', { name: '设置', exact: true }).click()
+      await workspace.getByRole('button', { name: '数据同步', exact: true }).click()
       const syncFrame = await sync.boundingBox()
       await sync.getByRole('tab', { name: '同步信息', exact: true }).focus()
       await page.keyboard.press('ArrowRight')
-      assert.equal(await sync.getByRole('tab', { name: '配置', exact: true }).getAttribute('aria-selected'), 'true')
+      await sync.getByRole('tab', { name: '配置', exact: true, selected: true }).waitFor()
       assert.deepEqual(await sync.boundingBox(), syncFrame, 'Switching tabs must preserve the dialog frame')
       await sync.getByLabel('WebDAV 同步目录').fill(dav.url)
       assert.equal(await sync.locator('.nook-sync-guide-body').count(), 0)
@@ -408,8 +480,9 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       assert.ok((await information.innerText()).includes(dav.url))
       await information.getByRole('button', { name: '开启同步', exact: true }).click()
       await sync.getByRole('status').filter({ hasText: '已同步' }).waitFor()
-      await sync.getByRole('button', { name: '关闭同步设置', exact: true }).click()
-      await workspace.getByRole('button', { name: /数据同步/ }).click()
+      await sync.getByRole('button', { name: '关闭设置', exact: true }).click()
+      await workspace.getByRole('button', { name: '设置', exact: true }).click()
+      await workspace.getByRole('button', { name: '数据同步', exact: true }).click()
       assert.equal(await sync.getByRole('tab', { name: '同步信息', exact: true }).getAttribute('aria-selected'), 'true')
       await sync.getByRole('tab', { name: '配置', exact: true }).click()
       assert.equal(await sync.getByLabel('WebDAV 同步目录').inputValue(), dav.url)
@@ -442,4 +515,9 @@ export async function dismissOnboarding(page) {
       if (error.name !== 'TimeoutError') throw error
     }
   }
+}
+
+/** Wait for the temporary draft to clear after the Host acknowledges autosave. */
+export async function waitForNoteSave(page) {
+  await page.waitForFunction(() => !Object.keys(localStorage).some(key => key.startsWith('nook.note-draft.v1.')))
 }

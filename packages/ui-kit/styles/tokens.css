@@ -1,13 +1,14 @@
 /*
  * Nook 色卡 — 全部 UI 颜色的唯一来源。
  *
- * 值为 Nook 现有纸感调色板（取自 ui-notes 迁移前的样式），固定配色、不随宿主主题变化。
+ * Nook 纸感、Claude 暖纸与夜晚三套独立语义色卡，不随宿主主题变化。
  * 规则：
  * - 仓库内任何其它文件禁止出现原始色值（stylelint + scripts/verify/verify-ui-tokens.mjs 双门禁）。
  * - 新增颜色先在本文件加 token，页面只写 var(--nook-color-*)。
  * - 近似色已合并：允许 ±10 以内的差异归入同一 token，保持色卡精简。
  */
-:root {
+:root,
+[data-nook-theme='paper'] {
   /* 表面 —— 背景与浮面 */
   --nook-color-bg: #fbfaf7; /* 工作台背景（纸面） */
   --nook-color-surface: #fffefb; /* 输入框、菜单、浮卡底色 */
@@ -52,6 +53,9 @@
   --nook-radius-md: 10px; /* 侧栏按钮、弹层、卡片 */
   --nook-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
 
+  --nook-font-editor: var(--nook-font-sans);
+  color-scheme: light;
+
   --nook-radius-lg: 16px;
   --nook-space-1: 4px;
   --nook-space-2: 8px;
@@ -74,9 +78,111 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root {
+  :root,
+  [data-nook-theme] {
     --nook-motion-fast: 0ms;
     --nook-motion-base: 0ms;
     --nook-motion-slow: 0ms;
   }
+}
+
+[data-nook-theme='claude'] {
+  --nook-color-bg: #faf9f5;
+  --nook-color-surface: #fffefa;
+  --nook-color-sunken: #f0eee7;
+  --nook-color-nav: #f0eee6;
+  --nook-color-hover: #e9e6dd;
+  --nook-color-border: #dedbd2;
+  --nook-color-button: #eae7df;
+  --nook-color-button-hover: #dfdbd1;
+  --nook-color-button-pressed: #d4cec2;
+  --nook-color-danger-soft: #f6e7e1;
+  --nook-color-danger-hover: #eed7ce;
+  --nook-color-control-border: #a7a196;
+  --nook-color-focus: #b76c50;
+  --nook-color-ink: #302e29;
+  --nook-color-ink-muted: #716b61;
+  --nook-color-ink-faint: #938b7f;
+  --nook-color-accent: #ae5639;
+  --nook-color-accent-strong: #91452e;
+  --nook-color-accent-soft: #ce9179;
+  --nook-color-accent-contrast: #ffffff;
+  --nook-color-danger: #ad413b;
+  --nook-color-warn-bg: #faecdc;
+  --nook-color-warn-ink: #885126;
+  --nook-color-backdrop: #302e294d;
+  --nook-color-mark: #dcba5340;
+  --nook-font-editor: Georgia, 'Songti SC', 'Noto Serif CJK SC', serif;
+  --nook-radius: 8px;
+  --nook-radius-md: 12px;
+  --nook-shadow-dialog: 0 18px 70px #302e2926;
+  --nook-shadow-menu: 0 8px 30px #302e2920;
+  color-scheme: light;
+}
+
+[data-nook-theme='night'] {
+  --nook-color-bg: #262624;
+  --nook-color-surface: #30302d;
+  --nook-color-sunken: #222220;
+  --nook-color-nav: #20201e;
+  --nook-color-hover: #3b3a35;
+  --nook-color-border: #46443e;
+  --nook-color-button: #3b3a35;
+  --nook-color-button-hover: #48463f;
+  --nook-color-button-pressed: #545147;
+  --nook-color-danger-soft: #482f2c;
+  --nook-color-danger-hover: #593732;
+  --nook-color-control-border: #797368;
+  --nook-color-focus: #dca183;
+  --nook-color-ink: #e8e5dc;
+  --nook-color-ink-muted: #b5afa2;
+  --nook-color-ink-faint: #9b9487;
+  --nook-color-accent: #dfa180;
+  --nook-color-accent-strong: #edb699;
+  --nook-color-accent-soft: #ac8067;
+  --nook-color-accent-contrast: #28231f;
+  --nook-color-danger: #f0988c;
+  --nook-color-warn-bg: #443529;
+  --nook-color-warn-ink: #ecc297;
+  --nook-color-backdrop: #11111099;
+  --nook-color-mark: #d4ad4d40;
+  --nook-font-editor: Georgia, 'Songti SC', 'Noto Serif CJK SC', serif;
+  --nook-radius: 8px;
+  --nook-radius-md: 12px;
+  --nook-shadow-dialog: 0 18px 70px #00000066;
+  --nook-shadow-menu: 0 8px 30px #00000055;
+  color-scheme: dark;
+}
+
+[data-nook-theme='memphis'] {
+  --nook-color-bg: #f2f6fd;
+  --nook-color-surface: #fcfdff;
+  --nook-color-sunken: #fdf0f6;
+  --nook-color-nav: #e7effa;
+  --nook-color-hover: #fce7f1;
+  --nook-color-border: #dce5f2;
+  --nook-color-button: #fdf3d7;
+  --nook-color-button-hover: #fbe9ba;
+  --nook-color-button-pressed: #f6dd97;
+  --nook-color-danger-soft: #fbe7e4;
+  --nook-color-danger-hover: #f6d5cf;
+  --nook-color-control-border: #a3b9d6;
+  --nook-color-focus: #5b8fe0;
+  --nook-color-ink: #2c3a56;
+  --nook-color-ink-muted: #66738e;
+  --nook-color-ink-faint: #aab3c6;
+  --nook-color-accent: #3d6ec4;
+  --nook-color-accent-strong: #3560b0;
+  --nook-color-accent-soft: #f2a3bf;
+  --nook-color-accent-contrast: #ffffff;
+  --nook-color-danger: #c04f47;
+  --nook-color-warn-bg: #fff5d9;
+  --nook-color-warn-ink: #93641c;
+  --nook-color-backdrop: #2c3a5644;
+  --nook-color-mark: #ffd76e59;
+  --nook-radius: 10px;
+  --nook-radius-md: 14px;
+  --nook-shadow-dialog: 0 18px 70px #2c3a5626;
+  --nook-shadow-menu: 0 8px 30px #2c3a5620;
+  color-scheme: light;
 }

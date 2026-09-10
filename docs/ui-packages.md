@@ -25,33 +25,15 @@
 
 页面 UI 优先用 `@nook-dsh/ui-kit` 组件构建：`Button` / `Input` / `Textarea`（Field.Control 渲染 textarea）/ `Select`（Select / Combobox）/ `Dialog` / `Tabs` + `TabPanel` / `Menu`（坐标锚定受控菜单）/ `Switch` / `Toast` 均组合 Base UI 公开部件；`Chip` / `Kbd` 为纯展示 HTML，以及 `uiKitStyles` 字符串（tokens + 组件样式，消费端根部 `<style>{uiKitStyles}</style>` 注入一次，位于自身 CSS 之前）。
 
-设计规范收敛为 `--nook-*` CSS tokens（Nook 纸感色卡，固定配色，不引用 `--dsw-alias-*`，不随宿主主题变化）：
+设计规范收敛为 `--nook-*` CSS tokens，不引用宿主的 `--dsw-alias-*`。完整色值以 [tokens.css](../packages/ui-kit/styles/tokens.css) 为唯一来源。工作区通过 `data-nook-theme` 选择主题，后代浮层继承同一组语义变量。
 
-| token                                         | 值             | 用途                                   |
-| --------------------------------------------- | -------------- | -------------------------------------- |
-| `--nook-color-bg`                             | `#fbfaf7`      | 工作台背景（纸面）                     |
-| `--nook-color-surface`                        | `#fffefb`      | 输入框、菜单、Toast、卡片浮面          |
-| `--nook-color-sunken`                         | `#f2f3ec`      | 凹陷表面：搜索框、页内选择器、代码块底 |
-| `--nook-color-nav`                            | `#f1f0e9`      | 侧栏导航面板                           |
-| `--nook-color-hover`                          | `#e9ece4`      | 悬停填充、选中卡片、状态药丸           |
-| `--nook-color-border`                         | `#e6e8df`      | 描边、分隔线、引用块竖线               |
-| `--nook-color-ink`                            | `#293a32`      | 主文字                                 |
-| `--nook-color-ink-muted`                      | `#66746b`      | 次要文字                               |
-| `--nook-color-ink-faint`                      | `#b5bcb0`      | 占位符、时间戳等装饰性弱文字           |
-| `--nook-color-accent`                         | `#42674e`      | 品牌绿：accent 按钮底、链接、强调文字  |
-| `--nook-color-accent-strong`                  | `#36563e`      | accent 悬停底、导航选中文字            |
-| `--nook-color-accent-soft`                    | `#a8b39d`      | 装饰性绿（欢迎页图标、小标）           |
-| `--nook-color-accent-contrast`                | `#fff`         | accent 底上的文字                      |
-| `--nook-color-danger`                         | `#a74336`      | 危险操作文字                           |
-| `--nook-color-warn-bg`                        | `#fff2e8`      | 错误条底                               |
-| `--nook-color-warn-ink`                       | `#975a36`      | 错误条文字                             |
-| `--nook-color-backdrop`                       | `#293a3244`    | 弹窗遮罩（带透明度的墨色）             |
-| `--nook-color-mark`                           | `#d9b74c33`    | 历史差异高亮底                         |
-| `--nook-color-focus`                          | `#73917a`      | focus ring                             |
-| `--nook-radius` / `--nook-radius-md`          | `6px` / `10px` | 控件圆角 / 弹层、侧栏按钮圆角          |
-| `--nook-font-sans`                            | 系统字体栈     | 文字字体                               |
-| `--nook-shadow-dialog` / `--nook-shadow-menu` | 阴影           | 弹窗 / 菜单阴影                        |
-| `--nook-z-dialog`                             | `300`          | 弹层 z-index（工作台 overlay 是 180）  |
+| 主题              | 属性值   | 视觉                                           |
+| ----------------- | -------- | ---------------------------------------------- |
+| Nook 纸感（默认） | `paper`  | 纸白、灰绿与自然绿强调色，系统字体             |
+| Claude 暖纸       | `claude` | 暖米白、陶土强调色，衬线阅读字体               |
+| 夜晚              | `night`  | 炭灰表面、暖白文字、浅陶土强调色，深色原生控件 |
+
+三套主题覆盖背景、表面、导航、交互状态、文字、语义色、焦点和阴影。共用间距、动效与层级；`--nook-font-editor` 表达阅读字体，`--nook-font-sans` 表达界面字体。主题选择即时生效，保存在浏览器当前源的本地存储，并响应同源标签页的偏好变更；存储不可用时保留会话内选择。外观偏好不参与笔记同步。
 
 规则（有门禁强制执行）：
 
@@ -70,6 +52,8 @@ Select 使用 `options`、`value`、`onValueChange`，通过 `variant="ghost"` �
 
 动效统一由 `tokens.css` 的 fast（120ms）、base（200ms）、slow（300ms）与 enter / exit 缓动控制。悬停、按压只改变颜色和描边；菜单、选择器、弹窗和通知使用透明度过渡。导航与卡片不缩放、不弹跳，减少动态效果偏好将时长归零。当前交互使用 CSS 与 Base UI 过渡状态，无需额外动效运行时。
 
-同步设置使用固定视口内尺寸的弹窗，标题、概览、tab 和底部操作保持稳定，活动面板独立滚动。状态页提供同步记录和操作；配置页提供连接导入、手动地址和折叠凭据，保存操作固定在底部。
+工作区左下角的“设置”打开全屏弹窗。左栏列出“外观”“数据同步”，右侧展示对应内容；窄屏保留左右结构。外观页提供主题预览卡片。数据同步保留状态与配置 tab，活动面板独立滚动，底部操作固定；关闭设置不停止后台同步状态轮询。配置指南往返保留表单草稿。
+
+“工具市集”统一承载“视频转文稿”“日 / 周总结”，通过工具卡片进入各自流程。工作区导航不单列这两个工具。
 
 笔记标题下的项目选择与置顶操作采用紧凑 ghost 控件，与时间信息同层级。置顶状态通过填充星标、文字与 `aria-pressed` 表达，悬停时显示轻量底色。

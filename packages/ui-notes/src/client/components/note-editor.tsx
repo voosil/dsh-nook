@@ -1,4 +1,4 @@
-import { ExternalLink, Star } from 'lucide-react'
+import { ExternalLink, MoreHorizontal, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { type NoteDto, type NoteInput } from '@nook-dsh/capability-note'
 import type { ProjectDto } from '@nook-dsh/capability-project'
@@ -6,7 +6,7 @@ import type { Api } from '../lib/api.js'
 import { NoteHistory } from './note-history.js'
 import { Autosave, type SavedDraft } from '../lib/autosave.js'
 import { fullDate, sourceLabels } from '../lib/note-format.js'
-import { Button, Input, Select } from '@nook-dsh/ui-kit'
+import { Button, Input, Menu, Select, type MenuAnchor } from '@nook-dsh/ui-kit'
 import { RichEditor } from './rich-editor.js'
 
 const draftKey = (id: string) => `nook.note-draft.v1.${id}`
@@ -54,9 +54,9 @@ export function NoteEditor({
   })
   const [input, setInput] = useState<NoteInput>(recovery?.input ?? initial)
   const [note, setNote] = useState(initial)
-  const [state, setState] = useState('saved')
   const [error, setError] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [menu, setMenu] = useState<MenuAnchor | null>(null)
   const composing = useRef(false)
   const [busy, setBusy] = useState(false)
   const alive = useRef(true)
@@ -70,7 +70,6 @@ export function NoteEditor({
         request => api('save', request),
         (status, message) => {
           if (!alive.current) return
-          setState(status)
           setError(message ?? '')
           if (status !== 'saved') preserve()
           if (status === 'saved') {
@@ -137,18 +136,6 @@ export function NoteEditor({
     }
   }, [controller, handle, historyOpen])
 
-  async function trash() {
-    setBusy(true)
-    try {
-      if (!note.deletedAt && !(await controller.flush())) return
-      await api('trash', { id: note.id, revision: controller.note.revision, deleted: !note.deletedAt })
-      onDeleted()
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    } finally {
-      setBusy(false)
-    }
-  }
   return (
     <section
       className="nook-editor"
@@ -179,38 +166,52 @@ export function NoteEditor({
       )}
       <div className="nook-editor-top">
         <span className="nook-muted">{sourceLabels[note.source.kind]}</span>
-        <div className="nook-actions">
-          <span role="status" className={state === 'error' ? 'nook-error-text' : 'nook-muted'}>
-            {state === 'saving'
-              ? '正在保存…'
-              : state === 'dirty'
-                ? '未保存'
-                : state === 'error'
-                  ? '保存失败'
-                  : '已保存到本地 · 已入库'}
-          </span>
-          <Button
-            disabled={disabled || busy || historyOpen}
-            onClick={() =>
-              void (async () => {
-                setBusy(true)
-                try {
-                  if (await controller.flush()) setHistoryOpen(true)
-                } finally {
-                  setBusy(false)
-                }
-              })()
-            }
-          >
-            历史版本
-          </Button>
-          <Button disabled={disabled || busy || historyOpen} onClick={() => void onExport(input)}>
-            导出
-          </Button>
-          <Button disabled={disabled || busy || historyOpen} onClick={() => void trash()}>
-            {note.deletedAt ? '恢复笔记' : '移到回收站'}
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          iconOnly
+          title="笔记操作"
+          aria-haspopup="menu"
+          aria-expanded={!!menu && !disabled && !busy && !historyOpen}
+          disabled={disabled || busy || historyOpen}
+          onClick={event => {
+            const rect = event.currentTarget.getBoundingClientRect()
+            setMenu(menu ? null : { x: rect.left, y: rect.bottom })
+          }}
+        >
+          <MoreHorizontal size={18} aria-hidden="true" />
+        </Button>
+        {menu && !disabled && !busy && !historyOpen && (
+          <Menu
+            anchor={menu}
+            open
+            onOpenChange={open => {
+              if (!open) setMenu(null)
+            }}
+            items={[
+              {
+                label: '历史版本',
+                run: () => {
+                  setMenu(null)
+                  void (async () => {
+                    setBusy(true)
+                    try {
+                      if (await controller.flush()) setHistoryOpen(true)
+                    } finally {
+                      setBusy(false)
+                    }
+                  })()
+                },
+              },
+              {
+                label: '导出',
+                run: () => {
+                  setMenu(null)
+                  void onExport(input)
+                },
+              },
+            ]}
+          />
+        )}
       </div>
       {error && (
         <div className="nook-error" role="alert">

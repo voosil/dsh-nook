@@ -54,6 +54,9 @@ export interface NoteHistoryEntry {
   readonly updatedAt: string
   readonly deleted: boolean
   readonly merged: boolean
+  readonly parents: readonly string[]
+  readonly branchPoint: boolean
+  readonly kind: 'save' | 'create' | 'merge' | 'delete' | 'restore'
 }
 export interface NoteHistoryPage {
   readonly entries: readonly NoteHistoryEntry[]

@@ -12,6 +12,7 @@ import { NotebookApp } from './components/notebook-app.js'
 import { openSyncDeployment } from './lib/sync-deployment.js'
 import { uiKitStyles } from '@nook-dsh/ui-kit'
 import css from './styles/index.css'
+import settingsCss from './styles/settings.css'
 
 export type { Api } from './lib/api.js'
 export const inject = ['slots', 'remote']
@@ -58,6 +59,7 @@ function mountWorkspace(ctx: ClientContext): void {
       <>
         <style>{uiKitStyles}</style>
         <style>{css}</style>
+        <style>{settingsCss}</style>
         <NotebookApp
           api={api}
           sync={sync}

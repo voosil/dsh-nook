@@ -18,6 +18,7 @@ import {
   type SaveNoteResult,
   type NoteHistoryQuery,
   type NoteHistoryPage,
+  type NoteHistoryEntry,
   type RestoreNoteRequest,
 } from '@nook-dsh/capability-note'
 import { Replica } from '@nook-dsh/storage-sync'
@@ -180,6 +181,8 @@ class Notebook {
               updatedAt: new Date().toISOString(),
             }),
         })
+        // Replica disposal owns these registrations. Checkpoints have no business projection.
+        this.replica.register({ type: 'note-checkpoint', schema: 1, validate: validateNoteCheckpoint })
         this.replica.afterApply = () => this.normalizeProjects()
         this.replica.transaction(() => {
           if (!this.db.prepare("SELECT value FROM sync_state WHERE key='projects-migrated'").get()) {
@@ -479,6 +482,14 @@ class LocalNotes extends Service implements NoteService {
     const byHash = new Map(versions.map(v => [v.hash, v]))
     for (const v of versions)
       for (const parent of new Set(v.value.parents)) children.set(parent, (children.get(parent) ?? 0) + 1)
+    const branchPoints = new Set([...children].filter(([, count]) => count > 1).map(([hash]) => hash))
+    const restored = new Set(
+      (this.store.replica?.records('note-checkpoint') ?? [])
+        .filter(v => v.value.schema === 1 && !v.value.deleted)
+        .map(v => v.value.data as unknown as NoteCheckpoint)
+        .filter(v => v.noteId === request.id)
+        .map(v => v.versionId),
+    )
     const ready = versions
       .filter(v => !children.get(v.hash))
       .map(v => v.hash)
@@ -503,14 +514,23 @@ class LocalNotes extends Service implements NoteService {
     const limit = Math.min(100, Math.max(1, request.limit ?? 50))
     const page = ordered.slice(start, start + limit)
     return {
-      entries: page.map(({ hash, value }) => {
+      entries: page.map<NoteHistoryEntry>(({ hash, value }) => {
         const n = value.data as unknown as NoteDto
+        let kind: NoteHistoryEntry['kind'] = 'save'
+        if (restored.has(hash)) kind = 'restore'
+        else if (value.parents.length > 1) kind = 'merge'
+        else if (value.deleted) kind = 'delete'
+        else if (value.parents.some(parent => byHash.get(parent)?.value.deleted)) kind = 'restore'
+        else if (!value.parents.length) kind = 'create'
         return {
           versionId: hash,
           title: noteTitle(n),
           updatedAt: n.updatedAt,
           deleted: value.deleted,
           merged: value.parents.length > 1,
+          parents: value.parents,
+          branchPoint: branchPoints.has(hash),
+          kind,
         }
       }),
       cursor: start + page.length < ordered.length ? page.at(-1)!.hash : null,
@@ -539,7 +559,7 @@ class LocalNotes extends Service implements NoteService {
         this.store.db.prepare('SELECT 1 FROM projects WHERE id=? AND deleted=0').get(content.projectId)
           ? content.projectId
           : null
-      replica.writeBranch(
+      const versionId = replica.writeBranch(
         'note',
         id,
         json({
@@ -553,6 +573,8 @@ class LocalNotes extends Service implements NoteService {
         false,
         request.copy ? [] : replica.snapshot().heads[`note/${id}`],
       )
+      if (!request.copy)
+        replica.capture('note-checkpoint', versionId, { noteId: id, versionId, kind: 'restore' }, false, [], [])
       this.recordReceipt(`restore/${request.requestId}`, fingerprint, id)
       return id
     })
@@ -693,6 +715,26 @@ function validateProjectVersion(v: RecordVersion) {
     !dateValid(p.updatedAt)
   )
     throw new SyncError('项目数据格式无效。')
+}
+interface NoteCheckpoint {
+  readonly noteId: string
+  readonly versionId: string
+  readonly kind: 'restore'
+}
+function validateNoteCheckpoint(v: RecordVersion) {
+  const data = v.data as unknown as NoteCheckpoint
+  if (
+    !data ||
+    !uuid(data.noteId) ||
+    data.versionId !== v.id ||
+    !/^[a-f0-9]{64}$/.test(data.versionId) ||
+    data.kind !== 'restore' ||
+    v.deleted ||
+    v.parents.length ||
+    v.blobs.length ||
+    Object.keys(data).sort().join(',') !== 'kind,noteId,versionId'
+  )
+    throw new SyncError('笔记历史标记格式无效。')
 }
 function validateNoteVersion(v: RecordVersion) {
   const n = v.data as unknown as NoteDto

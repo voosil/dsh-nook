@@ -159,7 +159,16 @@ const outputs = {
   save: z.strictObject({ note, submittedVersionId: versionId.nullable() }),
   history: z.strictObject({
     entries: z.array(
-      z.strictObject({ versionId, title: z.string(), updatedAt: date, deleted: z.boolean(), merged: z.boolean() }),
+      z.strictObject({
+        versionId,
+        title: z.string(),
+        updatedAt: date,
+        deleted: z.boolean(),
+        merged: z.boolean(),
+        parents: z.array(versionId).max(64),
+        branchPoint: z.boolean(),
+        kind: z.enum(['save', 'create', 'merge', 'delete', 'restore']),
+      }),
     ),
     cursor: versionId.nullable(),
   }),

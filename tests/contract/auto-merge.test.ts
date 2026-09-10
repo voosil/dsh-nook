@@ -164,12 +164,86 @@ test('stale saves merge, idempotent retries retain input identity, history and r
   assert.equal(restored.markdown, base.markdown)
   assert.notEqual(restored.versionId, base.versionId)
   assert.deepEqual(await ctx.nookNotes.restoreHistoryVersion(restore), restored)
+  const restoredHistory = await ctx.nookNotes.history({ id: base.id })
+  assert.equal(restoredHistory.entries[0]!.kind, 'restore')
+  assert.ok(restoredHistory.entries.some(v => v.kind === 'merge'))
+  assert.ok(restoredHistory.entries.some(v => v.branchPoint))
+  assert.equal(restoredHistory.entries.at(-1)!.kind, 'create')
+  assert.equal(ctx.nookSyncReplica.records('note-checkpoint').length, 1)
   const copy = { ...restore, requestId: randomUUID(), copy: true }
   const copied = await ctx.nookNotes.restoreHistoryVersion(copy)
   assert.notEqual(copied.id, base.id)
   assert.equal((await ctx.nookNotes.restoreHistoryVersion(copy)).id, copied.id)
+  assert.equal((await ctx.nookNotes.history({ id: copied.id })).entries[0]!.kind, 'create')
+  assert.equal(ctx.nookSyncReplica.records('note-checkpoint').length, 1)
   assert.equal((await ctx.nookNotes.list({})).total, 2)
   await assert.rejects(ctx.nookNotes.getHistoryVersion(copied.id, base.versionId!), /不存在/)
+})
+
+test('a checkpoint failure rolls back the restored note, versions and request receipt together', async t => {
+  const { DatabaseSync } = await import('node:sqlite')
+  const { ctx, root } = await setup(t)
+  const base = await ctx.nookNotes.create(original())
+  const saved = await ctx.nookNotes.save({ ...base, markdown: '保留当前内容' })
+  const before = ctx.nookSyncReplica.snapshot()
+  const db = new DatabaseSync(join(root, 'notes.sqlite'))
+  try {
+    db.exec(`CREATE TRIGGER reject_checkpoint BEFORE INSERT ON sync_versions
+      WHEN json_extract(NEW.body, '$.type') = 'note-checkpoint'
+      BEGIN SELECT RAISE(ABORT, 'checkpoint blocked'); END`)
+    const request = { id: base.id, versionId: base.versionId!, requestId: randomUUID(), copy: false }
+    await assert.rejects(ctx.nookNotes.restoreHistoryVersion(request), /checkpoint blocked/)
+    assert.deepEqual(await ctx.nookNotes.get(base.id), saved.note)
+    assert.deepEqual(ctx.nookSyncReplica.snapshot(), before)
+    db.exec('DROP TRIGGER reject_checkpoint')
+    const restored = await ctx.nookNotes.restoreHistoryVersion(request)
+    assert.equal(restored.markdown, base.markdown)
+    assert.equal((await ctx.nookNotes.history({ id: base.id })).entries[0]!.kind, 'restore')
+  } finally {
+    db.close()
+  }
+})
+
+test('checkpoint records reject malformed identity and mutation, and trash boundaries remain explicit', async t => {
+  const { ctx } = await setup(t)
+  const base = await ctx.nookNotes.create(original())
+  assert.throws(
+    () =>
+      ctx.nookSyncReplica.writeRecords([
+        {
+          type: 'note-checkpoint',
+          id: base.versionId!,
+          schema: 1,
+          expected: null,
+          deleted: false,
+          data: { noteId: base.id, versionId: 'bad', kind: 'restore' },
+        },
+      ]),
+    /历史标记格式/,
+  )
+  const deleted = await ctx.nookNotes.setDeleted(base.id, base.revision, true)
+  const recovered = await ctx.nookNotes.setDeleted(base.id, deleted.revision, false)
+  assert.deepEqual(
+    (await ctx.nookNotes.history({ id: base.id })).entries.map(v => v.kind),
+    ['restore', 'delete', 'create'],
+  )
+  await ctx.nookNotes.restoreHistoryVersion({
+    id: base.id,
+    versionId: recovered.versionId!,
+    requestId: randomUUID(),
+    copy: false,
+  })
+  const marker = ctx.nookSyncReplica.records('note-checkpoint')[0]!
+  assert.throws(
+    () =>
+      ctx.nookSyncReplica.writeRecords([
+        {
+          ...marker.value,
+          expected: marker.hash,
+        },
+      ]),
+    /历史标记格式/,
+  )
 })
 
 test('backup failure aborts a stale write without changing the working note or its heads', async t => {
@@ -328,6 +402,10 @@ test('three devices converge without copies, recover after restart and synchroni
   assert.equal((await c.nookNotes.get(base.id))!.versionId, restored.versionId)
   assert.equal((await c.nookNotes.get(base.id))!.markdown, base.markdown)
   assert.equal((await c.nookNotes.getHistoryVersion(base.id, merged.versionId!)).markdown, merged.markdown)
+  assert.equal((await c.nookNotes.history({ id: base.id })).entries[0]!.kind, 'restore')
+  await c.fiber.dispose()
+  const restarted = await boot('c')
+  assert.equal((await restarted.nookNotes.history({ id: base.id })).entries[0]!.kind, 'restore')
 })
 
 test('merge rechecks heads after background computation and rolls back if its recovery backup fails', async t => {
