@@ -9,6 +9,17 @@ import { build } from 'esbuild'
 const require = createRequire(import.meta.url)
 const { chromium } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
 
+// The selected-item check is absolutely positioned; it must stay centered in the
+// option row for both Select variants (plain and searchable).
+const checkCenteredInRow = () => {
+  const item = document.querySelector('.nui-select-item[data-selected]')
+  const check = item?.querySelector('.nui-select-check')
+  if (!item || !check) return false
+  const itemBox = item.getBoundingClientRect()
+  const checkBox = check.getBoundingClientRect()
+  return Math.abs(itemBox.top + itemBox.height / 2 - (checkBox.top + checkBox.height / 2)) <= 1
+}
+
 test(
   'kit controls preserve geometry, keyboard interaction, floating placement and reduced motion',
   { timeout: 60_000 },
@@ -58,6 +69,11 @@ test(
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('Enter')
     assert.equal(await select.innerText(), '阅读笔记')
+    await select.focus()
+    await page.keyboard.press('ArrowDown')
+    await page.getByRole('option', { name: '阅读笔记', exact: true }).waitFor()
+    await page.waitForFunction(checkCenteredInRow)
+    await page.keyboard.press('Escape')
     await page.getByRole('combobox', { name: '搜索项目', exact: true }).click()
     const search = page.getByRole('combobox', { name: '搜索选项', exact: true })
     await search.fill('没有这个项目')
@@ -65,6 +81,8 @@ test(
     await search.fill('项目 10')
     await page.getByRole('option', { name: '项目 10 · 研究和阅读中的长期记录', exact: true }).click()
     await page.getByRole('combobox', { name: '搜索项目', exact: true }).click()
+    await page.getByRole('option', { name: '项目 10 · 研究和阅读中的长期记录', exact: true }).waitFor()
+    await page.waitForFunction(checkCenteredInRow)
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: '打开弹窗', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: '设置', exact: true })
