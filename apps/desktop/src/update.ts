@@ -70,8 +70,9 @@ export class Updater {
     return Boolean(this.job)
   }
   private async publish(patch: Partial<UpdateStatus>) {
-    this.value = { ...this.value, ...patch }
-    await saveJson(join(this.state, 'updates/status.json'), this.value)
+    const next = { ...this.value, ...patch }
+    await saveJson(join(this.state, 'updates/status.json'), next)
+    this.value = next
   }
   private run(command: string, args: string[], timeout = 1800000): Promise<string> {
     return new Promise((resolve, reject) => {
