@@ -85,6 +85,8 @@ export async function createPackedProfile(temporaryRoot, { runPnpm = defaultRunP
     '@deepseek-ai/dsh-typert-registry': DSH_VERSION,
     '@deepseek-ai/dsh-llm': DSH_VERSION,
     '@deepseek-ai/dsh-agent': DSH_VERSION,
+    '@deepseek-ai/dsh-session': DSH_VERSION,
+    '@deepseek-ai/dsh-session-persistence': DSH_VERSION,
     '@deepseek-ai/dsh-system-prompt': DSH_VERSION,
     '@types/react': '18.3.31',
     '@types/react-dom': '18.3.7',

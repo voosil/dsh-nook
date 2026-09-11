@@ -6,6 +6,7 @@ import { deploymentGuide } from '../sync-server/agent-guide.mjs'
 
 const root = resolve(import.meta.dirname, '../..')
 const clients = [
+  { id: '@nook-dsh/ui-tasks', directory: 'ui-tasks' },
   { id: '@nook-dsh/ui-knowledge', directory: 'ui-knowledge' },
   { id: '@nook-dsh/ui-notes', directory: 'ui-notes' },
   { id: '@nook-dsh/ui-project', directory: 'ui-project' },

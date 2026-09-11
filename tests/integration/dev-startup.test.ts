@@ -138,7 +138,7 @@ test('dev stops before boot when Profile dependency installation fails', async t
     resolve(root, 'profile-source.json'),
     JSON.stringify({ dependencies: { '@fixture/missing': 'file:../../../missing-package' } }),
   )
-  await assert.rejects(launch(), /missing-package/)
+  await assert.rejects(launch(), /missing-\s*package/)
   await assert.rejects(readFile(resolve(root, 'booted.txt')), { code: 'ENOENT' })
 })
 

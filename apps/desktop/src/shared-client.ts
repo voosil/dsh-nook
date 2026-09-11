@@ -158,7 +158,7 @@ export class SharedRuntime {
     })
   }
 
-  stop(): Promise<void> {
+  stop(stopBackground = false): Promise<void> {
     this.stopped = true
     this.cancelReady()
     this.abort.abort()
@@ -166,7 +166,7 @@ export class SharedRuntime {
       await this.startup
       const socket = this.socket
       if (!socket || socket.destroyed) return
-      socket.write('{"type":"release"}\n')
+      socket.write(JSON.stringify({ type: 'release', stopBackground }) + '\n')
       const timer = setTimeout(() => socket.destroy(), 15_000)
       try {
         await this.closed

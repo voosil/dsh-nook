@@ -1,3 +1,4 @@
+import { taskSnapshot } from './task-connection.js'
 import { randomUUID } from 'node:crypto'
 import { Updater, candidateLaunch, type Candidate, type UpdateSource } from './update.js'
 import { retainHome, recoverHome, commitHome } from './update-backup.js'
@@ -40,6 +41,26 @@ async function serve(options: BrokerOptions) {
   let stopping: Promise<void> | undefined
   let starting: Promise<void> | undefined
   const abort = new AbortController()
+  let keepAlive = false
+  let checkingTasks = false
+  const refreshRetention = async () => {
+    if (!config || checkingTasks || stopping) return
+    checkingTasks = true
+    try {
+      const tasks = await taskSnapshot(join(config.home, 'task-connection.json'))
+      keepAlive = tasks.isOwner && tasks.settings.keepAlive
+    } catch {
+      /* A transient bridge restart must not drop an established background owner. */
+    } finally {
+      checkingTasks = false
+    }
+  }
+  const retentionTimer = setInterval(() => {
+    void refreshRetention().then(() => {
+      if (url && !leases.size && !keepAlive && !switching) void stop()
+    })
+  }, 5000)
+
   const path = runtimeSocket(state)
   const send = (socket: Socket, value: object) => {
     if (!socket.destroyed) socket.write(JSON.stringify(value) + '\n')
@@ -131,10 +152,13 @@ async function serve(options: BrokerOptions) {
           leases.add(socket)
           if (url) send(socket, { type: 'ready', url })
         } else if (value.type === 'release' && leases.delete(socket)) {
-          if (leases.size) {
-            send(socket, { type: 'released' })
-            socket.end()
-          } else void stop()
+          void (async () => {
+            await refreshRetention()
+            if (leases.size || (keepAlive && value.stopBackground !== true)) {
+              send(socket, { type: 'released' })
+              socket.end()
+            } else void stop()
+          })()
         } else socket.destroy()
       } catch {
         socket.destroy()
@@ -147,7 +171,10 @@ async function serve(options: BrokerOptions) {
       socket.off('data', reader.write)
       sockets.delete(socket)
       const held = leases.delete(socket)
-      if (held && !leases.size) void stop()
+      if (held && !leases.size)
+        void refreshRetention().then(() => {
+          if (!keepAlive && !leases.size) void stop()
+        })
     })
   })
   const unclaimed = setTimeout(() => {
@@ -156,6 +183,7 @@ async function serve(options: BrokerOptions) {
   const stop = (): Promise<void> =>
     (stopping ??= (async () => {
       clearTimeout(unclaimed)
+      clearInterval(retentionTimer)
       abort.abort()
       const closed = new Promise<void>(resolve => server.close(() => resolve()))
       await updater.dispose()

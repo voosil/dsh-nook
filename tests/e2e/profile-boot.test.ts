@@ -26,7 +26,13 @@ test('Safe UI patch boots the official shell without Nook Client plugins', { tim
     env: sandbox.env,
     patch: resolve(ROOT, 'dev/patches/safe-ui.cordis.yml'),
     expectedPackages: [],
-    excludedPackages: ['@nook-dsh/ui-project', '@nook-dsh/ui-sidebar', '@nook-dsh/ui-notes', '@nook-dsh/ui-knowledge'],
+    excludedPackages: [
+      '@nook-dsh/ui-project',
+      '@nook-dsh/ui-sidebar',
+      '@nook-dsh/ui-notes',
+      '@nook-dsh/ui-knowledge',
+      '@nook-dsh/ui-tasks',
+    ],
   })
   assert.equal(result.status, 200)
 })

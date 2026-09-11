@@ -17,6 +17,12 @@ function runtimeEnv(home) {
 
 function assertComposition(composition) {
   const rows = [
+    'nook-task-store',
+    'nook-task-execution',
+    'nook-tasks',
+    'nook-refinement',
+    'nook-tasks-rpc',
+    'nook-ui-tasks',
     'community-browser-runtime',
     'community-browser-playwright',
     'nook-browser-adapter',
@@ -78,6 +84,7 @@ try {
     }
   }
   for (const asset of [
+    'adapter-tasks-dsh/skills/nook-tasks/SKILL.md',
     'feature-agent/lib/sync-deployment.json',
     'feature-agent/skills/nook-sync-deploy/SKILL.md',
     'adapter-video-platform/python/collect.py',

@@ -47,6 +47,7 @@ export default class SyncFeature extends Service implements SyncService {
   private configuring = false
   private configurationController: AbortController | undefined
   private configurationTask: Promise<SyncStatus> | undefined
+  private taskAuthority: { target: string; owner: string } | undefined
   private failures = 0
   private localMerge: Promise<void> | undefined
   private readonly mergeController = new AbortController()
@@ -82,6 +83,37 @@ export default class SyncFeature extends Service implements SyncService {
         await this.running
       }
     })
+  }
+  async claimTaskOwner(ownerId: string, signal: AbortSignal): Promise<boolean> {
+    if (!/^[a-f0-9-]{36}$/.test(ownerId)) throw new SyncError('执行主机标识无效。')
+    if (this.stopped || this.configuring) throw new SyncError('同步配置暂不可用。')
+    if (!this.settings.enabled) return true
+    const target = this.settings.url
+    if (this.taskAuthority?.target === target) return this.taskAuthority.owner === ownerId
+    const remote = this.ctx.nookSyncStorage.open(this.settings)
+    const combined = AbortSignal.any([signal, this.mergeController.signal])
+    try {
+      const path = 'authority-task-owner.json'
+      let record = await remote.get(path, combined)
+      if (!record) {
+        const bytes = new TextEncoder().encode(JSON.stringify({ format: 1, ownerId }))
+        if (await remote.put(path, bytes, null, combined)) {
+          if (target !== this.settings.url || !this.settings.enabled) throw new SyncError('同步配置已变化。')
+          this.taskAuthority = { target, owner: ownerId }
+          return true
+        }
+        record = await remote.get(path, combined)
+      }
+      if (!record || record.bytes.byteLength > 4096) throw new SyncError('执行主机归属记录无效。')
+      const value = JSON.parse(new TextDecoder().decode(record.bytes))
+      if (value.format !== 1 || !/^[a-f0-9-]{36}$/.test(value.ownerId) || Object.keys(value).length !== 2)
+        throw new SyncError('执行主机归属记录无效。')
+      if (target !== this.settings.url || !this.settings.enabled) throw new SyncError('同步配置已变化。')
+      this.taskAuthority = { target, owner: value.ownerId }
+      return value.ownerId === ownerId
+    } finally {
+      remote.dispose?.()
+    }
   }
   status(): SyncStatus {
     return {

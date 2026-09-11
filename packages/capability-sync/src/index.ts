@@ -126,6 +126,8 @@ export interface ConfigureSync {
   readonly caCert?: string | undefined
 }
 export interface SyncService {
+  /** Immutable single-owner claim for background task execution in this sync target. */
+  claimTaskOwner(ownerId: string, signal: AbortSignal): Promise<boolean>
   prepareDeployment(): Promise<{ directory: string }>
   status(): SyncStatus
   configure(config: ConfigureSync, signal: AbortSignal): Promise<SyncStatus>

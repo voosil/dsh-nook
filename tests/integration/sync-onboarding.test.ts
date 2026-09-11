@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdtemp, realpath, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
@@ -58,7 +58,7 @@ test('agent file import verifies target before network, keeps secrets private, b
       ).result,
     )
   const deployment = await ctx.nookSync.prepareDeployment()
-  assert.equal(deployment.directory, join(root, 'private/sync-deployment'))
+  assert.equal(deployment.directory, await realpath(join(root, 'private/sync-deployment')))
   assert.deepEqual(await ctx.nookSync.prepareDeployment(), deployment)
   const file = join(root, 'connection.json')
   const config = {

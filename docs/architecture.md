@@ -22,6 +22,8 @@ The [Sync capability](../packages/capability-sync/src/index.ts) separates type r
 
 The [Update capability](../packages/capability-update/src/index.ts) separates authenticated application commands from the local broker that owns source preparation and runtime replacement. The DSH adapter exposes fixed commands; the local provider sends them over the private control connection. Updating uses normal Host shutdown to stop active tasks. User behavior belongs in the [update guide](update.md).
 
+The [Task](../packages/capability-task/src/index.ts), [Execution](../packages/capability-execution/src/index.ts) and [Refinement](../packages/capability-refinement/src/index.ts) capabilities separate persistent workflow state, DSH execution and incremental understanding. The task provider stores versioned records through SyncReplica; the features own decisions, scheduling and acceptance. UI, conversation tools and local stdio MCP share these capabilities. Product behavior belongs in the [task guide](tasks.md).
+
 ## Host and Client
 
 Host plugins own persistence, subprocesses, model requests and workflow lifetimes. Client plugins contribute through additive official Slots. The notes workspace uses the shell overlay and sidebar footer; the knowledge toggle uses session header actions. Nook-owned, schema-validated JSON DTOs cross the verified DSH Typert Gateway. No Session, Cordis service or React element crosses the boundary.

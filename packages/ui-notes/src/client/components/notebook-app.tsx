@@ -10,6 +10,7 @@ import {
   Settings,
   Store,
   NotebookPen,
+  ListChecks,
   Plus,
   Sprout,
   Star,
@@ -432,6 +433,18 @@ export function NotebookApp({
             <Plus size={16} aria-hidden="true" /> 写一条笔记 <Kbd>新建</Kbd>
           </Button>
           <nav aria-label="笔记导航">
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() =>
+                void navigate(() => {
+                  window.location.hash = 'nook-tasks'
+                  close()
+                })
+              }
+            >
+              <ListChecks size={16} aria-hidden="true" /> 任务与日程
+            </Button>
             <Button
               variant="ghost"
               disabled={busy}

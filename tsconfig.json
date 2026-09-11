@@ -120,6 +120,36 @@
     },
     {
       "path": "packages/adapter-update-dsh"
+    },
+    {
+      "path": "packages/capability-task"
+    },
+    {
+      "path": "packages/capability-execution"
+    },
+    {
+      "path": "packages/capability-refinement"
+    },
+    {
+      "path": "packages/provider-task-sync"
+    },
+    {
+      "path": "packages/feature-tasks"
+    },
+    {
+      "path": "packages/feature-refinement"
+    },
+    {
+      "path": "packages/adapter-execution-dsh"
+    },
+    {
+      "path": "packages/adapter-tasks-dsh"
+    },
+    {
+      "path": "packages/adapter-task-mcp"
+    },
+    {
+      "path": "packages/ui-tasks"
     }
   ]
 }

@@ -1,0 +1,24 @@
+{
+  "name": "@nook-dsh/capability-task",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./time": {
+      "types": "./lib/time.d.ts",
+      "default": "./lib/time.js"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

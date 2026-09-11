@@ -3,7 +3,8 @@ import { mkdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { app, BrowserWindow, Menu, shell, ipcMain } from 'electron'
+import { taskSnapshot } from './task-connection.js'
+import { app, BrowserWindow, Menu, shell, ipcMain, Notification } from 'electron'
 import { NoteExports } from './note-export.js'
 import type { RuntimeConfig } from './payload.js'
 import { canonicalPath, externalUrl, redact, sameRuntimeUrl, within } from './policy.js'
@@ -61,10 +62,11 @@ async function startDesktop() {
     window.webContents.stop()
     await window.loadFile(statusFile, { query: { state: kind, message: redact(message) } })
   }
-  const stopRuntime = async () => {
+  const stopRuntime = async (stopBackground = false) => {
     origin = undefined
     const current = runtime
-    await current?.stop()
+    if (current instanceof SharedRuntime) await current.stop(stopBackground)
+    else await current?.stop()
     if (runtime === current) runtime = undefined
     await closeLog()
   }
@@ -124,7 +126,50 @@ async function startDesktop() {
       attempt = undefined
     }))
 
+  let backgroundTasks = false
+  let pollingTasks = false
+  const deliveredNotifications = new Set<string>()
+  const activeNotifications = new Set<Notification>()
+  let taskTimer: ReturnType<typeof setInterval> | undefined
   await app.whenReady()
+  const taskHome = devConfigPath
+    ? (JSON.parse(await readFile(devConfigPath, 'utf8')) as RuntimeConfig).home
+    : join(state, 'harness')
+  taskTimer = setInterval(() => {
+    if (pollingTasks || quitting) return
+    pollingTasks = true
+    void taskSnapshot(join(taskHome, 'task-connection.json'))
+      .then(tasks => {
+        if (quitting) return
+        backgroundTasks = tasks.isOwner && tasks.settings.keepAlive
+        const pending = tasks.notifications.filter(n => !n.read && !deliveredNotifications.has(n.id))
+        for (const n of pending) deliveredNotifications.add(n.id)
+        if (pending.length && Notification.isSupported()) {
+          const first = pending[0]!
+          const notification = new Notification({
+            title: pending.length > 1 ? `有 ${pending.length} 项任务需要处理` : first.title,
+            body: first.body.slice(0, 300),
+          })
+          notification.once('click', () => {
+            if (window && origin) {
+              window.show()
+              window.focus()
+              void window.loadURL(new URL('/#nook-task=' + encodeURIComponent(first.targetId), origin).href)
+            }
+          })
+          activeNotifications.add(notification)
+          notification.once('close', () => {
+            activeNotifications.delete(notification)
+            notification.removeAllListeners()
+          })
+          notification.show()
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        pollingTasks = false
+      })
+  }, 5000)
   window = new BrowserWindow({
     width: 1360,
     height: 900,
@@ -214,17 +259,29 @@ async function startDesktop() {
     window?.show()
     window?.focus()
   }
+  window.on('close', event => {
+    if (!quitting && backgroundTasks) {
+      event.preventDefault()
+      window?.hide()
+    }
+  })
   const closed = () => app.quit()
   const beforeQuit = (event: Electron.Event) => {
     if (allowQuit) return
     event.preventDefault()
     quitting = true
+    clearInterval(taskTimer)
+    for (const notification of activeNotifications) {
+      notification.removeAllListeners()
+      notification.close()
+    }
+    activeNotifications.clear()
     startupAbort?.abort()
     origin = undefined
     shutdown ??= (async () => {
-      await stopRuntime()
+      await stopRuntime(true)
       await attempt
-      await stopRuntime()
+      await stopRuntime(true)
       app.off('second-instance', focus)
       app.off('activate', focus)
       app.off('window-all-closed', closed)

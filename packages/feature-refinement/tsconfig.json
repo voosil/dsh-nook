@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.package.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "lib/.tsbuildinfo",
+    "rootDir": "src",
+    "outDir": "lib"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    {
+      "path": "../capability-task"
+    },
+    {
+      "path": "../capability-refinement"
+    },
+    {
+      "path": "../capability-note"
+    },
+    {
+      "path": "../capability-knowledge"
+    },
+    {
+      "path": "../capability-generation"
+    },
+    {
+      "path": "../capability-sync"
+    }
+  ]
+}

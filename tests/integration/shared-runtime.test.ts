@@ -164,3 +164,60 @@ process.send?.({url:await runtime.ready});`,
     await assert.rejects(fetch(url, { signal: AbortSignal.timeout(1000) }))
   },
 )
+
+test(
+  'task execution host keeps the backend after the last frontend leaves and explicit quit stops it',
+  { timeout: 30_000 },
+  async t => {
+    const { createServer } = await import('node:net')
+    const root = await mkdtemp(join(tmpdir(), 'nook-task-retention-'))
+    const launch = await fixture(root)
+    const bridge = createServer(socket => {
+      socket.on('data', chunk => {
+        for (const line of chunk.toString().trim().split('\n')) {
+          const request = JSON.parse(line)
+          socket.write(
+            JSON.stringify({
+              id: request.id,
+              result: { ok: true, value: { isOwner: true, settings: { keepAlive: true }, notifications: [] } },
+            }) + '\n',
+          )
+        }
+      })
+    })
+    bridge.listen(0, '127.0.0.1')
+    await once(bridge, 'listening')
+    const address = bridge.address()
+    assert.ok(address && typeof address !== 'string')
+    await writeFile(
+      join(launch.options.config!.home, 'task-connection.json'),
+      JSON.stringify({ port: address.port, token: 'test-only' }),
+    )
+    let current: SharedRuntime | undefined
+    t.after(async () => {
+      await current?.stop(true)
+      await new Promise<void>(resolve => bridge.close(() => resolve()))
+      await rm(root, { recursive: true, force: true })
+    })
+    current = new SharedRuntime(
+      root,
+      async () => launch,
+      () => {},
+      () => {},
+    )
+    const url = await current.ready
+    await current.stop()
+    assert.equal(await (await fetch(url)).text(), 'shared')
+    current = new SharedRuntime(
+      root,
+      async () => {
+        throw new Error('Should retain existing backend')
+      },
+      () => {},
+      () => {},
+    )
+    assert.equal(await current.ready, url)
+    await current.stop(true)
+    await assert.rejects(fetch(url, { signal: AbortSignal.timeout(1000) }))
+  },
+)

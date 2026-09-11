@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
+import { taskSmoke } from './task-smoke.mjs'
 import { notebookSmoke } from './notebook-smoke.mjs'
 
 const URL_PATTERN = /dsh web:\s*(http:\/\/127\.0\.0\.1:\d+\/\?token=[^\s]+)(?=\s)/
@@ -27,7 +28,13 @@ export async function bootAndVerifyWeb({
   profile = 'nook',
   patch,
   timeoutMs = 45_000,
-  expectedPackages = ['@nook-dsh/ui-project', '@nook-dsh/ui-sidebar', '@nook-dsh/ui-notes', '@nook-dsh/ui-knowledge'],
+  expectedPackages = [
+    '@nook-dsh/ui-project',
+    '@nook-dsh/ui-sidebar',
+    '@nook-dsh/ui-notes',
+    '@nook-dsh/ui-knowledge',
+    '@nook-dsh/ui-tasks',
+  ],
   excludedPackages = [],
 }) {
   const args = [bin, '--profile', profile]
@@ -81,6 +88,7 @@ export async function bootAndVerifyWeb({
     for (const packageName of excludedPackages) {
       if (html.includes(packageName)) throw new Error(`Nook shell unexpectedly loaded ${packageName}`)
     }
+    if (expectedPackages.includes('@nook-dsh/ui-tasks')) await taskSmoke(launchUrl)
     if (expectedPackages.includes('@nook-dsh/ui-notes')) await notebookSmoke(launchUrl, undefined, undefined, true)
     return { url, status: response.status, html }
   } finally {

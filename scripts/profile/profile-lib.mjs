@@ -13,6 +13,17 @@ export const COMMUNITY_BROWSER_VERSION = '0.1.1'
 export const PNPM_VERSION = '12.1.0'
 
 export const LOCAL_PACKAGES = [
+  'capability-task',
+  'capability-execution',
+  'capability-refinement',
+  'provider-task-sync',
+  'feature-tasks',
+  'feature-refinement',
+  'adapter-execution-dsh',
+  'adapter-tasks-dsh',
+  'adapter-task-mcp',
+  'ui-tasks',
+
   'capability-update',
   'provider-update-local',
   'adapter-update-dsh',

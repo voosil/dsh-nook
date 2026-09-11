@@ -11,3 +11,6 @@
 
 - id: nook-ui-knowledge
   disabled: true
+
+- id: nook-ui-tasks
+  disabled: true

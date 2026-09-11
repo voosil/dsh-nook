@@ -139,6 +139,12 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: 0.1.3-alpha.2
         version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-session':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)))
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-brand@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-session@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))))(@deepseek-ai/dsh-timeout@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))
       '@deepseek-ai/dsh-system-prompt':
         specifier: 0.1.3-alpha.2
         version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-llm@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-scope@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)))
@@ -211,6 +217,33 @@ importers:
       dsh-browser-playwright:
         specifier: 0.1.1
         version: 0.1.1(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-llm@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-tools@0.1.3-alpha.2(b9204c495d3850b6216a3df3a444b8f7))
+
+  packages/adapter-execution-dsh:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: 4.0.2
+        version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
+      '@deepseek-ai/dsh-agent':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(8a6b2890fc43277c92629a7561891c34)
+      '@deepseek-ai/dsh-llm':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-session':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)))
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-brand@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-session@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))))(@deepseek-ai/dsh-timeout@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))
+      '@deepseek-ai/dsh-tools':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(b9204c495d3850b6216a3df3a444b8f7)
+      '@nook-dsh/capability-execution':
+        specifier: workspace:*
+        version: link:../capability-execution
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
 
   packages/adapter-intelligence-dsh:
     dependencies:
@@ -332,6 +365,54 @@ importers:
         specifier: workspace:*
         version: link:../capability-sync
 
+  packages/adapter-task-mcp:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: 1.30.0
+        version: 1.30.0(supports-color@10.2.2)(zod@4.4.3)
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
+  packages/adapter-tasks-dsh:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: 4.0.2
+        version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
+      '@deepseek-ai/dsh-tools':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(b9204c495d3850b6216a3df3a444b8f7)
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-typert-registry':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@nook-dsh/capability-generation':
+        specifier: workspace:*
+        version: link:../capability-generation
+      '@nook-dsh/capability-note':
+        specifier: workspace:*
+        version: link:../capability-note
+      '@nook-dsh/capability-project':
+        specifier: workspace:*
+        version: link:../capability-project
+      '@nook-dsh/capability-refinement':
+        specifier: workspace:*
+        version: link:../capability-refinement
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
+      '@nook-dsh/dsh-adapter':
+        specifier: workspace:*
+        version: link:../dsh-adapter
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   packages/adapter-update-dsh:
     dependencies:
       '@deepseek-ai/cordis':
@@ -394,6 +475,12 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: 0.1.3-alpha.2
         version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-session':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)))
+      '@deepseek-ai/dsh-session-persistence':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-brand@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-session@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))))(@deepseek-ai/dsh-timeout@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))
       '@deepseek-ai/dsh-system-prompt':
         specifier: 0.1.3-alpha.2
         version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-llm@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-scope@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)))
@@ -409,6 +496,9 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: 3.18.2
         version: 3.18.2
+      '@nook-dsh/adapter-execution-dsh':
+        specifier: workspace:*
+        version: link:../adapter-execution-dsh
       '@nook-dsh/adapter-intelligence-dsh':
         specifier: workspace:*
         version: link:../adapter-intelligence-dsh
@@ -424,6 +514,12 @@ importers:
       '@nook-dsh/adapter-sync-webdav':
         specifier: workspace:*
         version: link:../adapter-sync-webdav
+      '@nook-dsh/adapter-task-mcp':
+        specifier: workspace:*
+        version: link:../adapter-task-mcp
+      '@nook-dsh/adapter-tasks-dsh':
+        specifier: workspace:*
+        version: link:../adapter-tasks-dsh
       '@nook-dsh/adapter-update-dsh':
         specifier: workspace:*
         version: link:../adapter-update-dsh
@@ -436,6 +532,9 @@ importers:
       '@nook-dsh/capability-browser':
         specifier: workspace:*
         version: link:../capability-browser
+      '@nook-dsh/capability-execution':
+        specifier: workspace:*
+        version: link:../capability-execution
       '@nook-dsh/capability-generation':
         specifier: workspace:*
         version: link:../capability-generation
@@ -448,9 +547,15 @@ importers:
       '@nook-dsh/capability-project':
         specifier: workspace:*
         version: link:../capability-project
+      '@nook-dsh/capability-refinement':
+        specifier: workspace:*
+        version: link:../capability-refinement
       '@nook-dsh/capability-sync':
         specifier: workspace:*
         version: link:../capability-sync
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
       '@nook-dsh/capability-update':
         specifier: workspace:*
         version: link:../capability-update
@@ -475,12 +580,18 @@ importers:
       '@nook-dsh/feature-project':
         specifier: workspace:*
         version: link:../feature-project
+      '@nook-dsh/feature-refinement':
+        specifier: workspace:*
+        version: link:../feature-refinement
       '@nook-dsh/feature-reflection':
         specifier: workspace:*
         version: link:../feature-reflection
       '@nook-dsh/feature-sync':
         specifier: workspace:*
         version: link:../feature-sync
+      '@nook-dsh/feature-tasks':
+        specifier: workspace:*
+        version: link:../feature-tasks
       '@nook-dsh/feature-video':
         specifier: workspace:*
         version: link:../feature-video
@@ -493,6 +604,9 @@ importers:
       '@nook-dsh/provider-project-local':
         specifier: workspace:*
         version: link:../provider-project-local
+      '@nook-dsh/provider-task-sync':
+        specifier: workspace:*
+        version: link:../provider-task-sync
       '@nook-dsh/provider-update-local':
         specifier: workspace:*
         version: link:../provider-update-local
@@ -514,6 +628,9 @@ importers:
       '@nook-dsh/ui-sidebar':
         specifier: workspace:*
         version: link:../ui-sidebar
+      '@nook-dsh/ui-tasks':
+        specifier: workspace:*
+        version: link:../ui-tasks
       dsh-browser-playwright:
         specifier: 0.1.1
         version: 0.1.1(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-llm@0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-tools@0.1.3-alpha.2(b9204c495d3850b6216a3df3a444b8f7))
@@ -532,6 +649,12 @@ importers:
 
   packages/capability-browser: {}
 
+  packages/capability-execution:
+    dependencies:
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
+
   packages/capability-generation: {}
 
   packages/capability-knowledge: {}
@@ -540,7 +663,19 @@ importers:
 
   packages/capability-project: {}
 
+  packages/capability-refinement:
+    dependencies:
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
+
   packages/capability-sync: {}
+
+  packages/capability-task:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/capability-update: {}
 
@@ -633,6 +768,33 @@ importers:
         specifier: workspace:*
         version: link:../capability-project
 
+  packages/feature-refinement:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: 4.0.2
+        version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
+      '@nook-dsh/capability-generation':
+        specifier: workspace:*
+        version: link:../capability-generation
+      '@nook-dsh/capability-knowledge':
+        specifier: workspace:*
+        version: link:../capability-knowledge
+      '@nook-dsh/capability-note':
+        specifier: workspace:*
+        version: link:../capability-note
+      '@nook-dsh/capability-refinement':
+        specifier: workspace:*
+        version: link:../capability-refinement
+      '@nook-dsh/capability-sync':
+        specifier: workspace:*
+        version: link:../capability-sync
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   packages/feature-reflection:
     dependencies:
       '@deepseek-ai/cordis':
@@ -659,6 +821,24 @@ importers:
       '@nook-dsh/storage-backup':
         specifier: workspace:*
         version: link:../storage-backup
+
+  packages/feature-tasks:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: 4.0.2
+        version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
+      '@nook-dsh/capability-execution':
+        specifier: workspace:*
+        version: link:../capability-execution
+      '@nook-dsh/capability-note':
+        specifier: workspace:*
+        version: link:../capability-note
+      '@nook-dsh/capability-sync':
+        specifier: workspace:*
+        version: link:../capability-sync
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
 
   packages/feature-video:
     dependencies:
@@ -737,6 +917,18 @@ importers:
       '@nook-dsh/storage-backup':
         specifier: workspace:*
         version: link:../storage-backup
+
+  packages/provider-task-sync:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: 4.0.2
+        version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
+      '@nook-dsh/capability-sync':
+        specifier: workspace:*
+        version: link:../capability-sync
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
 
   packages/provider-update-local:
     dependencies:
@@ -956,6 +1148,60 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: 0.1.3-alpha.2
         version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@nook-dsh/ui-kit':
+        specifier: workspace:*
+        version: link:../ui-kit
+      lucide-react:
+        specifier: 1.41.0
+        version: 1.41.0(react@18.3.1)
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: 18.3.1
+        version: 18.3.1(react@18.3.1)
+
+  packages/ui-tasks:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: 4.0.2
+        version: 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
+      '@deepseek-ai/dsh-api-gateway':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-client-ui-conversation':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(typescript@6.0.3)
+      '@deepseek-ai/dsh-client-ui-layout':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-client-ui-renderer':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)(react@18.3.1)
+      '@deepseek-ai/dsh-client-ui-sidebar':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-tools':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(b9204c495d3850b6216a3df3a444b8f7)
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/dsh-typert-registry':
+        specifier: 0.1.3-alpha.2
+        version: 0.1.3-alpha.2(@deepseek-ai/cordis@4.0.2)
+      '@deepseek-ai/schemastery':
+        specifier: 3.18.2
+        version: 3.18.2
+      '@nook-dsh/adapter-tasks-dsh':
+        specifier: workspace:*
+        version: link:../adapter-tasks-dsh
+      '@nook-dsh/capability-task':
+        specifier: workspace:*
+        version: link:../capability-task
       '@nook-dsh/ui-kit':
         specifier: workspace:*
         version: link:../ui-kit

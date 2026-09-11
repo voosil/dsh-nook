@@ -84,3 +84,23 @@
       name: '@nook-dsh/provider-update-local'
     - id: nook-update-rpc
       name: '@nook-dsh/adapter-update-dsh'
+
+- insert:
+    - id: nook-task-store
+      name: '@nook-dsh/provider-task-sync'
+      config:
+        identity: !!js dshHomePath('nook-task-device-id')
+    - id: nook-task-execution
+      name: '@nook-dsh/adapter-execution-dsh'
+      config:
+        root: !!js dshHomePath('nook/task-execution')
+    - id: nook-tasks
+      name: '@nook-dsh/feature-tasks'
+    - id: nook-refinement
+      name: '@nook-dsh/feature-refinement'
+    - id: nook-tasks-rpc
+      name: '@nook-dsh/adapter-tasks-dsh'
+      config:
+        connection: !!js dshHomePath('task-connection.json')
+    - id: nook-ui-tasks
+      name: '@nook-dsh/ui-tasks'
