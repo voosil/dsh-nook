@@ -2,14 +2,14 @@
 
 | Command      | Default port | Code updates                                                           | Application data                            |
 | ------------ | ------------ | ---------------------------------------------------------------------- | ------------------------------------------- |
-| `pnpm dev`   | 3080         | Watches packages; rebuilds Client plugins and restarts Host code       | A fresh temporary home, removed on exit     |
+| `pnpm dev`   | 3080         | Watches packages; rebuilds Client plugins and restarts Host code       | Persistent isolated development home        |
 | `pnpm start` | 3081         | Builds and installs a fixed snapshot; changes apply on the next launch | Shared formal data; see [usage](runtime.md) |
 
 Open the complete URL printed by the command to establish [browser authentication](discovery.md#browser-boot-and-client-composition). Both commands accept `-- --port 4000`; port `0` selects an available port when creating a backend. An already-running shared backend keeps its existing port. Development keeps that selected port across Host restarts. An unavailable explicit port fails startup. When a command's default port is unavailable, the launcher probes the following ports and uses the first free one; if none of the next ten is free, it asks the OS for an available port. Neither launcher terminates another application's listener.
 
 ## Development
 
-The [desktop development entry](../apps/desktop/README.md#开发与打包) builds a fixed snapshot and opens Electron with a disposable home. Its lifecycle and packaged data are separate from both browser modes described here.
+The [desktop development entry](../apps/desktop/README.md#开发与打包) builds a fixed snapshot and opens Electron with its own persistent development home. Its lifecycle and packaged data are separate from both browser modes described here.
 
 The development launcher builds, refreshes the Profile manifest and installs its dependencies before boot. It polls package sources, assets and manifests plus root TypeScript/workspace configuration. Client-only changes rebuild bundles and activate the [verified official HMR chain](discovery.md#client-hot-reload). Host output or other package changes rebuild and restart the development runtime. Builds run serially; edits made during a build trigger another pass. A failed rebuild leaves the running Host and previous Client bundles available and retries on the next edit.
 
@@ -17,9 +17,15 @@ Client HMR remounts the changed plugin. Local React state in that plugin can res
 
 `pnpm dev:safe-ui` uses the same watcher with Nook UI contributions disabled. After adding workspace dependencies, run `pnpm install` and restart development. Profile membership changes require a restart; the launcher refreshes dependency links automatically while preserving existing user patch files. `pnpm dev:profile` prepares the Profile independently. Changes to launcher/build scripts also require restarting the command.
 
-Development starts with fresh data and credentials. Configure development models in that temporary instance when needed. The temporary directory is printed at startup and remains available through automatic Host restarts. It is removed when the launcher exits. The real user DSH home is never used.
+Browser development keeps data, credentials and model configuration in `.dsh-dev/sandboxes/web`; desktop development uses `.dsh-dev/sandboxes/desktop`. Each home starts with independent configuration and retains it across launches and Host restarts. Neither imports historical `.dsh-dev/nook` data, formal application data, or the real user DSH home. Configure development models once in the development instance. A launcher lock prevents concurrent use of the same home; after a crash, inspect the reported lock owner and ensure its processes have stopped before removing the lock directory.
 
-The temporary Profile owns its module directory and links each declared dependency to its resolved installed package directory. This preserves workspace updates on Windows and keeps runtime-generated dependency fallback links inside the temporary home.
+The first persistent launch creates example projects, Markdown and long-form notes, an empty note, a trash entry, and manual or unassigned tasks in several states. The seed uses Nook business services and the validated task store without starting a scheduler or connecting a model or sync service. `pnpm dev:seed` prepares missing browser examples and exits; stop browser development before running it. Seed receipts and stable record IDs preserve edits, renamed projects and trashed notes. Normal launches do not reapply a completed seed.
+
+`pnpm dev:clean` starts an unseeded temporary browser home and removes only that temporary home on exit. It does not reset persistent development data. Desktop accepts `pnpm desktop:dev -- --clean` for the same disposable behavior.
+
+Development disables the data-sync settings entry and deployment guide in the frontend, including direct guide links. A runtime flag travels through the authenticated Nook notebook RPC, so the same Client bundle can serve formal and development instances. This is a frontend restriction; backend sync contracts remain unchanged. Formal application sync remains available.
+
+Each development Profile owns its module directory and links each declared dependency to its resolved installed package directory. This preserves workspace updates on Windows and keeps runtime-generated dependency fallback links inside its isolated home.
 
 ## Usage while editing
 

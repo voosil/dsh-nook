@@ -28,4 +28,4 @@ Watcher integration covers queued edits, build failure recovery, Client/Host cla
 
 ## Consequences
 
-Usage startup includes a clean dependency installation. Development data is disposable and Client plugin state can reset on remount. Explicit dependency or launcher changes need preparation and a launcher restart. Application data and the upstream installation are not modified by development verification.
+Usage startup includes a clean dependency installation. Development data lifetime follows the [persistent sandbox decision](../process/2026-09-11-development-data.md); Client plugin state can reset on remount. Explicit dependency or launcher changes need preparation and a launcher restart. Application data and the upstream installation are not modified by development verification.

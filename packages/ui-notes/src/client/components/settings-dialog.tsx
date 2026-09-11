@@ -12,6 +12,7 @@ export function SettingsDialog({
   onAppearanceChange,
   children,
   update,
+  syncDisabled = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -21,6 +22,7 @@ export function SettingsDialog({
   onAppearanceChange: (appearance: Appearance) => void
   children: ReactNode
   update?: ReactNode
+  syncDisabled?: boolean
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="设置" closeLabel="关闭设置" className="nook-settings">
@@ -38,6 +40,9 @@ export function SettingsDialog({
           <Button
             variant="ghost"
             active={section === 'sync'}
+            disabled={syncDisabled}
+            aria-label="数据同步"
+            title={syncDisabled ? '开发环境已禁用数据同步' : '数据同步'}
             aria-current={section === 'sync' ? 'page' : undefined}
             onClick={() => onSectionChange('sync')}
           >
@@ -101,6 +106,8 @@ export function SettingsDialog({
             </section>
           ) : section === 'update' ? (
             update
+          ) : syncDisabled ? (
+            <p className="nook-muted">开发环境已禁用数据同步</p>
           ) : (
             children
           )}

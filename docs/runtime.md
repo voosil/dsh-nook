@@ -1,6 +1,6 @@
 # 网页与桌面的正式运行环境
 
-`pnpm start` 通过本机私有连接复用一个 DSH 后端，支持 macOS arm64 和 Windows x64。macOS 的打包桌面应用与它共用正式数据；Windows 使用源码仓库启动网页。`pnpm dev` 和 `pnpm desktop:dev` 使用各自的临时数据，不参与正式数据共享。
+`pnpm start` 通过本机私有连接复用一个 DSH 后端，支持 macOS arm64 和 Windows x64。macOS 的打包桌面应用与它共用正式数据；Windows 使用源码仓库启动网页。`pnpm dev` 和 `pnpm desktop:dev` 使用各自的[隔离开发数据](development.md)，不参与正式数据共享。
 
 ## 数据位置
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { createServer } from 'node:net'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -52,6 +52,8 @@ async function launcherFixture(t: TestContext) {
       const client = await readFile('lib/client.js', 'utf8')
       if (host !== source || client !== source) throw new Error('stale build artifacts')
       await writeFile('booted.txt', source)
+      await writeFile('boot-home.txt', process.env.DSH_HOME)
+      if (process.env.NOOK_DEV_RUNTIME !== '1') throw new Error('missing development UI flag')
     `,
   }
   for (const [path, content] of Object.entries(files)) {
@@ -78,6 +80,12 @@ async function launcherFixture(t: TestContext) {
   // Keep dependency installation real, with a local-only Profile in place of
   // the product's external runtime. Profile generation has its own coverage.
   await writeFile(
+    resolve(root, 'scripts/profile/dev-seed.mjs'),
+    `import { writeFile } from 'node:fs/promises'
+     import { join } from 'node:path'
+     export async function seedDevData(home) { await writeFile(join(home, 'seeded'), 'examples') }`,
+  )
+  await writeFile(
     resolve(root, 'scripts/profile/profile-lib.mjs'),
     `
       import { copyFile } from 'node:fs/promises'
@@ -100,6 +108,45 @@ async function launcherFixture(t: TestContext) {
       }),
   }
 }
+
+test('dev preserves data and configuration across launches; clean stays disposable and unseeded', async t => {
+  const { root, launch } = await launcherFixture(t)
+  await launch()
+  const home = await readFile(resolve(root, 'boot-home.txt'), 'utf8')
+  assert.equal(home, await realpath(resolve(root, '.dsh-dev/sandboxes/web')))
+  await writeFile(resolve(home, 'user-note'), 'keep my edits')
+  await writeFile(resolve(home, 'cordis.patch.yml'), '# development configuration\n[]\n')
+  await launch()
+  assert.equal(await readFile(resolve(home, 'user-note'), 'utf8'), 'keep my edits')
+  assert.match(await readFile(resolve(home, 'cordis.patch.yml'), 'utf8'), /development configuration/)
+  assert.equal(await readFile(resolve(home, 'seeded'), 'utf8'), 'examples')
+  await launch(['--clean'])
+  const cleanHome = await readFile(resolve(root, 'boot-home.txt'), 'utf8')
+  assert.notEqual(cleanHome, home)
+  await assert.rejects(readFile(resolve(cleanHome, 'profiles/nook/package.json')), { code: 'ENOENT' })
+  assert.equal(await readFile(resolve(home, 'user-note'), 'utf8'), 'keep my edits')
+})
+
+test('dev:seed prepares data without starting a runtime', async t => {
+  const { root, launch } = await launcherFixture(t)
+  await launch(['--seed'])
+  assert.equal(await readFile(resolve(root, '.dsh-dev/sandboxes/web/seeded'), 'utf8'), 'examples')
+  await assert.rejects(readFile(resolve(root, 'booted.txt')), { code: 'ENOENT' })
+})
+
+test('persistent sandbox rejects concurrent use and preserves data after preparation failure', async t => {
+  const { root, launch } = await launcherFixture(t)
+  await launch()
+  const { createDevSandbox } = await import(pathToFileURL(resolve(root, 'scripts/profile/dev-sandbox.mjs')).href)
+  const sandbox = await createDevSandbox({ persistent: true })
+  await writeFile(resolve(sandbox.home, 'keep'), 'saved')
+  await assert.rejects(createDevSandbox({ persistent: true }), /in use/)
+  await sandbox.dispose()
+  await writeFile(resolve(root, '.dsh-dev/profiles/nook/package.json'), '{broken')
+  await assert.rejects(createDevSandbox({ persistent: true }), /JSON/)
+  assert.equal(await readFile(resolve(sandbox.home, 'keep'), 'utf8'), 'saved')
+  await assert.rejects(readFile(`${sandbox.home}.lock/owner.json`), { code: 'ENOENT' })
+})
 
 for (const args of [[], ['--safe-ui']]) {
   test(`${['dev', ...args].join(' ')} builds missing and stale Host/Client output before boot`, async t => {

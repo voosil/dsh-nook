@@ -36,6 +36,7 @@ export async function bootAndVerifyWeb({
     '@nook-dsh/ui-tasks',
   ],
   excludedPackages = [],
+  acceptance,
 }) {
   const args = [bin, '--profile', profile]
   if (patch !== undefined) args.push('--patch', patch)
@@ -88,8 +89,11 @@ export async function bootAndVerifyWeb({
     for (const packageName of excludedPackages) {
       if (html.includes(packageName)) throw new Error(`Nook shell unexpectedly loaded ${packageName}`)
     }
-    if (expectedPackages.includes('@nook-dsh/ui-tasks')) await taskSmoke(launchUrl)
-    if (expectedPackages.includes('@nook-dsh/ui-notes')) await notebookSmoke(launchUrl, undefined, undefined, true)
+    if (acceptance) await acceptance(launchUrl)
+    else {
+      if (expectedPackages.includes('@nook-dsh/ui-tasks')) await taskSmoke(launchUrl)
+      if (expectedPackages.includes('@nook-dsh/ui-notes')) await notebookSmoke(launchUrl, undefined, undefined, true)
+    }
     return { url, status: response.status, html }
   } finally {
     await stop(child)

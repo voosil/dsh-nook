@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
@@ -66,6 +66,16 @@ function mountWorkspace(ctx: ClientContext): void {
     }
   }
   function Workspace() {
+    const [syncDisabled, setSyncDisabled] = useState(true)
+    useEffect(() => {
+      const controller = new AbortController()
+      void api('runtime', {}, controller.signal)
+        .then(runtime => {
+          if (!controller.signal.aborted) setSyncDisabled(runtime.development)
+        })
+        .catch(() => {})
+      return () => controller.abort()
+    }, [])
     const updater = useUpdate(update, () => saveUpdateDraft())
     const visible = useSyncExternalStore(
       listener => {
@@ -84,10 +94,12 @@ function mountWorkspace(ctx: ClientContext): void {
         <NotebookApp
           api={api}
           sync={sync}
+          syncDisabled={syncDisabled}
           updater={updater}
           registerUpdateSave={registerUpdateSave}
           close={() => setOpen(false)}
           onDeploy={async () => {
+            if (syncDisabled) return
             const { directory } = await sync('prepareDeployment', {}, lifecycle.signal)
             await openSyncDeployment(ctx, directory, lifecycle.signal)
             setOpen(false)

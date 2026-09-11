@@ -69,6 +69,9 @@ export default class NotebookRpc extends TypertRemoteService {
   list(request: Request<'list'>, signal: AbortSignal) {
     return result(signal, () => this.ctx.nookNotebook.list(defined(request)))
   }
+  runtime(_request: Request<'runtime'>, signal: AbortSignal) {
+    return result(signal, async () => ({ development: process.env.NOOK_DEV_RUNTIME === '1' }))
+  }
   get(request: Request<'get'>, signal: AbortSignal) {
     return result(signal, () => this.ctx.nookNotebook.get(request.id))
   }

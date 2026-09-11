@@ -5,11 +5,13 @@ import { createDevSandbox } from '../profile/dev-sandbox.mjs'
 import { desktopNode } from './desktop-node.mjs'
 import { ROOT, dshBin, runPnpm } from '../profile/profile-lib.mjs'
 import { ProcessScope } from '../shared/process-scope.mjs'
+import { seedDevData } from '../profile/dev-seed.mjs'
 
 await runPnpm(['run', 'build'])
 await runPnpm(['run', 'dev:profile'])
 const node = join(await desktopNode(), 'bin', 'node')
-const sandbox = await createDevSandbox()
+const clean = process.argv.includes('--clean')
+const sandbox = await createDevSandbox({ persistent: !clean, desktop: true })
 const scope = new ProcessScope()
 const stop = () => {
   void scope.dispose()
@@ -17,8 +19,9 @@ const stop = () => {
 process.once('SIGINT', stop)
 process.once('SIGTERM', stop)
 try {
+  if (!clean) await seedDevData(sandbox.home)
   const cwd = join(sandbox.home, 'workspace')
-  await mkdir(cwd)
+  await mkdir(cwd, { recursive: true })
   const config = join(sandbox.home, 'desktop.json')
   await writeFile(
     config,
@@ -32,7 +35,7 @@ try {
     }),
   )
   const require = createRequire(resolve(ROOT, 'apps/desktop/package.json'))
-  const env = { ...process.env, NOOK_DESKTOP_DEV_CONFIG: config }
+  const env = { ...process.env, NOOK_DESKTOP_DEV_CONFIG: config, NOOK_DEV_RUNTIME: '1' }
   delete env.ELECTRON_RUN_AS_NODE
   await scope.run(require('electron'), [resolve(ROOT, 'apps/desktop')], { cwd: dirname(config), env })
 } finally {

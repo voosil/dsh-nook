@@ -47,6 +47,7 @@ const personal = { kind: 'personal' as const, url: null, author: null, basedOn: 
 export function NotebookApp({
   api,
   sync,
+  syncDisabled = false,
   updater,
   registerUpdateSave,
   close,
@@ -54,6 +55,7 @@ export function NotebookApp({
 }: {
   api: Api
   sync: SyncApi
+  syncDisabled?: boolean
   updater?: UpdateController
   registerUpdateSave?: (save: () => Promise<void>) => () => void
   close: () => void
@@ -563,6 +565,7 @@ export function NotebookApp({
           </div>
         </aside>
         <SyncControl
+          disabled={syncDisabled}
           update={updater && <UpdatePanel controller={updater} />}
           api={sync}
           onChanged={setSyncChange}

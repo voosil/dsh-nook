@@ -7,13 +7,13 @@
 在仓库根目录执行：
 
 ```bash
-pnpm desktop:dev      # 构建后打开桌面窗口；使用临时数据，退出时清理
+pnpm desktop:dev      # 构建后打开桌面窗口；保留独立开发数据
 pnpm desktop:stage    # 生成可搬移、带校验清单的离线运行时
 pnpm desktop:package  # 构建 .pack/desktop/mac-arm64/Nook.app
 pnpm verify:desktop   # 构建安装包，再运行真实窗口验收
 ```
 
-开发入口构建固定快照，修改源码后重新启动。需要热更新时使用[浏览器开发模式](../../docs/development.md)。开发与验证使用临时 home，不使用用户桌面数据或真实 DSH home。
+开发入口构建固定快照，修改源码后重新启动。需要热更新时使用[浏览器开发模式](../../docs/development.md)。开发数据与空白模式遵循[开发指南](../../docs/development.md)，验证使用临时 home。
 
 构建需要仓库开发工具链、网络和当前平台原生编译工具。Electron 与打包器版本归属[应用 manifest](package.json)，附带 Node 的版本和官方 SHA-256 归属[下载脚本](../../scripts/desktop/desktop-node.mjs)。运行时只携带 Node 可执行文件与许可证，原生模块按标准 Node 安装，不按 Electron ABI 重建。
 

@@ -9,6 +9,7 @@ import { parseSyncConnection, CONNECTION_FILE_LIMIT } from '@nook-dsh/capability
 import type { SyncApi } from '../lib/sync-api.js'
 
 export function SyncControl({
+  disabled = false,
   api,
   update,
   onChanged,
@@ -18,6 +19,7 @@ export function SyncControl({
   appearance,
   onAppearanceChange,
 }: {
+  disabled?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
   appearance: Appearance
@@ -28,12 +30,13 @@ export function SyncControl({
   onDeploy: () => Promise<void>
 }) {
   const [tab, setTab] = useState<'status' | 'configuration'>('status')
-  const [guideOpen, setGuideOpen] = useState(window.location.hash === '#nook-sync-guide')
+  const [guideOpen, setGuideOpen] = useState(!disabled && window.location.hash === '#nook-sync-guide')
   useEffect(() => {
-    const changed = () => setGuideOpen(window.location.hash === '#nook-sync-guide')
+    const changed = () => setGuideOpen(!disabled && window.location.hash === '#nook-sync-guide')
+    changed()
     window.addEventListener('hashchange', changed)
     return () => window.removeEventListener('hashchange', changed)
-  }, [])
+  }, [disabled])
   const [caCert, setCaCert] = useState('')
   const [imported, setImported] = useState(false)
   const [connectionText, setConnectionText] = useState('')
@@ -61,6 +64,7 @@ export function SyncControl({
     setError('')
   }
   useEffect(() => {
+    if (disabled) return
     const controller = new AbortController()
     lifecycle.current = controller
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -85,9 +89,9 @@ export function SyncControl({
       clearTimeout(timer)
       lifecycle.current = null
     }
-  }, [api])
+  }, [api, disabled])
   useEffect(() => {
-    if (!open) return
+    if (!open || disabled) return
     setUrl(status?.url ?? '')
     setUsername(status?.username ?? '')
     setPassword('')
@@ -95,7 +99,7 @@ export function SyncControl({
     setConnectionText('')
     setCaCert(status?.caCert ?? '')
     void operation(async () => {})
-  }, [open])
+  }, [open, disabled])
   async function operation(fn: () => Promise<unknown>) {
     const signal = lifecycle.current?.signal
     if (!signal || signal.aborted) return
@@ -128,7 +132,7 @@ export function SyncControl({
               : '等待首次同步'
   return (
     <>
-      {guideOpen && (
+      {guideOpen && !disabled && (
         <SyncGuidePage
           onDeploy={onDeploy}
           onBack={() => {
@@ -146,6 +150,7 @@ export function SyncControl({
       )}
       {open && !guideOpen && (
         <SettingsDialog
+          syncDisabled={disabled}
           open
           onOpenChange={next => {
             if (!busy) setOpen(next)

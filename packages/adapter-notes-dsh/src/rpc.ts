@@ -63,6 +63,7 @@ const hit = z.strictObject({
 })
 
 export const requests = {
+  runtime: z.strictObject({}),
   videoSkills: z.strictObject({}),
   startVideo: z.strictObject({
     id,
@@ -134,6 +135,7 @@ const videoJob = z.strictObject({
   updatedAt: date,
 })
 const outputs = {
+  runtime: z.strictObject({ development: z.boolean() }),
   videoSkills: z.array(z.strictObject({ id: z.string(), name: z.string() })),
   startVideo: videoJob,
   videoJob: videoJob.nullable(),

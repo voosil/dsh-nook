@@ -19,6 +19,8 @@
     "test:integration": "node --import tsx --test tests/integration/*.test.ts",
     "test:e2e": "node --import tsx --test tests/e2e/*.test.ts",
     "dev": "node scripts/profile/run-profile.mjs",
+    "dev:seed": "node scripts/profile/run-profile.mjs --seed",
+    "dev:clean": "node scripts/profile/run-profile.mjs --clean",
     "start": "node scripts/profile/start-profile.mjs",
     "start:app": "open .pack/desktop/mac-arm64/Nook.app",
     "dev:safe-ui": "node scripts/profile/run-profile.mjs --safe-ui",
