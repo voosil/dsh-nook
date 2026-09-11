@@ -1106,3 +1106,10 @@
     max-height: 180px;
   }
 }
+/* checkbox 对齐首行文字的垂直中心；height 需与 .nook-paper .tiptap 的 line-height 保持一致 */
+.nook-paper .tiptap ul[data-type='taskList'] li > label {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  height: 1.95em;
+}

@@ -6,6 +6,8 @@ import { Markdown } from '@tiptap/markdown'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
 import { TextSelection } from '@tiptap/pm/state'
 import { Button } from '@nook-dsh/ui-kit'
+import { FillEmptyBlocks } from '../lib/fill-empty-blocks.js'
+import { DeleteEmptyListItem } from '../lib/delete-empty-list-item.js'
 
 export function RichEditor({
   markdown,
@@ -24,6 +26,8 @@ export function RichEditor({
       Markdown,
       TaskList,
       TaskItem.configure({ nested: true }),
+      FillEmptyBlocks,
+      DeleteEmptyListItem,
     ],
     content: markdown,
     contentType: 'markdown',
