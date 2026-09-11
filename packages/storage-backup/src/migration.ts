@@ -127,8 +127,12 @@ function mergeNotebookRows(source: string, target: string): boolean {
       sync_working: ['key', 'hash'],
       sync_state: ['key', 'value'],
     }
+    const archiveExpected = (db: DatabaseSync) =>
+      db.prepare("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='sync_epoch_archive'").get()
+        ? { sync_epoch_archive: ['epoch', 'hash', 'body'] }
+        : {}
     for (const db of [incoming, current]) {
-      const allExpected = { ...expected, ...(hasSync(db) ? syncExpected : {}) }
+      const allExpected = { ...expected, ...(hasSync(db) ? { ...syncExpected, ...archiveExpected(db) } : {}) }
       const tables = new Set([
         ...Object.keys(allExpected),
         'knowledge_fts_data',
@@ -154,7 +158,10 @@ function mergeNotebookRows(source: string, target: string): boolean {
     }
     if (identical) return false
     if (hasSync(incoming) || hasSync(current)) {
-      const targetTables = [...Object.keys(expected), ...(hasSync(current) ? Object.keys(syncExpected) : [])]
+      const targetTables = [
+        ...Object.keys(expected),
+        ...(hasSync(current) ? Object.keys({ ...syncExpected, ...archiveExpected(current) }) : []),
+      ]
       const empty = targetTables.every(table =>
         table === 'sync_state'
           ? equivalent(current.prepare('SELECT key,value FROM sync_state').all(), [

@@ -331,3 +331,87 @@ test('WebDAV reuses connections within a run and closes them on disposal', async
   await assert.rejects(remote.get('objects/reuse', signal()), /关闭/)
   assert.equal(server.methods.length, count)
 })
+
+test('same-directory epochs preserve note sources, offline edits, search and late browser drafts over WebDAV', async t => {
+  const { publishEpoch } = await import('../../packages/feature-sync/src/epochs.ts')
+  const root = await mkdtemp(join(tmpdir(), 'nook-epoch-http-')),
+    server = await startWebDav(),
+    contexts: Context[] = []
+  t.after(async () => {
+    for (const ctx of contexts) await ctx.fiber.dispose()
+    await server.close()
+    await rm(root, { recursive: true, force: true })
+  })
+  const boot = async (name: string) => {
+    const ctx = new Context()
+    contexts.push(ctx)
+    await ctx.plugin(Notebook, {
+      file: join(root, name, 'notebook.sqlite'),
+      projectsFile: join(root, name, 'projects.json'),
+    })
+    return ctx
+  }
+  const a = await boot('a'),
+    b = await boot('b'),
+    remote = openWebDav(t, { url: server.url, username: 'tester', password: 'secret' })
+  await remote.probe(signal())
+  const run = (ctx: Context) => synchronize(ctx.nookSyncReplica, remote, server.url, signal())
+  const original = await a.nookNotes.create(note('base'))
+  const firstRequest = { ...original, markdown: 'middle 中文', requestId: randomUUID() }
+  const first = (await a.nookNotes.save(firstRequest)).note
+  const referenced = (await a.nookNotes.save({ ...first, markdown: 'referenced 中文' })).note
+  const sourceNote = await a.nookNotes.create({
+    ...note('来源笔记'),
+    source: {
+      kind: 'personal',
+      url: null,
+      author: null,
+      basedOn: [{ noteId: original.id, revision: referenced.revision, versionId: referenced.versionId! }],
+    },
+  })
+  await run(a)
+  await run(b)
+  const local = await b.nookNotes.get(original.id)
+  await b.nookNotes.save({ ...local!, markdown: 'offline 中文' })
+  await a.nookNotes.save({ ...referenced, markdown: 'remote 中文' })
+  await run(a)
+  const plan = a.nookSyncReplica.planHistoryRewrite!([first.versionId!, referenced.versionId!])
+  const mapping = (plan.migration.data as { mapping: Record<string, string | null> }).mapping
+  assert.equal(mapping[first.versionId!], null)
+  assert.ok(mapping[referenced.versionId!], 'explicitly referenced snapshots survive, with remapped identifiers')
+  await publishEpoch(remote, plan, signal())
+  await run(a)
+  const beforeRetry = a.nookSyncReplica.snapshot().heads
+  const currentBeforeRetry = await a.nookNotes.get(original.id)
+  const retried = await a.nookNotes.save(firstRequest)
+  assert.deepEqual(
+    a.nookSyncReplica.snapshot().heads,
+    beforeRetry,
+    'lost responses never resubmit an already saved edit',
+  )
+  assert.equal(retried.note.markdown, currentBeforeRetry!.markdown)
+  assert.equal(
+    a.nookSyncReplica.version(retried.submittedVersionId!)!.data &&
+      (a.nookSyncReplica.version(retried.submittedVersionId!)!.data as { markdown: string }).markdown,
+    'middle 中文',
+  )
+  await assert.rejects(a.nookNotes.save({ ...firstRequest, markdown: 'different request body' }), /其他内容/)
+  const migratedSource = await a.nookNotes.get(sourceNote.id)
+  assert.equal(migratedSource!.source.basedOn[0]!.versionId, mapping[referenced.versionId!])
+  assert.equal(
+    (await a.nookNotes.getHistoryVersion(original.id, mapping[referenced.versionId!]!)).markdown,
+    referenced.markdown,
+  )
+  // A still-open editor submits a draft using a version removed by the migration.
+  await a.nookNotes.save({ ...first, markdown: 'late browser 中文', requestId: randomUUID() })
+  await run(a)
+  await run(b)
+  await run(a)
+  await run(b)
+  assert.equal((await a.nookNotes.get(original.id))!.markdown, (await b.nookNotes.get(original.id))!.markdown)
+  const history = await a.nookNotes.history({ id: original.id, limit: 100 })
+  const contents = await Promise.all(history.entries.map(e => a.nookNotes.getHistoryVersion(original.id, e.versionId)))
+  assert.ok(contents.some(n => n.markdown === 'late browser 中文'))
+  assert.ok(contents.some(n => n.markdown === 'offline 中文'))
+  assert.ok((await a.nookKnowledge.search({ query: '中文' })).length)
+})

@@ -60,7 +60,6 @@ export function NoteEditor({
   const composing = useRef(false)
   const [busy, setBusy] = useState(false)
   const alive = useRef(true)
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const saved = useRef(onSaved)
   saved.current = onSaved
   const [controller] = useState(
@@ -97,14 +96,11 @@ export function NoteEditor({
     setInput(next)
     controller.edit(next)
     preserve()
-    clearTimeout(timer.current)
-    if (!composing.current)
-      timer.current = setTimeout(() => {
-        void controller.flush()
-      }, 650)
+    controller.schedule()
   }
   useEffect(() => {
     alive.current = true
+    controller.resume()
     if (recovery) {
       controller.recover(recovery)
       void controller.flush()
@@ -119,7 +115,7 @@ export function NoteEditor({
     window.addEventListener('beforeunload', beforeUnload)
     return () => {
       alive.current = false
-      clearTimeout(timer.current)
+      controller.dispose()
       window.removeEventListener('beforeunload', beforeUnload)
       if (controller.dirty) preserve()
     }
@@ -143,11 +139,10 @@ export function NoteEditor({
       onCompositionStart={() => {
         composing.current = true
         controller.pause()
-        clearTimeout(timer.current)
       }}
       onCompositionEnd={() => {
         composing.current = false
-        void controller.resume()
+        controller.resume()
       }}
     >
       {historyOpen && (

@@ -243,6 +243,7 @@ test('an empty legacy notebook does not permit replacing projects held outside S
 for (const [name, sql] of Object.entries({
   binding: "INSERT INTO sync_state VALUES('binding','{}')",
   history: "INSERT INTO sync_versions VALUES('retained','{}',0)",
+  epochArchive: "INSERT INTO sync_epoch_archive VALUES('legacy','retained',X'01')",
   heads: "INSERT INTO sync_heads VALUES('retained','hash')",
   working: "INSERT INTO sync_working VALUES('retained','hash')",
   preferences: "INSERT INTO knowledge_sessions VALUES('session',1,NULL)",

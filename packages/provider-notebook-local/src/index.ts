@@ -128,6 +128,9 @@ class Notebook {
         this.replica.register({
           type: 'project',
           schema: 1,
+          reset: () => {
+            this.db.exec('DELETE FROM projects')
+          },
           validate: validateProjectVersion,
           merge: (input, signal) => this.merger.merge(input, signal),
           apply: value => {
@@ -148,6 +151,26 @@ class Notebook {
         this.replica.register({
           type: 'note',
           schema: 1,
+          reset: () => {
+            this.db.exec('DELETE FROM notes; DELETE FROM knowledge_fts; DELETE FROM chunks;')
+          },
+          references: value =>
+            (value.data as unknown as NoteDto).source.basedOn.flatMap(ref => (ref.versionId ? [ref.versionId] : [])),
+          remapReferences: (value, resolve) => {
+            const data = value.data as unknown as NoteDto
+            return {
+              ...value,
+              data: json({
+                ...data,
+                source: {
+                  ...data.source,
+                  basedOn: data.source.basedOn.map(ref =>
+                    ref.versionId ? { ...ref, versionId: resolve(ref.versionId) } : ref,
+                  ),
+                },
+              }),
+            }
+          },
           validate: validateNoteVersion,
           merge: (input, signal) => this.merger.merge(input, signal),
           apply: value => {
@@ -182,7 +205,17 @@ class Notebook {
             }),
         })
         // Replica disposal owns these registrations. Checkpoints have no business projection.
-        this.replica.register({ type: 'note-checkpoint', schema: 1, validate: validateNoteCheckpoint })
+        this.replica.register({
+          type: 'note-checkpoint',
+          schema: 1,
+          validate: validateNoteCheckpoint,
+          references: value => [(value.data as unknown as NoteCheckpoint).versionId],
+          remapReferences: (value, resolve) => {
+            const data = value.data as unknown as NoteCheckpoint,
+              versionId = resolve(data.versionId)
+            return { ...value, id: versionId, data: { ...data, versionId } }
+          },
+        })
         this.replica.afterApply = () => this.normalizeProjects()
         this.replica.transaction(() => {
           if (!this.db.prepare("SELECT value FROM sync_state WHERE key='projects-migrated'").get()) {
@@ -409,7 +442,8 @@ class LocalNotes extends Service implements NoteService {
       const current = this.store.get(request.id)
       if (!current) throw new NoteError('NOT_FOUND', '笔记不存在。')
       if (replica) {
-        const baseline = request.versionId ? replica.version(request.versionId) : null
+        const baselineId = request.versionId ? replica.rebaseSavedVersion(request.versionId) : null
+        const baseline = baselineId ? replica.version(baselineId) : null
         if (
           request.versionId &&
           (!baseline || baseline.type !== 'note' || baseline.id !== request.id || baseline.schema !== 1)
@@ -417,6 +451,18 @@ class LocalNotes extends Service implements NoteService {
           throw new NoteError('INVALID_NOTE', '笔记编辑基线不存在或不匹配。')
         if (!baseline) this.requireRevision(request.id, request.revision)
         const base = baseline ? (baseline.data as unknown as NoteDto) : current
+        // An unchanged editor baseline must not manufacture a timestamp-only branch.
+        if (
+          !base.deletedAt &&
+          request.title === base.title &&
+          request.markdown === base.markdown &&
+          request.pinned === base.pinned &&
+          request.projectId === base.projectId
+        ) {
+          const hash = baselineId ?? replica.working('note', request.id)!
+          if (request.requestId) this.recordReceipt(`save/${request.requestId}`, fingerprint, hash)
+          return hash
+        }
         const data = json({
           id: base.id,
           title: request.title,
@@ -428,13 +474,7 @@ class LocalNotes extends Service implements NoteService {
           updatedAt: new Date().toISOString(),
           deletedAt: null,
         })
-        const hash = replica.writeBranch(
-          'note',
-          request.id,
-          data,
-          false,
-          request.versionId ? [request.versionId] : undefined,
-        )
+        const hash = replica.writeBranch('note', request.id, data, false, baselineId ? [baselineId] : undefined)
         if (request.requestId) this.recordReceipt(`save/${request.requestId}`, fingerprint, hash)
         return hash
       }
@@ -464,6 +504,13 @@ class LocalNotes extends Service implements NoteService {
     const value = JSON.parse(String(row.value)) as { fingerprint: string; result: string }
     if (value.fingerprint !== createHash('sha256').update(fingerprint).digest('hex'))
       throw new NoteError('INVALID_NOTE', '保存请求标识已被其他内容使用。')
+    // A response may be lost just before an epoch changes. Preserve the receipt
+    // fingerprint and resolve its saved result instead of submitting the edit twice.
+    if (key.startsWith('save/')) {
+      const result = this.store.replica?.rebaseSavedVersion(value.result)
+      if (!result) throw new NoteError('INVALID_NOTE', '已保存请求的版本基线无法恢复。')
+      return result
+    }
     return value.result
   }
   private recordReceipt(key: string, fingerprint: string, result: string) {
@@ -892,6 +939,24 @@ class ReplicaService extends Service implements SyncReplica {
   }
   receive(...args: Parameters<SyncReplica['receive']>) {
     return this.replica.receive(...args)
+  }
+  hasPack(hash: string) {
+    return this.replica.hasPack(hash)
+  }
+  remoteIndex() {
+    return this.replica.remoteIndex()
+  }
+  registerEpochMigration(...args: Parameters<Replica['registerEpochMigration']>) {
+    return this.replica.registerEpochMigration(...args)
+  }
+  supportsEpochMigration(...args: Parameters<Replica['supportsEpochMigration']>) {
+    return this.replica.supportsEpochMigration(...args)
+  }
+  adoptEpoch(...args: Parameters<Replica['adoptEpoch']>) {
+    return this.replica.adoptEpoch(...args)
+  }
+  planHistoryRewrite(...args: Parameters<Replica['planHistoryRewrite']>) {
+    return this.replica.planHistoryRewrite(...args)
   }
   reconcile(signal?: AbortSignal) {
     return this.replica.reconcile(signal)

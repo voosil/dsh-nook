@@ -94,7 +94,13 @@ export class WebDavStorage implements SyncStorage {
           response => {
             const chunks: Buffer[] = []
             let size = 0
-            const max = path.startsWith('blobs/') ? 20_000_000 : 4_000_000
+            const max = path.startsWith('blobs/')
+              ? 20_000_000
+              : path.endsWith('.epoch')
+                ? 32_000_000
+                : /\.(pack|history)$/.test(path)
+                  ? 8_000_000
+                  : 4_000_000
             response.on('data', (chunk: Buffer) => {
               size += chunk.length
               if (size > max) {

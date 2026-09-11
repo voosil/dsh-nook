@@ -21,6 +21,9 @@ export class Autosave {
   private input: NoteInput
   private baseline: string | undefined
   private paused = false
+  private timer: ReturnType<typeof setTimeout> | undefined
+  private dirtySince: number | undefined
+  private lastEdit = 0
   private pending: { generation: number; request: SaveNoteRequest } | undefined
   constructor(
     public note: NoteDto,
@@ -42,6 +45,14 @@ export class Autosave {
   recover(draft: SavedDraft) {
     this.baseline = draft.versionId ?? this.note.versionId
     this.edit(draft.input)
+    // Reconcile the saved draft's baseline and retry a lost request even if its text
+    // already matches the current note. The Host deduplicates unchanged submissions.
+    if (!this.dirty) {
+      this.generation++
+      this.lastEdit = Date.now()
+      this.dirtySince = this.lastEdit
+      this.changed('dirty')
+    }
     if (draft.pending && draft.pending.id === this.note.id && draft.pending.requestId) {
       this.pending = {
         request: draft.pending,
@@ -57,26 +68,58 @@ export class Autosave {
     this.changed('saved')
   }
   edit(input: NoteInput) {
+    if (JSON.stringify(inputOf(input)) === JSON.stringify(this.input)) return
     this.input = inputOf(input)
     this.generation++
+    this.lastEdit = Date.now()
+    this.dirtySince ??= this.lastEdit
     this.changed('dirty')
   }
   pause() {
     this.paused = true
-    this.edit(this.input)
+    clearTimeout(this.timer)
+    // Do not adopt a response over an IME buffer that has not emitted its final input yet.
+    if (this.running) {
+      this.generation++
+      this.dirtySince ??= Date.now()
+      this.changed('dirty')
+    }
   }
   resume() {
     this.paused = false
-    return this.flush()
+    this.schedule()
+  }
+  /** IME confirmations share the same quiet period as ordinary input. */
+  schedule() {
+    clearTimeout(this.timer)
+    if (this.paused || !this.dirty) return
+    const due = Math.min(this.lastEdit + 3000, (this.dirtySince ?? Date.now()) + 30000)
+    this.timer = setTimeout(
+      () => {
+        void this.commit(false).then(ok => {
+          if (ok && this.dirty) this.schedule()
+        })
+      },
+      Math.max(0, due - Date.now()),
+    )
+  }
+  dispose() {
+    clearTimeout(this.timer)
+    this.paused = true
   }
   flush(): Promise<boolean> {
+    clearTimeout(this.timer)
+    if (this.running) return this.running.then(ok => (ok && this.dirty ? this.flush() : ok))
+    return this.commit(true)
+  }
+  private commit(all: boolean): Promise<boolean> {
     if (this.running) return this.running
-    this.running = this.drain().finally(() => {
+    this.running = this.drain(all).finally(() => {
       this.running = undefined
     })
     return this.running
   }
-  private async drain(): Promise<boolean> {
+  private async drain(all: boolean): Promise<boolean> {
     try {
       // A flush over unchanged input must stay silent: the 'saved' notification
       // re-sorts the note list, so emitting it on every no-op flush would flash
@@ -100,6 +143,7 @@ export class Autosave {
         this.note = result.note
         this.savedGeneration = pending.generation
         this.pending = undefined
+        this.dirtySince = this.dirty ? Date.now() : undefined
         if (this.dirty) {
           this.baseline = result.submittedVersionId ?? this.note.versionId
           this.changed('dirty')
@@ -107,8 +151,9 @@ export class Autosave {
           this.baseline = this.note.versionId
           this.input = inputOf(this.note)
         }
+        if (!all) break
       }
-      if (wasDirty) this.changed('saved')
+      if (wasDirty && !this.dirty) this.changed('saved')
       return true
     } catch (error) {
       this.changed('error', error instanceof Error ? error.message : '保存失败，请重试。')

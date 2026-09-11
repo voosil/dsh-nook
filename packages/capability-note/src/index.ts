@@ -126,3 +126,5 @@ export function noteTitle(note: Pick<NoteDto, 'title' | 'markdown'>): string {
     '无标题笔记'
   )
 }
+
+export { HISTORY_IDLE_MS, historyStages, historyLabel, type HistoryStage } from './history.js'

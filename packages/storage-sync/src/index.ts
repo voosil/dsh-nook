@@ -1,14 +1,19 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { gzipSync, gunzipSync } from 'node:zlib'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import { writeRecoveryRecord } from '@nook-dsh/storage-backup'
 import { durableRename, syncPath } from '@nook-dsh/storage-backup/durability'
+import { historyRewriteMigration, planHistoryRewrite } from './history-rewrite.js'
 import {
   canonicalJson,
   SyncError,
   recordKey,
   validateVersion,
+  epochBaseline,
+  syncEpoch,
+  validateEpochTransition,
   type Json,
   type BlobRef,
   type RecordVersion,
@@ -18,6 +23,8 @@ import {
   type SyncConflict,
   type SyncTypeHandler,
   type RecordWrite,
+  type SyncEpochMigration,
+  type SyncEpochTransition,
 } from '@nook-dsh/capability-sync'
 
 export function encode(value: unknown): Uint8Array {
@@ -37,6 +44,7 @@ export class Replica implements SyncReplica {
   private changed = false
   private readonly listeners = new Set<() => void>()
   private readonly handlers = new Map<string, RecordHandler>()
+  private readonly migrations = new Map<string, SyncEpochMigration>()
   afterApply: () => void = () => {}
   constructor(
     readonly db: DatabaseSync,
@@ -48,7 +56,11 @@ export class Replica implements SyncReplica {
       CREATE TABLE IF NOT EXISTS sync_heads(key TEXT NOT NULL,hash TEXT NOT NULL,PRIMARY KEY(key,hash));
       CREATE TABLE IF NOT EXISTS sync_working(key TEXT PRIMARY KEY,hash TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sync_state(key TEXT PRIMARY KEY,value TEXT NOT NULL);`)
+    db.exec(
+      'CREATE TABLE IF NOT EXISTS sync_epoch_archive(epoch TEXT NOT NULL,hash TEXT NOT NULL,body BLOB NOT NULL,PRIMARY KEY(epoch,hash))',
+    )
     mkdirSync(files, { recursive: true, mode: 0o700 })
+    this.registerEpochMigration(historyRewriteMigration(this.handlers))
   }
   transaction<T>(fn: () => T): T {
     if (this.depth) return fn()
@@ -122,6 +134,7 @@ export class Replica implements SyncReplica {
     this.lifecycle.abort()
     this.listeners.clear()
     this.handlers.clear()
+    this.migrations.clear()
   }
   subscribe(fn: () => void) {
     this.listeners.add(fn)
@@ -259,7 +272,208 @@ export class Replica implements SyncReplica {
       for (const hash of hashes) this.db.prepare('UPDATE sync_versions SET pending=0 WHERE hash=?').run(hash)
     })
   }
-  receive(items: readonly VersionItem[], remote: SyncIndex) {
+  hasPack(hash: string): boolean {
+    return this.get(`pack/${hash}`) === '1'
+  }
+  remoteIndex(): SyncIndex | null {
+    const value = this.get('remote')
+    return value ? (JSON.parse(value) as SyncIndex) : null
+  }
+  registerEpochMigration(migration: SyncEpochMigration): () => void {
+    const key = `${migration.id}@${migration.version}`
+    if (this.migrations.has(key)) throw new SyncError('同步迁移处理器重复注册。')
+    this.migrations.set(key, migration)
+    return () => {
+      if (this.migrations.get(key) === migration) this.migrations.delete(key)
+    }
+  }
+  supportsEpochMigration(id: string, version: number): boolean {
+    return this.migrations.has(`${id}@${version}`)
+  }
+  planHistoryRewrite(remove: readonly string[]) {
+    const from = this.remoteIndex(),
+      snapshot = this.snapshot()
+    if (!from || snapshot.pending.length || canonicalJson(snapshot.heads) !== canonicalJson(from.heads))
+      throw new SyncError('请先完成同步，再精简历史。')
+    const versions = this.db
+      .prepare('SELECT hash,body FROM sync_versions')
+      .all()
+      .map(row => ({
+        hash: String(row.hash),
+        value: JSON.parse(String(row.body)) as RecordVersion,
+      }))
+    return planHistoryRewrite(from, versions, remove, this.handlers)
+  }
+  /** A browser draft may arrive after Host migration. Rebase its archived baseline on demand. */
+  rebaseSavedVersion(hash: string): string | null {
+    if (this.version(hash)) return hash
+    const alias = this.get(`draft-alias/${hash}`)
+    if (alias && this.version(alias)) return alias
+    const receipts = this.db
+      .prepare("SELECT value FROM sync_state WHERE key LIKE 'epoch/%'")
+      .all()
+      .map(row => JSON.parse(String(row.value)) as { manifest?: SyncEpochTransition })
+      .filter((r): r is { manifest: SyncEpochTransition } => Boolean(r.manifest))
+      .sort((a, b) => (BigInt(a.manifest.from.generation) < BigInt(b.manifest.from.generation) ? -1 : 1))
+    const first = receipts.findIndex(({ manifest }) =>
+      this.db.prepare('SELECT 1 FROM sync_epoch_archive WHERE epoch=? AND hash=?').get(syncEpoch(manifest.from), hash),
+    )
+    if (first < 0) return null
+    const staged = new Map<string, RecordVersion>()
+    let result = hash
+    for (const { manifest } of receipts.slice(first)) {
+      const strategy = this.migrations.get(`${manifest.migration.id}@${manifest.migration.version}`)
+      if (!strategy) throw new SyncError('旧草稿需要更新应用后恢复，输入已保留。')
+      const memo = new Map<string, string>(),
+        visiting = new Set<string>()
+      const move = (id: string): string => {
+        const mapped = strategy.mapped(id, manifest)
+        if (mapped) return mapped
+        if (memo.has(id)) return memo.get(id)!
+        if (visiting.has(id)) throw new SyncError('草稿历史引用循环。')
+        const row = this.db
+          .prepare('SELECT body FROM sync_epoch_archive WHERE epoch=? AND hash=?')
+          .get(syncEpoch(manifest.from), id)
+        const value =
+          staged.get(id) ??
+          (row
+            ? (JSON.parse(
+                gunzipSync(row.body as Uint8Array, { maxOutputLength: 4_000_000 }).toString(),
+              ) as RecordVersion)
+            : this.version(id))
+        if (!value) return id
+        if (versionHash(value) !== id) throw new SyncError('旧草稿的历史归档校验失败。')
+        visiting.add(id)
+        const next = strategy.rewrite(value, move, manifest),
+          nextHash = versionHash(next)
+        staged.set(nextHash, next)
+        memo.set(id, nextHash)
+        visiting.delete(id)
+        return nextHash
+      }
+      result = move(result)
+    }
+    this.transaction(() => {
+      const todo = [result],
+        needed = new Map<string, RecordVersion>()
+      while (todo.length) {
+        const id = todo.pop()!
+        if (needed.has(id) || this.version(id)) continue
+        const value = staged.get(id)
+        if (!value) throw new SyncError('草稿迁移后的基线缺失。')
+        needed.set(id, value)
+        todo.push(...value.parents)
+        for (const ref of this.handlers.get(value.type)?.references?.(value) ?? []) if (staged.has(ref)) todo.push(ref)
+      }
+      for (const [hash, value] of needed) this.save({ hash, value }, true)
+      this.set(`draft-alias/${hash}`, result)
+    })
+    return result
+  }
+  adoptEpoch(transition: SyncEpochTransition, hash: string, items: readonly VersionItem[], packs: readonly string[]) {
+    validateEpochTransition(transition)
+    const previous = this.remoteIndex()
+    if (
+      !previous ||
+      syncEpoch(previous) !== syncEpoch(transition.from) ||
+      previous.vaultId !== transition.from.vaultId ||
+      BigInt(previous.generation) > BigInt(transition.from.generation)
+    )
+      throw new SyncError('同步迁移基线不一致，已保留本地数据。')
+    const strategy = this.migrations.get(`${transition.migration.id}@${transition.migration.version}`)
+    if (!strategy) throw new SyncError('此数据代次需要更新应用后才能同步，本地修改已保留。')
+    strategy.validate(transition)
+    for (const h of Object.values(previous.heads).flat())
+      if (strategy.mapped(h, transition) === undefined) throw new SyncError('同步迁移缺少已知历史的映射。')
+    for (const handler of this.handlers.values())
+      if (handler.apply && !handler.reset) throw new SyncError('数据 Provider 尚不支持安全切换同步代次，请升级应用。')
+    const incoming = new Map(items.map(item => [item.hash, item.value]))
+    const baseline = new Map<string, RecordVersion>(),
+      stack = Object.values(transition.baseline.heads).flat()
+    while (stack.length) {
+      const id = stack.pop()!
+      if (baseline.has(id)) continue
+      const value = incoming.get(id) ?? this.version(id)
+      if (!value || versionHash(value) !== id || baseline.size >= 100000) throw new SyncError('新同步基线不完整。')
+      baseline.set(id, value)
+      stack.push(...value.parents)
+    }
+    const pending = new Map<string, RecordVersion>(),
+      rebased = new Map<string, string>(),
+      visiting = new Set<string>()
+    const rewrite = (id: string): string => {
+      const known = strategy.mapped(id, transition)
+      if (known) {
+        if (!baseline.has(known)) throw new SyncError('迁移映射指向缺失的版本。')
+        return known
+      }
+      if (rebased.has(id)) return rebased.get(id)!
+      if (visiting.has(id)) throw new SyncError('本地修改的迁移引用循环。')
+      const value = this.version(id)
+      if (!value) return id // An external version reference may not belong to this vault.
+      visiting.add(id)
+      const next = strategy.rewrite(value, rewrite, transition),
+        mapped = versionHash(next)
+      rebased.set(id, mapped)
+      pending.set(mapped, next)
+      visiting.delete(id)
+      if (pending.size + baseline.size > 100000) throw new SyncError('迁移后的历史超出容量。')
+      return mapped
+    }
+    // Recreate only genuinely local branches. Mapped/pruned published versions stay retired.
+    for (const id of this.snapshot().pending) if (strategy.mapped(id, transition) === undefined) rewrite(id)
+    for (const value of pending.values())
+      for (const parent of value.parents) {
+        const ancestor = pending.get(parent) ?? baseline.get(parent)
+        if (!ancestor || recordKey(ancestor.type, ancestor.id) !== recordKey(value.type, value.id))
+          throw new SyncError('迁移后的本地修改引用了错误的记录。')
+      }
+    this.backup()
+    const recovery = writeRecoveryRecord(this.backups, 'before-sync-epoch', {
+      transition: hash,
+      versions: this.db.prepare('SELECT * FROM sync_versions').all(),
+      heads: this.db.prepare('SELECT * FROM sync_heads').all(),
+      working: this.db.prepare('SELECT * FROM sync_working').all(),
+      state: this.db.prepare('SELECT * FROM sync_state').all(),
+    })
+    this.transaction(() => {
+      for (const row of this.db.prepare('SELECT hash,body FROM sync_versions').all())
+        this.db
+          .prepare('INSERT OR IGNORE INTO sync_epoch_archive VALUES(?,?,?)')
+          .run(syncEpoch(previous), String(row.hash), gzipSync(Buffer.from(String(row.body))))
+      for (const handler of this.handlers.values()) handler.reset?.()
+      this.db.exec(
+        "DELETE FROM sync_versions; DELETE FROM sync_heads; DELETE FROM sync_working; DELETE FROM sync_state WHERE key='remote' OR key LIKE 'pack/%';",
+      )
+      this.receive(
+        [...baseline].map(([hash, value]) => ({ hash, value })),
+        epochBaseline(transition, hash),
+        packs,
+      )
+      for (const [hash, value] of pending) {
+        this.save({ hash, value }, true)
+      }
+      for (const [hash, value] of pending) {
+        const key = recordKey(value.type, value.id)
+        this.replaceHeads(key, this.reduce([...this.heads(key), hash]))
+      }
+      for (const key of new Set([...pending.values()].map(v => recordKey(v.type, v.id)))) {
+        const heads = this.heads(key)
+        if (heads.length !== 1) continue
+        const value = this.version(heads[0]!)!,
+          handler = this.handlers.get(value.type)
+        if (handler?.schema === value.schema) {
+          handler.validate(value)
+          handler.apply?.(value, heads[0]!)
+          this.setWorking(key, heads[0]!)
+        }
+      }
+      this.afterApply()
+      this.set(`epoch/${transition.epoch}`, JSON.stringify({ transition: hash, recovery, manifest: transition }))
+      this.touch()
+    })
+  }
+  receive(items: readonly VersionItem[], remote: SyncIndex, packs: readonly string[] = []) {
     this.transaction(() => {
       for (const item of items) this.save(item, false)
       const before = this.get('remote')
@@ -267,18 +481,21 @@ export class Replica implements SyncReplica {
       if (previous) {
         if (
           previous.vaultId !== remote.vaultId ||
+          syncEpoch(previous) !== syncEpoch(remote) ||
           BigInt(previous.generation) > BigInt(remote.generation) ||
           (previous.generation === remote.generation && canonicalJson(previous) !== canonicalJson(remote))
         )
           throw new SyncError('远端索引发生回退或被替换，已停止同步以保留数据。')
         for (const [key, heads] of Object.entries(previous.heads)) {
+          if (canonicalJson(heads) === canonicalJson(remote.heads[key] ?? [])) continue
           const reachable = new Set((remote.heads[key] ?? []).flatMap(h => [...this.ancestors(h)]))
           if (heads.some(h => !reachable.has(h))) throw new SyncError('远端版本历史缺失，已停止同步。')
         }
       }
       const apply: VersionItem[] = []
       for (const [key, heads] of Object.entries(remote.heads)) {
-        for (const h of heads) {
+        const unchanged = canonicalJson(previous?.heads[key] ?? []) === canonicalJson(heads)
+        for (const h of unchanged ? [] : heads) {
           const value = this.version(h)!
           if (recordKey(value.type, value.id) !== key) throw new SyncError('远端记录标识与索引不一致。')
           for (const parent of this.ancestors(h)) {
@@ -287,8 +504,8 @@ export class Replica implements SyncReplica {
             this.db.prepare('UPDATE sync_versions SET pending=0 WHERE hash=?').run(parent)
           }
         }
-        const merged = this.reduce([...this.heads(key), ...heads])
-        this.replaceHeads(key, merged)
+        const merged = unchanged ? this.heads(key) : this.reduce([...this.heads(key), ...heads])
+        if (!unchanged) this.replaceHeads(key, merged)
         const old = this.db.prepare('SELECT hash FROM sync_working WHERE key=?').get(key)
         const selected = merged.length === 1 ? merged[0]! : old ? String(old.hash) : merged[0]!
         if (old?.hash !== selected) {
@@ -318,6 +535,7 @@ export class Replica implements SyncReplica {
         this.touch()
       }
       this.set('remote', JSON.stringify(remote))
+      for (const hash of packs) this.set(`pack/${hash}`, '1')
     })
   }
   conflicts(): readonly SyncConflict[] {

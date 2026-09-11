@@ -4,6 +4,7 @@ import { dirname } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { SyncReplica, Json } from '@nook-dsh/capability-sync'
 import { recordSchemas, type RecordType, type RecordValue, type TaskStore, TaskError } from '@nook-dsh/capability-task'
+import { remapTaskReferences, taskReferences } from './epoch-references.js'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -30,6 +31,8 @@ export default class TaskProvider extends Service implements TaskStore {
         ctx.nookSyncReplica.registerType({
           type,
           schema: 1,
+          references: taskReferences,
+          remapReferences: remapTaskReferences,
           validate: value => {
             const parsed = recordSchemas[type].parse(value.data)
             if (parsed.id !== value.id) throw new TaskError('任务记录标识不一致')

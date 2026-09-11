@@ -1,4 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { HistoryPacks } from './history-packs.js'
+import { concurrent, pullIndex } from './pull.js'
+import { migrateEpochs } from './epochs.js'
 import {
   canonicalJson,
   SyncError,
@@ -19,29 +22,6 @@ const parse = (v: Uint8Array): unknown => {
     throw new SyncError('远端 JSON 数据损坏。')
   }
 }
-/** Drain cancelled workers before returning, so a failed round cannot outlive its owner. */
-async function concurrent<T>(
-  items: readonly T[],
-  signal: AbortSignal,
-  visit: (item: T, signal: AbortSignal) => Promise<void>,
-) {
-  const controller = new AbortController()
-  const cancellation = AbortSignal.any([signal, controller.signal])
-  let cursor = 0
-  await Promise.all(
-    Array.from({ length: Math.min(6, items.length) }, async () => {
-      try {
-        while (cursor < items.length) {
-          cancellation.throwIfAborted()
-          await visit(items[cursor++]!, cancellation)
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) controller.abort(error)
-      }
-    }),
-  )
-  cancellation.throwIfAborted()
-}
 /** Generic record DAG; file payloads stay outside the metadata index. */
 export async function synchronize(
   replica: SyncReplica,
@@ -51,6 +31,7 @@ export async function synchronize(
 ): Promise<void> {
   // A CAS retry can reuse objects already verified during this run.
   const verified = new Map<string, Promise<void>>()
+  const packs = new HistoryPacks(replica, remote)
   function immutable(path: string, content: Uint8Array, cancellation: AbortSignal): Promise<void> {
     let task = verified.get(path)
     if (!task) {
@@ -76,56 +57,15 @@ export async function synchronize(
     const index = parse(object.bytes)
     validateIndex(index)
     replica.bind(target, index.vaultId)
-    const loaded = new Map<string, RecordVersion>()
-    const visiting = new Set<string>()
-    const blobs = new Map<string, Promise<void>>()
-    let downloaded = 0
-    async function load(id: string, cancellation: AbortSignal): Promise<RecordVersion> {
-      cancellation.throwIfAborted()
-      const known = loaded.get(id) ?? replica.version(id)
-      if (known) return known
-      if (visiting.has(id) || ++downloaded > 100000) throw new SyncError('远端版本链损坏或超出首版容量。')
-      visiting.add(id)
-      const o = await remote.get(`objects/${id}`, cancellation)
-      if (!o || hash(o.bytes) !== id) throw new SyncError('远端版本缺失或校验失败。')
-      const v = parse(o.bytes)
-      validateVersion(v)
-      for (const parent of v.parents) {
-        const p = await load(parent, cancellation)
-        if (recordKey(p.type, p.id) !== recordKey(v.type, v.id)) throw new SyncError('远端版本引用了其他记录。')
-      }
-      for (const ref of v.blobs) {
-        if (!replica.blob(ref.hash)) {
-          let task = blobs.get(ref.hash)
-          if (!task) {
-            task = (async () => {
-              const content = await remote.get(`blobs/${ref.hash}`, cancellation)
-              if (!content) throw new SyncError('远端附件尚不完整。')
-              replica.receiveBlob(ref, content.bytes)
-            })()
-            blobs.set(ref.hash, task)
-          }
-          await task
-        }
-      }
-      visiting.delete(id)
-      loaded.set(id, v)
-      return v
-    }
-    // A record's heads share ancestors; keep that traversal serial and parallelize records.
-    await concurrent(Object.entries(index.heads), signal, async ([key, heads], cancellation) => {
-      for (const h of heads) {
-        const v = await load(h, cancellation)
-        if (recordKey(v.type, v.id) !== key) throw new SyncError('远端索引标识不一致。')
-      }
-    })
-    replica.receive(
-      [...loaded].map(([hash, value]) => ({ hash, value })),
-      index,
-    )
+    await migrateEpochs(replica, remote, index, signal)
+    const downloaded = await pullIndex(replica, remote, index, signal)
+    replica.receive(downloaded.versions, index, downloaded.packs)
     await replica.reconcile(signal)
     const snapshot = replica.snapshot()
-    if (!snapshot.pending.length) return
+    const headsToPack = Object.entries(snapshot.heads).flatMap(([key, heads]) =>
+      heads.filter(h => !index.packs?.[h]).map(head => ({ key, head })),
+    )
+    if (!snapshot.pending.length && !headsToPack.length) return
     // Objects are invisible to readers until the index publishes the complete dependency set.
     await concurrent(snapshot.pending, signal, async (id, cancellation) => {
       const value = replica.version(id)
@@ -139,11 +79,21 @@ export async function synchronize(
     })
     const heads: Record<string, readonly string[]> = {}
     for (const key of Object.keys(snapshot.heads).sort()) heads[key] = [...snapshot.heads[key]!].sort()
+    const manifests: Record<string, string> = {}
+    for (const head of Object.values(heads).flat()) if (index.packs?.[head]) manifests[head] = index.packs[head]!
+    await concurrent(headsToPack, signal, async ({ key, head }, cancellation) => {
+      const previous = (index.heads[key] ?? []).flatMap(h =>
+        index.packs?.[h] ? [{ head: h, manifest: index.packs[h]! }] : [],
+      )
+      manifests[head] = await packs.publish(head, previous, cancellation, immutable)
+    })
     const next: SyncIndex = {
-      format: 1,
+      format: index.format,
+      ...(index.format === 2 ? { epoch: index.epoch!, transition: index.transition! } : {}),
       vaultId: index.vaultId,
       generation: String(BigInt(index.generation) + 1n),
       heads,
+      packs: manifests,
     }
     validateIndex(next)
     const body = bytes(next)
