@@ -91,6 +91,7 @@ export function NotebookApp({
   const [draggedProject, setDraggedProject] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const operation = useRef(false)
+  const selecting = useRef<AbortController | null>(null)
   const handle = useRef<EditorHandle | null>(null)
   const panel = useRef<HTMLDivElement>(null)
   useEffect(
@@ -178,6 +179,7 @@ export function NotebookApp({
       if (!match?.[1]) return
       void (async () => {
         if (handle.current && !(await handle.current.flush())) return
+        cancelSelection()
         const note = await api('get', { id: match[1]! }, controller.signal)
         if (!note || note.deletedAt) {
           setError('引用的笔记不存在或已进入回收站。')
@@ -207,6 +209,7 @@ export function NotebookApp({
     if (!copy && handle.current && !(await handle.current.flush())) return
     setBusy(true)
     setError('')
+    cancelSelection()
     try {
       const note = await api('create', {
         id: crypto.randomUUID(),
@@ -230,6 +233,7 @@ export function NotebookApp({
   }
   function view(id: string | null | undefined, deleted = false) {
     void navigate(() => {
+      cancelSelection()
       setSelected(null)
       setProjectId(id)
       setTrash(deleted)
@@ -237,13 +241,24 @@ export function NotebookApp({
       setPage(0)
     })
   }
+  function cancelSelection() {
+    selecting.current?.abort()
+    selecting.current = null
+  }
   async function openNote(note: NoteDto) {
     await navigate(() => {
-      setBusy(true)
-      void api('get', { id: note.id })
-        .then(setSelected)
-        .catch(cause => setError(String(cause)))
-        .finally(() => setBusy(false))
+      // Selecting a note must not toggle the global busy state: every button in the
+      // app is disabled by busy, so flipping it here flashes the whole interface.
+      cancelSelection()
+      const controller = new AbortController()
+      selecting.current = controller
+      void api('get', { id: note.id }, controller.signal)
+        .then(next => {
+          if (!controller.signal.aborted) setSelected(next)
+        })
+        .catch(cause => {
+          if (!controller.signal.aborted) setError(String(cause))
+        })
     })
   }
   async function submitProject() {
@@ -356,6 +371,7 @@ export function NotebookApp({
       const current = selectedRef.current
       if (current?.projectId === deleteProject.id) {
         // The provider changes note revisions while detaching the deleted project.
+        cancelSelection()
         setSelected(null)
         const next = await api('get', { id: current.id })
         setSelected(next)
