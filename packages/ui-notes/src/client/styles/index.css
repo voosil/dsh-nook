@@ -398,6 +398,28 @@
   padding-left: 24px;
   margin: 14px 0;
 }
+/* 有序列表按嵌套深度换序号:1. → α. → ① → a),第 5 层起沿用 a);序号只是展示,markdown 内容不变 */
+@counter-style nook-list-circled {
+  system: fixed;
+  symbols: '①' '②' '③' '④' '⑤' '⑥' '⑦' '⑧' '⑨' '⑩' '⑪' '⑫' '⑬' '⑭' '⑮' '⑯' '⑰' '⑱' '⑲' '⑳';
+  suffix: ' ';
+}
+@counter-style nook-list-alpha-paren {
+  system: extends lower-alpha;
+  suffix: ') ';
+}
+.nook-paper .tiptap ol {
+  list-style-type: decimal;
+}
+.nook-paper .tiptap ol ol {
+  list-style-type: lower-greek;
+}
+.nook-paper .tiptap ol ol ol {
+  list-style-type: nook-list-circled;
+}
+.nook-paper .tiptap ol ol ol ol {
+  list-style-type: nook-list-alpha-paren;
+}
 .nook-paper .tiptap li p {
   margin: 0;
 }
@@ -408,6 +430,13 @@
 .nook-paper .tiptap ul[data-type='taskList'] li {
   display: flex;
   gap: 10px;
+}
+/* checkbox 对齐首行文字的垂直中心；height 需与 .nook-paper .tiptap 的 line-height 保持一致 */
+.nook-paper .tiptap ul[data-type='taskList'] li > label {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  height: 1.95em;
 }
 .nook-paper .tiptap ul[data-type='taskList'] li > div {
   flex: 1;
@@ -1105,11 +1134,4 @@
   .nook-history-content {
     max-height: 180px;
   }
-}
-/* checkbox 对齐首行文字的垂直中心；height 需与 .nook-paper .tiptap 的 line-height 保持一致 */
-.nook-paper .tiptap ul[data-type='taskList'] li > label {
-  align-self: flex-start;
-  display: flex;
-  align-items: center;
-  height: 1.95em;
 }
