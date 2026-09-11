@@ -4,5 +4,6 @@
 // same files from both src and lib.
 import tokens from '../styles/tokens.css'
 import components from '../styles/components.css'
+import scrollbar from '../styles/scrollbar.css'
 
-export const uiKitStyles = `${tokens}\n${components}`
+export const uiKitStyles = `${tokens}\n${components}\n${scrollbar}`

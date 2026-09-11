@@ -47,6 +47,8 @@
   /* 特殊用途 */
   --nook-color-backdrop: #293a3244; /* 弹窗遮罩（带透明度的墨色） */
   --nook-color-mark: #d9b74c33; /* 历史差异高亮底 */
+  --nook-color-scrollbar-thumb: #293a3226; /* 滚动条拖块：静置态 */
+  --nook-color-scrollbar-thumb-hover: #293a324d; /* 滚动条拖块：悬停态 */
 
   /* 尺寸与字体 */
   --nook-radius: 6px; /* 按钮 / 输入框 */
@@ -112,6 +114,8 @@
   --nook-color-warn-ink: #885126;
   --nook-color-backdrop: #302e294d;
   --nook-color-mark: #dcba5340;
+  --nook-color-scrollbar-thumb: #302e2926;
+  --nook-color-scrollbar-thumb-hover: #302e294d;
   --nook-font-editor: Georgia, 'Songti SC', 'Noto Serif CJK SC', serif;
   --nook-radius: 8px;
   --nook-radius-md: 12px;
@@ -146,6 +150,8 @@
   --nook-color-warn-ink: #ecc297;
   --nook-color-backdrop: #11111099;
   --nook-color-mark: #d4ad4d40;
+  --nook-color-scrollbar-thumb: #e8e5dc29;
+  --nook-color-scrollbar-thumb-hover: #e8e5dc52;
   --nook-font-editor: Georgia, 'Songti SC', 'Noto Serif CJK SC', serif;
   --nook-radius: 8px;
   --nook-radius-md: 12px;
@@ -180,6 +186,8 @@
   --nook-color-warn-ink: #93641c;
   --nook-color-backdrop: #2c3a5644;
   --nook-color-mark: #ffd76e59;
+  --nook-color-scrollbar-thumb: #2c3a5626;
+  --nook-color-scrollbar-thumb-hover: #2c3a564d;
   --nook-radius: 10px;
   --nook-radius-md: 14px;
   --nook-shadow-dialog: 0 18px 70px #2c3a5626;

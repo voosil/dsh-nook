@@ -51,6 +51,8 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await page.screenshot({ path: process.env.NOOK_UPDATE_SCREENSHOT })
     }
     await settings.getByRole('button', { name: '外观', exact: true }).click()
+    const scrollbarThumbs = new Set()
+    const scrollbarHovers = new Set()
     for (const [name, theme] of [
       ['Claude 暖纸', 'claude'],
       ['夜晚', 'night'],
@@ -60,12 +62,17 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
       await settings.getByRole('button', { name: new RegExp(name) }).click()
       assert.equal(await workspace.getAttribute('data-nook-theme'), theme)
       assert.equal(await settings.getByRole('button', { name: new RegExp(name) }).getAttribute('aria-pressed'), 'true')
+      const scrollbar = await verifyThemedScrollbar(page, theme, name)
+      scrollbarThumbs.add(scrollbar.thumb)
+      scrollbarHovers.add((await themedScrollbarColors(page)).hover)
       await settings.evaluate(async element => {
         await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {})))
       })
       if (process.env.NOOK_APPEARANCE_SCREENSHOT)
         await page.screenshot({ path: process.env.NOOK_APPEARANCE_SCREENSHOT.replace('.png', `-${theme}.png`) })
     }
+    assert.equal(scrollbarThumbs.size, 4, 'Every appearance themes the scrollbar thumb separately')
+    assert.equal(scrollbarHovers.size, 4, 'Every appearance themes the scrollbar hover thumb separately')
     await settings.getByRole('button', { name: /夜晚/ }).click()
     await page.keyboard.press('Escape')
     await settings.waitFor({ state: 'hidden' })
@@ -549,4 +556,74 @@ export async function dismissOnboarding(page) {
 /** Wait for the temporary draft to clear after the Host acknowledges autosave. */
 export async function waitForNoteSave(page) {
   await page.waitForFunction(() => !Object.keys(localStorage).some(key => key.startsWith('nook.note-draft.v1.')))
+}
+
+/** Resolve one appearance's idle and hover scrollbar thumb colors. */
+export async function themedScrollbarColors(page) {
+  return page.evaluate(() => {
+    const css = getComputedStyle(document.querySelector('.nook-workspace'))
+    return {
+      thumb: css.getPropertyValue('--nook-color-scrollbar-thumb').trim(),
+      hover: css.getPropertyValue('--nook-color-scrollbar-thumb-hover').trim(),
+    }
+  })
+}
+
+/**
+ * The appearance themes the scrollbars of Nook's own scroll containers: the theme
+ * scope narrows the WebKit gutter and resolves the thumb through Nook tokens, and
+ * the standard-property path rebinds the variable that the host sets on `body`.
+ *
+ * The narrowed gutter is measurable only where a scroll container is laid out and
+ * the engine renders scrollbars in the layout at all; Chromium overlays them in
+ * headless mode, and a hidden or not-yet-populated pane reports no gutter.
+ */
+export async function verifyThemedScrollbar(page, theme, name) {
+  const result = await page.evaluate(() => {
+    const workspace = document.querySelector('.nook-workspace')
+    const container = [...workspace.querySelectorAll('*')].find(
+      element => element.scrollHeight > element.clientHeight + 2 && element.clientHeight > 40,
+    )
+    const css = getComputedStyle(container ?? workspace)
+    const widths = []
+    for (const sheet of document.styleSheets) {
+      let rules
+      try {
+        rules = sheet.cssRules
+      } catch {
+        continue
+      }
+      for (const rule of rules)
+        if (rule.selectorText?.endsWith('::-webkit-scrollbar')) widths.push([rule.selectorText, rule.style.width])
+    }
+    return {
+      theme: workspace.getAttribute('data-nook-theme'),
+      gutter: container ? container.offsetWidth - container.clientWidth : null,
+      hostGutter: document.body.offsetWidth - document.body.clientWidth,
+      thumb: css.getPropertyValue('--nook-color-scrollbar-thumb').trim(),
+      hover: css.getPropertyValue('--nook-color-scrollbar-thumb-hover').trim(),
+      themed: css.getPropertyValue('--dsh-scrollbar-thumb').trim(),
+      host: getComputedStyle(document.body).getPropertyValue('--dsh-scrollbar-thumb').trim(),
+      widthToken: css.getPropertyValue('--nook-scrollbar-width').trim(),
+      inlineWidth: css.scrollbarWidth,
+      widths,
+    }
+  })
+  assert.equal(result.theme, theme)
+  assert.match(result.thumb, /^#|rgb/, `${name} must resolve the scrollbar thumb from Nook tokens`)
+  assert.notEqual(result.thumb, result.hover, `${name} must distinguish the scrollbar hover thumb`)
+  assert.equal(result.themed, result.thumb, `${name} must bind the scrollbar to its own tokens`)
+  assert.notEqual(result.themed, result.host, `${name} must replace the host scrollbar color`)
+  assert.equal(result.inlineWidth, 'auto', `${name} keeps the WebKit pseudo-element path`)
+  assert.equal(result.widthToken, '6px', `${name} must declare its own narrow scrollbar width`)
+  assert.ok(
+    result.widths.some(
+      ([selector, width]) =>
+        selector === '[data-nook-theme] ::-webkit-scrollbar' && width === 'var(--nook-scrollbar-width)',
+    ),
+    `${name} must own the winning ::-webkit-scrollbar width`,
+  )
+  if (result.gutter !== null && result.hostGutter > 0)
+    assert.equal(result.gutter, Number.parseInt(result.widthToken, 10), `${name} must narrow the scrollbar gutter`)
+  return { thumb: result.thumb, gutter: result.gutter ?? 0 }
 }

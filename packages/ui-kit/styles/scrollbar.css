@@ -1,0 +1,34 @@
+/* Nook 工作区与主题同源的细滚动条。只用 var(--nook-*)，不出现原始色值。
+ *
+ * `--dsh-scrollbar-*` 是宿主已核实的滚动条契约（见本包 README.md）：
+ * `scrollbar.css` 在 body 上声明 thumb 与布局宽度；WebKit 走 `::-webkit-scrollbar*`
+ * 伪元素，Firefox 走标准 `scrollbar-width` / `scrollbar-color`（由宿主在其
+ * `@supports not selector(::-webkit-scrollbar)` 块内设置，thumb 取同一变量）。
+ * 因此主题作用域只提供两条颜色、一条宽度：伪元素路径读 `--nook-*` 变量，
+ * 标准路径重绑宿主变量——否则它会沿继承拿到 body 上的宿主取值。
+ */
+
+[data-nook-theme] {
+  --dsh-scrollbar-thumb: var(--nook-color-scrollbar-thumb);
+  --nook-scrollbar-width: 6px;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  /* 标准属性只接受 thin / auto；宿主已为后代设过 thin，这里只改颜色。 */
+  [data-nook-theme],
+  [data-nook-theme] * {
+    scrollbar-color: var(--nook-color-scrollbar-thumb) transparent;
+  }
+}
+
+/* 特异性高于宿主裸 `::-webkit-scrollbar`（0,1,1 对 0,0,1），收窄布局宽度。 */
+[data-nook-theme] ::-webkit-scrollbar {
+  width: var(--nook-scrollbar-width);
+  height: var(--nook-scrollbar-width);
+}
+[data-nook-theme] ::-webkit-scrollbar-thumb {
+  background: var(--nook-color-scrollbar-thumb);
+}
+[data-nook-theme] ::-webkit-scrollbar-thumb:hover {
+  background: var(--nook-color-scrollbar-thumb-hover);
+}
