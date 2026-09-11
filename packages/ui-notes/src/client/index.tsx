@@ -12,6 +12,7 @@ import { useUpdate } from './hooks/use-update.js'
 import { notebookApi } from './lib/api.js'
 import { syncApi } from './lib/sync-api.js'
 import { NotebookApp } from './components/notebook-app.js'
+import { UpdateOverlay } from './components/update-overlay.js'
 import { openSyncDeployment } from './lib/sync-deployment.js'
 import { uiKitStyles } from '@nook-dsh/ui-kit'
 import css from './styles/index.css'
@@ -106,6 +107,7 @@ function mountWorkspace(ctx: ClientContext): void {
             setOpen(false)
           }}
         />
+        <UpdateOverlay status={updater.status} />
       </>
     )
   }
