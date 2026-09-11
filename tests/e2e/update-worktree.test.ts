@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { copyFile, mkdtemp, readFile, realpath, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { test } from 'node:test'
+import { prepareUpdate } from '../../scripts/update/prepare-update.mjs'
+import { bootAndVerifyWeb } from '../../scripts/verify/runtime-verify.mjs'
+
+const exec = promisify(execFile)
+test('packed update boots and serves real workflows after its worktree is removed', { timeout: 300_000 }, async t => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'nook-update-package-')))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const repo = join(root, 'source repo'),
+    directory = join(root, 'update runtime')
+  await exec('git', ['clone', '--quiet', '--no-hardlinks', resolve('.'), repo])
+  // Include the cleanup implementation under test without committing the user's working tree.
+  const files = ['prepare-update.mjs', 'pack-update.mjs', 'verify-update.mjs', 'update-worktree.mjs']
+  for (const name of files) await copyFile(resolve('scripts/update', name), join(repo, 'scripts/update', name))
+  const git = async (...args: string[]) => (await exec('git', ['-C', repo, ...args])).stdout.trim()
+  await git('add', '--', ...files.map(name => 'scripts/update/' + name))
+  await git(
+    '-c',
+    'user.name=Nook Test',
+    '-c',
+    'user.email=test@example.invalid',
+    '-c',
+    'commit.gpgsign=false',
+    'commit',
+    '--allow-empty',
+    '-m',
+    'isolated update acceptance',
+  )
+  const commit = await git('rev-parse', 'HEAD')
+  await prepareUpdate({ repo, commit, directory, state: join(root, 'unused-formal-state') })
+  await assert.rejects(readFile(join(directory, 'source/package.json')), { code: 'ENOENT' })
+  assert.equal((await git('worktree', 'list', '--porcelain')).split('worktree ').length - 1, 1)
+  const candidate = JSON.parse(await readFile(join(directory, 'candidate.json'), 'utf8'))
+  const { activateProfile } = await import('../../apps/desktop/dist/payload.mjs')
+  const config = await activateProfile({ state: join(root, 'browser-acceptance'), ...candidate.snapshot })
+  const result = await bootAndVerifyWeb({
+    bin: config.bin,
+    cwd: config.cwd,
+    env: {
+      DSH_HOME: config.home,
+      DSH_AGENTS_HOME: join(config.home, 'agents'),
+      DSH_TELEMETRY_MODE: 'DISABLED',
+      CHOKIDAR_USEPOLLING: '1',
+    },
+  })
+  assert.equal(result.status, 200)
+})
