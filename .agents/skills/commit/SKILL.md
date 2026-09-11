@@ -11,3 +11,4 @@ description: Commit changes present when invoked; ask afterward before committin
 4. 用具体路径或 hunk 暂存本轮内容,不用 `git add -A` / `git add .`;保留已有部分暂存,同文件出现后续修改时不整文件暂存。不要覆盖或丢弃期间的新改动。
 5. 提交阶段不额外做代码审查,不重复已适用的验证;缺少仓库要求的验证时补齐,不用 `--no-verify`。message 沿用已知历史风格,未知才读最近 5 条;正文仅在动机或影响需要解释时写。
 6. 本轮各组提交完成后核对 commit 输出与一次 `git status --short`,简报 hash、主题和未提交项。若执行期间有新改动,此时再问用户“是否继续提交执行期间的新改动?”;明确同意才开启下一轮,否则保留。原先不在提交范围内的内容只报告,不当作期间新改动。
+7. commit 完成后直接将已提交的变更推送到远程仓库。
