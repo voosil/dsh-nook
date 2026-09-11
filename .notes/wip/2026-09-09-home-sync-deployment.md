@@ -11,7 +11,7 @@
 
 ## 执行记录
 
-1. 阅读[家庭服务器指南](../../docs/sync-server.md)、[安装助手源码](../../scripts/sync-server/assistant.py)和[产物生成器](../../scripts/sync-server/artifacts.mjs)。优先复用公开发布的固定版本与摘要校验链。
+1. 阅读[家庭服务器指南](../../scripts/sync-server/README.md#安装助手约束)、[安装助手源码](../../scripts/sync-server/assistant.py)和[产物生成器](../../scripts/sync-server/artifacts.mjs)。优先复用公开发布的固定版本与摘要校验链。
 2. 通过 `ssh -o BatchMode=yes -o ConnectTimeout=15 pro_evan` 检查系统、权限、依赖和磁盘；退出码 1 来自不存在目录的 `ls`，SSH 本身成功。后续预检必须显式区分命令错误与连接错误。
 3. 确认 Docker 29.1.2、Compose v5.0.0、systemd 和 UFW 运行；已有 18 个业务容器。不重启 Docker 或整机，不改现有业务的端口与配置。客户端 Windows 未检测到 Tailscale。
 4. GitHub 直连及发布资产下载超时；Tailscale 软件源可直接访问，GHCR `/v2/` 返回预期的未认证 401。复用服务器已运行的 `127.0.0.1:7890` HTTP 代理后下载成功。代理仅传给本次下载/安装进程，不写入全局配置。

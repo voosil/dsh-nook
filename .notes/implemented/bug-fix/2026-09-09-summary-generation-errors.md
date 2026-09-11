@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-Generation Capability 定义携带安全提示的 `GenerationError`，DSH 适配器按[已核实的流结束契约](../../../docs/discovery.md#prompt-and-model-contracts)把模型失败分类转换成 Nook 提示，RPC 允许该错误通过。认证、额度、限流、上下文、网络与输出长度分别提示。未识别错误保留模型配置与切换建议，不猜测具体原因，也不传递原始服务商响应。
+Generation Capability 定义携带安全提示的 `GenerationError`，DSH 适配器按[已核实的流结束契约](../../../packages/adapter-intelligence-dsh/README.md#流结束与会话归因)把模型失败分类转换成 Nook 提示，RPC 允许该错误通过。认证、额度、限流、上下文、网络与输出长度分别提示。未识别错误保留模型配置与切换建议，不猜测具体原因，也不传递原始服务商响应。
 
 生成在流结束后再次检查取消信号，避免最后一个数据块之后发生的取消返回成功正文。只有正常结束的非空正文能成为预览。产品行为见[笔记契约](../../../packages/feature-notes/README.md)。
 

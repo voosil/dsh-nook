@@ -1,6 +1,6 @@
 # AGENTS.md — 决策笔记(Agent Notes)
 
-决策笔记记录影响本代码库的决策或提案:_为什么_、_放弃了什么_、_怎么验证_——代码和 `docs/` 承载不了的部分。规范来自 DeepSeek Harness 上游 `.agents/notes/README.md` @ `0.1.1-rc.2`,已裁剪。文档分层见 [docs/AGENTS.md](../docs/AGENTS.md)。
+决策笔记记录影响本代码库的决策或提案:_为什么_、_放弃了什么_、_怎么验证_——源码与技术契约承载不了的部分。功能现状通过源码和测试检索，不在笔记中再建一份功能手册。规范来自 DeepSeek Harness 上游 `.agents/notes/README.md` @ `0.1.1-rc.2`,已裁剪。文档分层见 [docs/AGENTS.md](../docs/AGENTS.md)。
 
 ## 布局与命名
 

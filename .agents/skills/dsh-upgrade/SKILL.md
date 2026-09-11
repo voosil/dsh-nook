@@ -5,7 +5,7 @@ description: Upgrade Nook's pinned DeepSeek Harness release, migrate verified pu
 
 # Upgrade Nook's DSH runtime
 
-Apply the [DSH development workflow](../dsh-plugin-development/SKILL.md). Read the current [discovery baseline](../../../docs/discovery.md), affected manifests and existing upgrade notes before changing versions. Keep current runtime facts in discovery; this skill owns the upgrade procedure and version-scoped troubleshooting.
+Apply the [DSH development workflow](../dsh-plugin-development/SKILL.md). Read the current [discovery baseline](../../../docs/discovery.md), affected manifests, package READMEs and existing upgrade notes before changing versions. Place current facts under the [documentation standard](../../../docs/AGENTS.md); this skill owns the upgrade procedure and version-scoped troubleshooting.
 
 ## Resolve and migrate
 
@@ -19,7 +19,7 @@ Apply the [DSH development workflow](../dsh-plugin-development/SKILL.md). Read t
 
 Run the repository's current typecheck/build, contract tests, Provider integrations, full Profile composition, real-browser acceptance, peer and boundary checks, and clean packed-install gate. Consult [package scripts](../../../package.json) for the current commands. Compiler success alone does not prove browser service activation, authentication or module compatibility. Validate both development and non-watching launch modes when their contracts change.
 
-Update the owning Agent Note and discovery with the verified target and any remaining `UNKNOWN` items. Report failures as failures; a blocked browser or package gate is not a completed upgrade. Redact tokens, cookies and credentials in diagnostics and notes.
+Update the owning Agent Note, shared discovery baseline and affected package contracts with the verified target and remaining `UNKNOWN` items in their respective homes. Report failures as failures; a blocked browser or package gate is not a completed upgrade. Redact tokens, cookies and credentials in diagnostics and notes.
 
 ## Self-maintenance is part of each upgrade
 

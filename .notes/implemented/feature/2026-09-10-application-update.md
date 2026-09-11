@@ -8,7 +8,7 @@ Status: implemented
 
 ## Decision
 
-[应用更新](../../../docs/update.md)采用源码检出、独立构建和共享 broker 切换。Nook 自有更新 Capability 通过本机 Provider 与 broker 通信，DSH Adapter 提供严格 DTO 的鉴权 RPC。命令不能携带任意路径、远端地址或 shell 文本，也不注册 Agent Tool。broker 位于 Host 之外，停止 Host 不会中断切换。
+[应用更新](../../../docs/runtime.md#运行时切换)采用源码检出、独立构建和共享 broker 切换。Nook 自有更新 Capability 通过本机 Provider 与 broker 通信，DSH Adapter 提供严格 DTO 的鉴权 RPC。命令不能携带任意路径、远端地址或 shell 文本，也不注册 Agent Tool。broker 位于 Host 之外，停止 Host 不会中断切换。
 
 更新采用应用关闭语义：Client 保存当前笔记，候选准备完成后自动停止旧 Host。进行中的任务随正常关闭流程停止，不维护忙碌检查、等待队列、稍后切换或多窗口确认。入口提示重启会中止任务。保存失败不开始更新。
 

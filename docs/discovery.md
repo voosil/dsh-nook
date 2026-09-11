@@ -1,97 +1,44 @@
 # DSH discovery baseline
 
-Runtime, external RPC, prompt, model and workspace Slot contracts verified on 2026-09-08 against the pinned installed release and its source tag.
+Shared integration facts verified on 2026-09-08 against `@deepseek-ai/dsh@0.1.3-alpha.2`, source commit `82a5fd61a7cf5c293cec4bdff68f455398d685e9` ([release source](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.1.3-alpha.2)). Dependency and engine values belong to the [root manifest](../package.json) and lockfile; [dsh-compat](../packages/dsh-compat/src/index.ts) enforces the supported release. Recheck affected contracts against the installed runtime when changing integrations.
 
-| Fact                         | Verified value                                                                  |
-| ---------------------------- | ------------------------------------------------------------------------------- |
-| Published DSH runtime        | `@deepseek-ai/dsh@0.1.3-alpha.2`                                                |
-| Release source               | tag commit `82a5fd61a7cf5c293cec4bdff68f455398d685e9`                           |
-| Required Node                | `^22.19.0` or `>=24.0.0`                                                        |
-| Upstream package manager     | pnpm `11.7.0`                                                                   |
-| Nook package manager         | pnpm `12.1.0`                                                                   |
-| Official profile layers used | `@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-web-app`                             |
-| Bundle metadata              | `dsh.bundle.patch`                                                              |
-| Profile metadata             | `dsh.profile.bundles`                                                           |
-| Client metadata              | `dsh.client.inject`, optional `dsh.client.external`, `platform: web`            |
-| Additive Slots used          | `sidebar.footer.action`, `conversation.session.header.actions`, `shell.overlay` |
-| Community browser            | `dsh-browser-playwright@0.1.1` public `./service` and `./playwright` exports    |
+Scope and placement follow the [documentation standard](AGENTS.md). Package-specific constraints live beside their adapters or UI packages; this baseline does not inventory features or upstream APIs.
 
-## Published official Bundles
+## Composition and discovery
 
-- `@deepseek-ai/dsh-base@0.1.3-alpha.2`: Host services and headless foundations.
-- `@deepseek-ai/dsh-headless@0.1.3-alpha.2`: runnable headless composition; available but not selected by Nook.
-- `@deepseek-ai/dsh-web-app@0.1.3-alpha.2`: Web Host plus Browser Client shell selected by Nook.
+The extension chain is Bundle `dsh.bundle.patch` → Profile `dsh.profile.bundles` ordering → Profile/Home patch files → repeatable CLI `--patch` overlays. Package dependencies do not activate services. Nook's selected composition belongs to [architecture](architecture.md).
 
-The verified extension chain is Bundle `dsh.bundle.patch` metadata → Profile `dsh.profile.bundles` ordering → Profile/Home patch files → repeatable CLI `--patch` overlays. Nook uses each layer explicitly and never relies on transitive activation.
-
-## Runtime discovery
-
-- Inspect final composition with `dsh --profile nook --dump-config`.
-- Inspect Cordis runtime state with the current `cordis_inspect_list`, `cordis_inspect_query`, and `cordis_inspect_self` Tools when the diagnostic plugin is mounted.
-- Query current service/event/tool providers through `Service.listService`, `Event.listEvents`, and `Tool.listTools` in the current runtime.
-- Query Client contributions through `Slots.listSubTree`; query tokens through `Theme.listTokens`.
-
-Client extensions use the verified `ctx.slots.inject(...)` + `ctx.slots.register(...)` lifecycle. The Client closure is registered through the current `window.__ModuleLoader__.load(...)` contract and declares its Host-injected Client packages in `dsh.client.inject`.
+Inspect final composition with `dsh --profile nook --dump-config`; inspect active providers through `Service.listService`, `Event.listEvents` and `Tool.listTools`, or the mounted diagnostic plugin's `cordis_inspect_*` Tools. Client contributions and theme tokens are exposed through `Slots.listSubTree` and `Theme.listTokens`.
 
 ## Compatibility decisions
 
-The community browser package declares DSH peer ranges ending before `0.1.0-rc.7`, while Nook pins `0.1.3-alpha.2`. Nook therefore never mounts its Tool plugin. The public Cordis service/provider slice has no value imports from DSH Tool or LLM packages and is guarded by a real provider smoke test. This is a narrow, evidence-based compatibility exception, not a claim that the whole community bundle is compatible.
+The community browser package's DSH peer ranges exclude the pinned release. Nook mounts only its public service/provider slice, which has no value imports from DSH Tool or LLM packages, and verifies it with a real provider smoke test. Its Tool plugin is not mounted. Only the stale `@deepseek-ai/dsh-tools` and `@deepseek-ai/dsh-llm` peer warnings are accepted; additional mismatches fail the release gate. The [peer policy](../scripts/shared/peer-policy.mjs) owns the executable check.
 
-`pnpm peers check` consequently reports the community package's stale `@deepseek-ai/dsh-tools` and `@deepseek-ai/dsh-llm` peer ranges. These two known warnings are accepted only for the isolated service/provider slice above; any additional peer warning is a release failure.
-
-Fresh development and packed-install Profiles constrain all `@deepseek-ai/*` resolutions to the repository lockfile through [runtime overrides](../scripts/profile/profile-lib.mjs). Pinning only the top-level DSH version is insufficient: its published dependencies contain semver ranges, and newer Cordis utility plugins require a newer Cordis runtime. The clean-install gate rejects extra peer mismatches.
-
-## UNKNOWN
-
-- Native patch watching failed for the linked development Profile on the verified macOS environment, so Nook's launcher and verification scripts set Chokidar's documented `CHOKIDAR_USEPOLLING=1` compatibility mode. The root cause remains `UNKNOWN`. Product Services and their own watch settings remain untouched; Profile patch lifecycle is described below.
-- The next published DSH release and its migration requirements remain `UNKNOWN`; `dsh-compat` fails closed outside the pinned release.
-
-## Client hot reload
-
-The pinned `@deepseek-ai/dsh-client-hmr` Host polls Client bundle files and emits `rebuilt` frames over `/plugins/events`. Its Client invalidates the module revision, prefetches the new bundle, disposes the old fiber and refreshes the plugin through the official Loader. This is plugin remounting, not React Fast Refresh. Nook enables it only through the development overlay. Repeated sidebar and notebook CSS updates, Slot cleanup and build-failure recovery are covered by [mode acceptance](../tests/e2e/dev-modes.test.ts).
+Fresh linked and packed Profiles constrain all `@deepseek-ai/*` resolutions to the lockfile through [runtime overrides](../scripts/profile/profile-lib.mjs). The top-level pin alone cannot prevent transitive semver ranges from selecting incompatible Cordis plugins.
 
 ## Browser boot and Client composition
 
-The [release source](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.1.3-alpha.2) uses Cordis `4.0.2` and Schemastery `3.18.2`. Client plugins use Cordis `Context`; `@deepseek-ai/dsh-client-ui-renderer/client` owns the `slots` context augmentation. The former `dsh-client-runtime` package is absent from this release. Nook declares the renderer as a Client injection and imports its public types.
+The startup URL's process token is exchanged by GET for a cookie and redirect to `/`; unauthenticated index requests return 401. Open the complete launcher URL and redact tokens in diagnostics. Signed cookies survive Host restarts with the same home, host and port; another port requires another token exchange.
 
-The Web startup URL contains a process token. A GET to that URL exchanges the token for a cookie and redirects to `/`; unauthenticated index requests return HTTP 401. Browser and HTTP acceptance use this flow, and diagnostic logs redact token values. Open the complete URL printed by the launcher to establish a browser session. Signed cookies use the persistent credential secret and survive Host restarts in the same home at the same host and port. The pinned client-connection package binds the cookie name and signed audience to that authority; changing the port requires another token exchange.
-
-Session JSONL persistence imports `fs-ext@2.1.1`; its binding supports POSIX `flock` and Windows `LockFileEx`. The pinned JSONL backend also declares Koffi and uses its own Windows semaphore and write-through publication branch. Workspace, development Profile and packed Profile installs permit native builds. Nook's model adapter and knowledge assembly hook do not configure persona; the release's persona prefix/suffix migration does not change those contracts.
-
-## Desktop launcher discovery
-
-The installed DSH manifest declares `bin.dsh = lib/bin.js`. That entry exports `runCli` but invokes it automatically only under `if (import.meta.main)`. Direct Node execution with `--version` prints the pinned version; dynamically importing the entry with the same argument does not run the CLI. A desktop launcher can execute the manifest-declared CLI in a separate Node process without importing internal boot chunks.
-
-The installed Web Bundle's startup parser accepts `--no-open --host 127.0.0.1 --port 0`; the OS chooses the port at bind time. Launcher flags such as `--profile` and `--patch` precede Web flags. After Loader settlement, the Web Bundle announces the authenticated URL through `dsh web: ...`. Its authentication handoff follows the [browser boot contract](#browser-boot-and-client-composition). DSH subprocess-local launches its packaged runner through `process.execPath`, so the executable hosting DSH must also support ordinary Node child execution.
-
-The installed app-boot validates `dsh.profile.patchReload` as `live` or `startup`; omitted values on custom Profiles default to `live`. Profile boot watches Profile/Home patch files only for `live`. `startup` is a verified option for a desktop Profile that applies configuration at the next launch; it does not disable unrelated plugin timers or storage watchers.
-
-Profile names are resolved beneath `DSH_HOME/profiles` and reject path separators. CLI boot rewrites its generated root configuration and heals module fallback links. The pinned app-boot source owns the shared `DSH_HOME/profiles/node_modules` fallback and each Profile’s `.dsh-module-fallback/node_modules`; these are generated links, separate from user data and Profile patches. A whole Profile cannot be assumed to work directly inside read-only application resources. The CLI handles `SIGTERM` and `SIGINT` through root disposal. Forced termination and cleanup of every descendant still require platform acceptance.
+Client plugins use public Cordis `Context` and renderer types. The closure loads through `window.__ModuleLoader__.load(...)`; Host-provided Client dependencies are declared in `dsh.client.inject`, with `platform: web`. Packages must export `./package.json` for discovery and an applicable Host plugin entry. Metadata does not prove service availability.
 
 ## Product RPC and Client contracts
 
-The pinned Conversation Client publicly exposes `ctx.conversation.input.for(sessionScope).setDraft(text)`. The Session Controller exposes `create({ workspaceId })`, `scope(id)` and `open(id)`; `create()` resolves after the new binding is addressable. The Workspace Controller exposes idempotent `workspaces.create({ path })` for an existing Host directory. The official Hero composer is inert without a workspace label, so Nook prepares a deployment directory through its own RPC, registers its workspace and creates a bound session before seeding the draft. The Client contribution injects `workspaces`, `sessions` and `conversation`; no private React component, DOM modification, `send` or `submit` is involved. Contract tests and the packed browser smoke cover the draft handoff.
+Client Slots use `ctx.slots.inject(...)` and `ctx.slots.register(...)` with lifecycle cleanup. `shell.overlay` is a root list with a non-interactive container; interactive contributions set their own pointer events. `sidebar.footer.action` is a root list with `wide`; `conversation.session.header.actions` is a session list with `sessionId` and the session kit.
 
-The installed `dsh-client-ui-layout` Slot contract declares `shell.overlay` as a root list. Its owner uses a non-interactive overlay container; contributed interactive content sets its own pointer events. The sidebar footer is a root list with `wide`; session header actions are a session list with `sessionId` and the session kit.
+Remote services require `ctx.remote.$mount({ package, descriptors })` followed by injection of the traced `remote.<namespace>` service. Host `ctx.typert.register` runs in a lifecycle effect; Gateway calls require a visible `TypertRemoteService`, matching named parameters, the final cancellation signal and validated request/return schemas. Use the official authenticated connection. [Gateway tests](../tests/contract/notebook.test.ts) and [browser acceptance](../scripts/verify/notebook-smoke.mjs) cover this boundary.
 
-Client module discovery resolves `<package>/package.json`; contributing packages must export that path. Host entry points also need an applicable plugin export. Client mounting uses `ctx.remote.$mount({ package, descriptors })` followed by injection of the traced `remote.<namespace>` service before reading it. Package metadata or `$mount` completion alone is not proof that the namespace service is available.
+## Client hot reload
 
-The installed Typert registry accepts invocation descriptors registered through `ctx.typert.register` under a lifecycle effect. Gateway calls require a visible `TypertRemoteService` binding and validate parameter and return schemas. Named request parameters and the final cancellation signal must match the descriptor. Nook uses the official connection and Gateway route; it adds no unauthenticated HTTP RPC endpoint. [Gateway tests](../tests/contract/notebook.test.ts) and the [browser acceptance script](../scripts/verify/notebook-smoke.mjs) exercise this path.
+The official HMR Host polls bundles and emits `rebuilt` frames over `/plugins/events`; its Client invalidates the module revision, prefetches, disposes the old fiber and remounts through the Loader. Nook enables this only in development. User-facing behavior and verification belong to the [development guide](development.md).
 
-## Prompt and model contracts
+## Desktop launcher discovery
 
-The installed system-prompt package exposes the `system-prompt/assemble` waterfall with `next()`. The agent package augments assembly context with `agent`; `agent.session.deriveMessages()` provides the conversation view. Nook selects the latest message with a user source. Hook removal follows the Cordis listener lifecycle.
+The manifest-declared `bin.dsh` is `lib/bin.js`; importing it does not run the CLI (`import.meta.main` guards execution). Launch it in a separate Node process. DSH's subprocess runner uses `process.execPath`, so that executable must support Node child execution. Web flags accept `--no-open --host 127.0.0.1 --port 0`, after Profile/patch flags; `dsh web: ...` announces the authenticated URL after Loader settlement.
 
-Template variable names must match `^[a-z][a-z0-9_]*$`. Variable values are inserted without recursively evaluating template syntax in source material. This behavior is covered using literal template markers in a retrieved note in the [intelligence tests](../tests/contract/intelligence.test.ts).
+Profiles resolve beneath `DSH_HOME/profiles` and reject path separators. Boot rewrites generated configuration and heals `profiles/node_modules` and each Profile's `.dsh-module-fallback/node_modules`; Profiles need writable runtime storage. `dsh.profile.patchReload` accepts `live` (custom Profile default) or `startup`; the latter disables Profile/Home patch watching only. CLI termination signals dispose the root; descendant cleanup needs platform acceptance. JSONL persistence has native dependencies, so installs must permit their builds. Launcher behavior belongs to the [runtime guide](runtime.md).
 
-The LLM service exposes `listProviders()`, `listModels(provider)` and `stream(request)`. `createUserMessage` accepts content blocks and a user source. Nook collects visible `text-delta` blocks and replaces each with its completed `block-end` text; reasoning blocks are excluded. Only a `finish` reason of `stop` establishes a complete result. The request signal cancels generation. Nook does not construct private provider clients.
+## UNKNOWN
 
-The pinned LLM runtime converts adapter selection, dispatch and iteration exceptions into terminal `error` or `aborted` finish chunks. Their `failure` contains a provider-neutral `code`, a message and optional HTTP `status`. Middleware and consumer exceptions can still be thrown. The public `LlmError` preserves these facts; `isHarnessError` identifies thrown runtime errors. Generation consumers must inspect terminal failures as well as catch exceptions. This is verified through the actual runtime and Gateway in the [intelligence tests](../tests/contract/intelligence.test.ts).
-
-`GenerateOptions.sessionId` is optional in DSH, but the pinned DeepSeek adapter emits `x-deepseek-harness-session-id` only when it is supplied. It uses that string for request attribution without requiring a persisted DSH Session. [OpenCode Go](https://opencode.ai/docs/go/#where-can-i-use-it) recognizes this native header and requires a stable session identifier for routing. A live request through the configured Go endpoint without this field returns HTTP 400 / `INVALID_REQUEST` reporting a missing `x-opencode-session` header. Nook supplies a workflow identifier through the official option; no custom HTTP header or provider patch is needed.
-
-## Task execution contracts
-
-The pinned Agent service exposes `agents.create({ sessionId, meta, agentOptions, signal, setup })`, `withInitiator(agent, callback)` and a disposable handle. `setup` receives an Agent context for scoped Tool contributions. The Agent supports `followup(createUserMessage(...))`, `whenIdle()` and `cancel({ kind: 'user' })`. Session persistence exposes `flush()` without a Session argument. Nook owns run identifiers and explicit result reporting; idle alone does not establish task success. The [execution adapter](../packages/adapter-execution-dsh/src/index.ts) isolates these contracts.
-
-The pinned Schedule service provides reminders associated with a live session, including one-time and fixed-interval timing. It does not own Nook task state, persisted calendar recurrence or the application background lifetime. Nook's scheduler remains a capability consumer and does not patch official Schedule.
+- Native patch watching fails in the verified linked macOS Profile; its root cause is `UNKNOWN`. Launchers and verification use `CHOKIDAR_USEPOLLING=1`, without changing product service watchers.
+- Compatibility with another DSH release is `UNKNOWN`; upgrades follow the [upgrade workflow](../.agents/skills/dsh-upgrade/SKILL.md).

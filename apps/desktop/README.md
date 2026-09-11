@@ -41,6 +41,6 @@ Renderer 开启 sandbox、上下文隔离和 Web 安全，关闭 Node integratio
 
 [原生模块验收](../../scripts/verify/desktop-native-smoke.mjs)使用安装包附带的 Node 和依赖，实际执行文件锁、SQLite FTS5、DSH shell、PTY 与服务释放。
 
-视频采集与浏览器预览仍使用各自的外部依赖，见[视频功能](../../packages/feature-video/README.md)与[浏览器边界](../../docs/architecture.md#external-boundaries)。Electron 的 Chromium 不替代社区浏览器 Provider。开发者签名、公证、自动更新及其他操作系统的发布不在当前安装产物中。
+视频采集与浏览器预览仍使用各自的外部依赖，见[视频功能](../../packages/feature-video/README.md)与[浏览器适配器](../../packages/adapter-browser-community/src/index.ts)。Electron 的 Chromium 不替代社区浏览器 Provider。开发者签名、公证、自动更新及其他操作系统的发布不在当前安装产物中。
 
 方案取舍、参考项目评审与验证依据见[桌面化决策](../../.notes/implemented/architecture/2026-09-08-electron-desktop.md)。

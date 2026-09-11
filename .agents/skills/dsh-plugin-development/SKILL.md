@@ -9,7 +9,7 @@ Use this skill for every DSH-specific change in this repository.
 
 ## Workflow
 
-1. Read `AGENTS.md`, `docs/discovery.md`, and the affected capability/plugin manifests.
+1. Read `AGENTS.md`, `docs/discovery.md`, and the affected capability/plugin manifests and package READMEs. Keep integration findings in their home under the [documentation standard](../../../docs/AGENTS.md); feature-local facts do not expand the shared baseline.
 2. Treat the user request as the SPEC. Identify every DSH-specific fact it needs.
 3. DISCOVER each fact in the installed pinned runtime/source before writing code. Prefer, in order: current source/runtime, exports/types/manifests, official docs/examples, community examples. Mark anything unresolved `UNKNOWN` and do not invent it.
 4. DESIGN dependencies as Feature → Nook Capability ← Provider/Adapter. Keep official/community private APIs inside one Adapter.

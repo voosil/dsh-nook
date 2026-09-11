@@ -8,7 +8,7 @@ Status: implemented
 
 ## Decision
 
-同步配置指南以“让 AI 帮我配置”为入口，通过固定 DSH 的公开 Session Controller 和 Conversation 输入接口创建独立草稿，由用户发送。任务说明先从用户表述确定接入、部署或排障，需求不明确时简短询问，随后只获取该路径下一步需要的信息；已确定范围内连续推进，账号授权和系统提权由用户完成。接口核实结果由[发现文档](../../../docs/discovery.md#product-rpc-and-client-contracts)承载。
+同步配置指南以“让 AI 帮我配置”为入口，通过固定 DSH 的公开 Session Controller 和 Conversation 输入接口创建独立草稿，由用户发送。任务说明先从用户表述确定接入、部署或排障，需求不明确时简短询问，随后只获取该路径下一步需要的信息；已确定范围内连续推进，账号授权和系统提权由用户完成。接口核实结果由[工作区接入契约](../../../packages/ui-notes/README.md#部署会话草稿)承载。
 
 干净浏览器验收发现，没有工作区绑定的会话会显示禁用的输入框。入口先通过 Nook RPC 准备专用部署目录，用公开 Workspace Controller 幂等注册工作区，再将新会话绑定到它；因此首次使用不依赖用户已有会话或手动目录选择。
 

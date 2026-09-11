@@ -6,7 +6,7 @@ Status: implemented
 
 Nook 的桌面交付需要双击启动、独立窗口、持久化数据、确定的运行时和可靠的退出行为。浏览器启动命令仍要求开发环境；把网址放进窗口不足以解决依赖、鉴权、升级保留数据和安装包验收。
 
-参考项目为本机 `/Users/yifan/workspace/indie/research-all-in-one-dsh`，核对基线为提交 `04c35a03578689cd89069283aee38912cfd86cef`，其桌面代码使用 Electron `44.0.0` 和 DSH `0.1.1-rc.2`。Nook 的 DSH 外部事实归属[发现记录](../../../docs/discovery.md)。
+参考项目为本机 `/Users/yifan/workspace/indie/research-all-in-one-dsh`，核对基线为提交 `04c35a03578689cd89069283aee38912cfd86cef`，其桌面代码使用 Electron `44.0.0` 和 DSH `0.1.1-rc.2`。Nook 的 DSH 启动接入基线归属[发现记录](../../../docs/discovery.md)。
 
 ## Decision
 

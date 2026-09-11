@@ -1,39 +1,17 @@
 # Nook architecture
 
-The runnable Nook application is the `nook` Profile. Its ordered layers are the official base and Web Bundles, the pinned community browser compatibility Bundle, and the Nook Product Bundle. The [composition root](../packages/app-all/cordis.patch.yml) owns provider activation; package dependencies alone do not activate services.
+Nook runs as a DSH Profile. The [composition root](../packages/app-all/cordis.patch.yml) owns Bundle ordering and Provider activation; package dependencies alone do not activate services. The pinned runtime and shared integration contracts belong to [discovery](discovery.md).
 
-## Capability map
+## Dependency boundaries
 
-| Contract                                                     | Responsibility                                | Default implementation                     |
-| ------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------ |
-| [Project](../packages/capability-project/src/index.ts)       | The single optional classification of notes   | Local notebook provider                    |
-| [Note](../packages/capability-note/src/index.ts)             | Versioned Markdown and provenance             | Local notebook provider                    |
-| [Knowledge](../packages/capability-knowledge/src/index.ts)   | Search evidence and session preferences       | Local notebook provider                    |
-| [Generation](../packages/capability-generation/src/index.ts) | Model catalog and cancellable text generation | DSH intelligence adapter                   |
-| [Video](../packages/capability-video/src/index.ts)           | Separate collection, review and writing seams | Platform adapter and video editor provider |
-| [Artifact](../packages/capability-artifact/src/index.ts)     | Stored output bytes                           | Local artifact provider                    |
-| [Browser](../packages/capability-browser/src/index.ts)       | Browser sessions for preview                  | Community browser adapter                  |
+Features depend on Nook Capability contracts; Providers and Adapters implement those contracts. Capability packages own JSON-safe DTOs, errors and interfaces. Third-party private or unstable APIs stay inside dedicated Adapters. Locate concrete activation in the Profile and implementation in the affected package rather than maintaining a parallel feature map here.
 
-Capability packages contain DTOs, errors, events and interfaces. Features depend on these contracts. The notebook provider shares one transaction owner between note persistence and retrieval indexing. Reflection and video orchestrate capabilities; the knowledge conversation adapter can operate without either feature.
+Host plugins own persistence, subprocesses, model requests and workflow lifetimes. Client plugins contribute through verified additive Slots. Nook-owned, schema-validated DTOs cross the authenticated DSH Gateway; Sessions, Cordis services and React elements do not cross this boundary.
 
-Local persistence providers share a [backup library](../packages/storage-backup/src/index.ts) for durable recovery records. The same library supports offline snapshots and recovery commands; it contributes no runtime service. Behavior and scope belong in the [backup guide](backup.md).
+## Storage and process ownership
 
-The [Sync capability](../packages/capability-sync/src/index.ts) separates type registration, transactional replica storage and remote object access. The notebook provider supplies projects, notes, knowledge and the replica from one SQLite transaction owner; the sync feature orchestrates records and blob dependencies through the WebDAV adapter. The [merge adapter](../packages/adapter-merge-automerge/README.md) isolates Automerge in a lifecycle-owned worker. The [sync contract](../packages/feature-sync/README.md) owns wire format, limits, automatic merge semantics, note history and target compatibility.
+The notebook Provider owns the shared SQLite transaction for business projections, retrieval indexes and versioned replica records. Synchronization orchestration consumes the Sync Capability; HTTP storage and merge algorithms are isolated in Adapters. Business data and its pending versions commit together. Module-specific protocol constraints belong to the [sync contract](../packages/feature-sync/README.md).
 
-The [Update capability](../packages/capability-update/src/index.ts) separates authenticated application commands from the local broker that owns source preparation and runtime replacement. The DSH adapter exposes fixed commands; the local provider sends them over the private control connection. Updating uses normal Host shutdown to stop active tasks. User behavior belongs in the [update guide](update.md).
+Local Providers and maintenance commands share the backup library. Recovery and deletion boundaries belong to [data protection](backup.md); new storage mutations must preserve those guarantees.
 
-The [Task](../packages/capability-task/src/index.ts), [Execution](../packages/capability-execution/src/index.ts) and [Refinement](../packages/capability-refinement/src/index.ts) capabilities separate persistent workflow state, DSH execution and incremental understanding. The task provider stores versioned records through SyncReplica; the features own decisions, scheduling and acceptance. UI, conversation tools and local stdio MCP share these capabilities. Product behavior belongs in the [task guide](tasks.md).
-
-## Host and Client
-
-Host plugins own persistence, subprocesses, model requests and workflow lifetimes. Client plugins contribute through additive official Slots. The notes workspace uses the shell overlay and sidebar footer; the knowledge toggle uses session header actions. Nook-owned, schema-validated JSON DTOs cross the verified DSH Typert Gateway. No Session, Cordis service or React element crosses the boundary.
-
-The [notes contract](../packages/feature-notes/README.md), [knowledge contract](../packages/adapter-knowledge-dsh/README.md) and [video contract](../packages/feature-video/README.md) own configuration and behavior. The [decision note](../.notes/implemented/feature/2026-09-07-minimal-nook.md) records scope and alternatives. External runtime contracts belong in [discovery](discovery.md).
-
-Nook UI icons use named `lucide-react` SVG components bundled into each contributing Client. Decorative icons are hidden from assistive technology; icon-only buttons expose a descriptive accessible name. The [icon decision](../.notes/implemented/feature/2026-09-08-ui-icons.md) records the choice and validation.
-
-## External boundaries
-
-The [desktop application](../apps/desktop/README.md) loads the existing authenticated Web UI in a sandboxed Electron window. Desktop and usage Web launchers share the [formal runtime](runtime.md), whose independent broker retains the backend while either frontend holds a connection. A Node supervisor owns DSH's process group and observes broker IPC disconnect. The writable Profile links to a versioned runtime installation, preserving user patches and data. Business features retain the same Capability and Host/Client boundaries.
-
-The browser adapter consumes `dsh-browser-playwright` through its public service contract. Its Agent-facing Tool plugin is not a business API. The video platform adapter owns third-party collection details and a Python process boundary. Both expose Nook capabilities to features. The generation and knowledge adapters own DSH model and prompt contracts.
+Web and desktop launchers share a backend through a local broker outside the Host. Runtime snapshots, process-tree ownership and data locations belong to [runtime](runtime.md). Development and acceptance use [isolated homes](development.md). The desktop loads the authenticated Web Client in a sandboxed Electron window; it does not move business services into the renderer.

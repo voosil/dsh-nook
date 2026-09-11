@@ -8,7 +8,7 @@ A DSH release changes package availability, context ownership, native dependenci
 
 ## Decision
 
-The runtime baseline and verified contracts live in [discovery](../../../docs/discovery.md). Root and package dependency pins, the compatibility guard, Profile generation and packed-install dependencies move together. Client plugins use public Cordis and renderer types. Runtime acceptance follows the official browser login flow.
+The shared runtime baseline lives in [discovery](../../../docs/discovery.md); local integration contracts live in the affected package READMEs. Root and package dependency pins, the compatibility guard, Profile generation and packed-install dependencies move together. Client plugins use public Cordis and renderer types. Runtime acceptance follows the official browser login flow.
 
 The [upgrade skill](../../../.agents/skills/dsh-upgrade/SKILL.md) makes evidence collection and its own maintenance part of each upgrade. Version-scoped cases record confirmed causes and validation; unresolved facts stay explicit.
 

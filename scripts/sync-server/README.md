@@ -1,8 +1,6 @@
 # 同步服务器部署
 
-家庭服务器优先使用[安装助手](../../docs/sync-server.md)：复制安装命令，按提示登录 Tailscale，再将连接信息粘贴到 Nook。以下为其他网络环境的系统安装方式。
-
-已有 Docker 的服务器使用 [Docker / Compose 部署包](DOCKER.md)，从 GHCR 拉取固定版本镜像。无 Docker 的 Linux 主机使用本页的系统安装工具。两种方式都导出 `connection.json`，可在 Nook → 数据同步直接导入，核对地址后点击“验证并开启同步”。连接文件包含密码，只通过可信渠道传输和保管。
+系统安装由 [setup.py](setup.py) 承载，Docker 部署约束见 [DOCKER.md](DOCKER.md)。[安装助手](assistant.py)组合 Docker 与 Tailscale，使用独立数据卷；三种部署不能互相接管已有数据。WebDAV 条件写入与客户端信任要求见[同步契约](../../packages/feature-sync/README.md)。
 
 ## Linux 系统安装
 
@@ -60,3 +58,15 @@ sudo systemctl status nook-sync-renew.timer
 生成的服务与定时器通过 `systemd-analyze verify` 校验。Linux 验收结束后保留一个仅供测试的 HTTPS 服务；把容器中的 `/tmp/nook-test-client.json` 复制出来，可在仓库运行 `node --import tsx tests/sync-server/verify_client.ts /tmp/nook-test-client.json`。该验收只接受固定的本机测试地址，使用真实 Nook Adapter 检查私有 CA、两个副本并发编辑、冲突解决及最终一致性。回执含测试密码，完成后随一次性容器一起清理。
 
 公开证书调用依据 [Certbot standalone 文档](https://eff-certbot.readthedocs.io/en/stable/using.html#standalone)，独立服务配置依据 [Apache WebDAV](https://httpd.apache.org/docs/2.4/mod/mod_dav.html) 与 [prefork](https://httpd.apache.org/docs/2.4/mod/prefork.html)。
+
+## 安装助手约束
+
+修改 [assistant.py](assistant.py) 时保留目标地址与数据卷身份：助手回执和证书绑定原 Tailscale IPv4，地址变化时停止；缺失身份不自动改证书、迁移同步库或重置客户端。每个卷只能有一个服务写入。依赖安装复用已有 Docker/Tailscale，不卸载冲突运行时。支持矩阵与安装分支以源码及[依赖验收](../../tests/sync-server/verify_dependencies.py)为准。
+
+systemd 等待 Docker、Tailscale 和原地址后启动服务；容器重启策略不能替代宿主机的启动顺序。备份停止服务并只读归档数据卷，逐文件比对 SHA-256 后恢复服务。备份包含私钥与密码；恢复使用独立新卷，不覆盖运行卷。程序更新前验证备份，程序选择失败只回退程序，不自动用备份覆盖业务数据。
+
+[产物生成器](artifacts.mjs)固定安装入口、助手、部署归档的逐级 SHA256 和多架构镜像摘要；应用命令与内置 AI 指南使用同一摘要。输入统一 LF，gzip 系统头固定 Linux，保证跨平台产物一致。助手与镜像独立版本化，发布源码变更必须增加助手版本，不能覆盖同版本产物或允许旧入口降级新部署。
+
+[发布工作流](../../.github/workflows/sync-assistant.yml)在原生双架构验收后创建 Release，并验证匿名下载与校验值；手动触发只验证。工作区打包成功不证明安装地址已公开可用。交付命令前检查对应发布结果；Agent 部署流程由[随包技能](../../packages/feature-agent/skills/nook-sync-deploy/SKILL.md)承载，不在此复制。
+
+[助手验收](../../tests/sync-server/verify_assistant.py)使用一次性卷验证镜像、备份恢复和重建；[入口验收](../../tests/sync-server/verify_bootstrap.py)验证校验失败不执行代码。容器中替代的 Tailscale 身份、systemd 和软件安装调用不能证明真实授权、跨网络连接或物理机重启成功，宿主服务单元另用 `systemd-analyze verify` 检查。
