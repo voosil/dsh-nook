@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { lstat, readdir, realpath } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { copyFile, lstat, mkdir, readdir, realpath } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 const exec = promisify(execFile)
@@ -9,15 +10,24 @@ const within = (root, path) => {
   return part === '' || (!isAbsolute(part) && part !== '..' && !part.startsWith(`..${sep}`))
 }
 
+/** The preparing broker's executable may belong to a disposable Web launcher. */
+export async function retainCandidateNode(directory, executable = process.execPath) {
+  const bin = join(directory, 'runtime/node/bin')
+  await mkdir(bin, { recursive: true })
+  const node = join(bin, process.platform === 'win32' ? 'node.exe' : 'node')
+  await copyFile(executable, node, constants.COPYFILE_EXCL)
+  return node
+}
+
 /** The installed snapshot must not retain workspace links into its disposable source. */
 export async function assertIndependentCandidate(directory, candidate, commit) {
   if (candidate.protocol !== 1 || candidate.commit !== commit) throw new Error('Invalid update candidate')
   const root = await realpath(directory)
-  const source = resolve(root, 'source')
   const runtime = resolve(root, 'runtime'),
     boot = resolve(root, 'boot')
   for (const [path, owner, name] of [
     [candidate.snapshot?.seedProfile, runtime, 'runtime'],
+    [candidate.snapshot?.node, runtime, 'runtime'],
     [candidate.snapshot?.supervisor, boot, 'boot'],
     [candidate.broker, boot, 'boot'],
   ]) {
@@ -29,13 +39,6 @@ export async function assertIndependentCandidate(directory, candidate, commit) {
     )
       throw new Error('Candidate path escapes its runtime')
   }
-  if (
-    typeof candidate.snapshot.node !== 'string' ||
-    !isAbsolute(candidate.snapshot.node) ||
-    within(resolve(directory, 'source'), resolve(candidate.snapshot.node)) ||
-    within(source, await realpath(candidate.snapshot.node))
-  )
-    throw new Error('Candidate Node depends on the source worktree')
   async function visit(path, owner) {
     const stat = await lstat(path)
     if (stat.isSymbolicLink()) {

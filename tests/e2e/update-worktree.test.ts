@@ -3,8 +3,11 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { copyFile, mkdtemp, readFile, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import { test } from 'node:test'
+import { ProcessScope } from '../../scripts/shared/process-scope.mjs'
+import { retainCandidateNode } from '../../scripts/update/update-worktree.mjs'
+import { verifyUpdate } from '../../scripts/update/verify-update.mjs'
 import { prepareUpdate } from '../../scripts/update/prepare-update.mjs'
 import { bootAndVerifyWeb } from '../../scripts/verify/runtime-verify.mjs'
 
@@ -33,10 +36,20 @@ test('packed update boots and serves real workflows after its worktree is remove
     'isolated update acceptance',
   )
   const commit = await git('rev-parse', 'HEAD')
-  await prepareUpdate({ repo, commit, directory, state: join(root, 'unused-formal-state') })
+  const launcher = join(root, 'web-start')
+  const temporaryNode = await retainCandidateNode(launcher)
+  class LauncherProcesses extends ProcessScope {
+    run(command: string, args: string[], options = {}) {
+      return super.run(command === process.execPath ? temporaryNode : command, args, options)
+    }
+  }
+  await prepareUpdate({ repo, commit, directory, state: join(root, 'unused-formal-state') }, new LauncherProcesses())
+  await rm(launcher, { recursive: true })
   await assert.rejects(readFile(join(directory, 'source/package.json')), { code: 'ENOENT' })
   assert.equal((await git('worktree', 'list', '--porcelain')).split('worktree ').length - 1, 1)
   const candidate = JSON.parse(await readFile(join(directory, 'candidate.json'), 'utf8'))
+  assert.ok(candidate.snapshot.node.startsWith(join(directory, 'runtime') + sep))
+  await verifyUpdate(candidate)
   const { activateProfile } = await import('../../apps/desktop/dist/payload.mjs')
   const config = await activateProfile({ state: join(root, 'browser-acceptance'), ...candidate.snapshot })
   const result = await bootAndVerifyWeb({

@@ -6,7 +6,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, type TestContext } from 'node:test'
 import { prepareUpdate } from '../../scripts/update/prepare-update.mjs'
-import { assertIndependentCandidate, removeUpdateWorktree } from '../../scripts/update/update-worktree.mjs'
+import {
+  assertIndependentCandidate,
+  removeUpdateWorktree,
+  retainCandidateNode,
+} from '../../scripts/update/update-worktree.mjs'
 
 const exec = promisify(execFile)
 async function fixture(t: TestContext) {
@@ -57,6 +61,7 @@ for (const failure of ['', 'install', 'build', 'pack', 'verify', 'cancel']) {
           await mkdir(runtime)
           await mkdir(boot)
           await writeFile(join(runtime, 'package.json'), '{}')
+          await writeFile(join(runtime, 'node'), 'retained node')
           await writeFile(join(boot, 'supervisor.mjs'), 'retained supervisor')
           await writeFile(join(boot, 'shared-broker.mjs'), 'retained broker')
           await writeFile(
@@ -65,7 +70,7 @@ for (const failure of ['', 'install', 'build', 'pack', 'verify', 'cancel']) {
               protocol: 1,
               commit: f.commit,
               broker: join(boot, 'shared-broker.mjs'),
-              snapshot: { seedProfile: runtime, node: process.execPath, supervisor: join(boot, 'supervisor.mjs') },
+              snapshot: { seedProfile: runtime, node: join(runtime, 'node'), supervisor: join(boot, 'supervisor.mjs') },
             }),
           )
           return
@@ -107,11 +112,12 @@ test('snapshot links into source are rejected; internal links are accepted', asy
   await mkdir(runtime)
   await mkdir(boot)
   await writeFile(join(boot, 'supervisor.mjs'), '')
+  await writeFile(join(runtime, 'node'), 'retained node')
   const candidate = {
     protocol: 1,
     commit: f.commit,
     broker: join(boot, 'supervisor.mjs'),
-    snapshot: { seedProfile: runtime, node: process.execPath, supervisor: join(boot, 'supervisor.mjs') },
+    snapshot: { seedProfile: runtime, node: join(runtime, 'node'), supervisor: join(boot, 'supervisor.mjs') },
   }
   const link = join(runtime, 'source-link')
   await symlink(f.checkout, link, 'junction')
@@ -129,6 +135,37 @@ test('snapshot links into source are rejected; internal links are accepted', asy
       },
       f.commit,
     ),
-    /Node depends/,
+    /escapes/,
   )
+})
+
+test('candidate owns an executable that survives removal of its preparing launcher', async t => {
+  const f = await fixture(t)
+  const launcher = join(f.root, 'web-start', 'runtime')
+  const temporaryNode = await retainCandidateNode(launcher)
+  const retained = await retainCandidateNode(f.directory, temporaryNode)
+  await rm(launcher, { recursive: true })
+  assert.equal((await exec(retained, ['--version'])).stdout.trim(), process.version)
+  await assert.rejects(retainCandidateNode(f.directory), { code: 'EEXIST' })
+})
+
+test('candidate rejects executable paths and symlinks into an external Web launcher', async t => {
+  const f = await fixture(t)
+  const runtime = join(f.directory, 'runtime'),
+    boot = join(f.directory, 'boot')
+  await mkdir(runtime, { recursive: true })
+  await mkdir(boot)
+  await writeFile(join(boot, 'supervisor.mjs'), '')
+  const external = await retainCandidateNode(join(f.root, 'web-start'))
+  const candidate = {
+    protocol: 1,
+    commit: f.commit,
+    broker: join(boot, 'supervisor.mjs'),
+    snapshot: { seedProfile: runtime, node: external, supervisor: join(boot, 'supervisor.mjs') },
+  }
+  await assert.rejects(assertIndependentCandidate(f.directory, candidate, f.commit), /escapes/)
+  const link = join(runtime, 'node')
+  await symlink(external, link)
+  candidate.snapshot.node = link
+  await assert.rejects(assertIndependentCandidate(f.directory, candidate, f.commit), /escapes/)
 })
