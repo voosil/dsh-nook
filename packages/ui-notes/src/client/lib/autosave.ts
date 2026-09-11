@@ -78,6 +78,10 @@ export class Autosave {
   }
   private async drain(): Promise<boolean> {
     try {
+      // A flush over unchanged input must stay silent: the 'saved' notification
+      // re-sorts the note list, so emitting it on every no-op flush would flash
+      // the list loading state each time the user merely opens another note.
+      const wasDirty = this.dirty
       while (this.dirty) {
         if (this.paused) return false
         this.pending ??= {
@@ -104,7 +108,7 @@ export class Autosave {
           this.input = inputOf(this.note)
         }
       }
-      this.changed('saved')
+      if (wasDirty) this.changed('saved')
       return true
     } catch (error) {
       this.changed('error', error instanceof Error ? error.message : '保存失败，请重试。')
