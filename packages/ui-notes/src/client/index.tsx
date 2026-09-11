@@ -86,12 +86,13 @@ function mountWorkspace(ctx: ClientContext): void {
       },
       () => open,
     )
-    return visible ? (
+    return (
       <>
         <style>{uiKitStyles}</style>
         <style>{css}</style>
         <style>{settingsCss}</style>
         <NotebookApp
+          visible={visible}
           api={api}
           sync={sync}
           syncDisabled={syncDisabled}
@@ -106,7 +107,7 @@ function mountWorkspace(ctx: ClientContext): void {
           }}
         />
       </>
-    ) : null
+    )
   }
   ctx.effect(() => {
     const openHash = () => {

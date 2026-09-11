@@ -9,6 +9,7 @@ import { parseSyncConnection, CONNECTION_FILE_LIMIT } from '@nook-dsh/capability
 import type { SyncApi } from '../lib/sync-api.js'
 
 export function SyncControl({
+  visible = true,
   disabled = false,
   api,
   update,
@@ -19,6 +20,7 @@ export function SyncControl({
   appearance,
   onAppearanceChange,
 }: {
+  visible?: boolean
   disabled?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -151,7 +153,7 @@ export function SyncControl({
       {open && !guideOpen && (
         <SettingsDialog
           syncDisabled={disabled}
-          open
+          open={visible}
           onOpenChange={next => {
             if (!busy) setOpen(next)
           }}

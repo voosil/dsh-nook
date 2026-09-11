@@ -149,6 +149,13 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
     await waitForNoteSave(page)
     assert.ok((await workspace.innerText()).includes('创建于'))
     assert.ok((await workspace.innerText()).includes('更新于'))
+    await workspace.getByRole('searchbox', { name: '搜索笔记' }).fill(suffix)
+    await workspace.getByRole('button', { name: '返回 AI 对话', exact: true }).click()
+    await workspace.waitFor({ state: 'hidden' })
+    await page.getByRole('button', { name: '打开 Nook', exact: true }).click()
+    await workspace.waitFor()
+    assert.equal(await workspace.getByRole('textbox', { name: '笔记标题', exact: true }).inputValue(), title)
+    assert.equal(await workspace.getByRole('searchbox', { name: '搜索笔记' }).inputValue(), suffix)
     // Both browser saves start from the same version; Host merging must be invisible.
     const secondContext = await page
       .context()
@@ -336,11 +343,15 @@ export async function notebookSmoke(url, screenshot, providedPage, verifySync = 
         .locator('[contenteditable="true"]')
         .filter({ hasText: '请协助我配置 Nook 数据同步。' })
       await initialComposer.waitFor()
+      await initialComposer.click()
+      assert.ok(
+        await initialComposer.evaluate(element => element.contains(document.activeElement)),
+        'Hidden settings release the conversation focus',
+      )
       const initialPrompt = await initialComposer.innerText()
       await page.getByRole('button', { name: '打开 Nook', exact: true }).click()
       await workspace.waitFor()
-      await workspace.getByRole('button', { name: '设置', exact: true }).click()
-      await workspace.getByRole('button', { name: '数据同步', exact: true }).click()
+      await sync.waitFor()
       const syncFrame = await sync.boundingBox()
       await sync.getByRole('tab', { name: '同步信息', exact: true }).focus()
       await page.keyboard.press('ArrowRight')

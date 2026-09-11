@@ -45,6 +45,7 @@ import { SyncControl } from './sync-control.js'
 const personal = { kind: 'personal' as const, url: null, author: null, basedOn: [] }
 
 export function NotebookApp({
+  visible = true,
   api,
   sync,
   syncDisabled = false,
@@ -53,6 +54,7 @@ export function NotebookApp({
   close,
   onDeploy,
 }: {
+  visible?: boolean
   api: Api
   sync: SyncApi
   syncDisabled?: boolean
@@ -104,6 +106,7 @@ export function NotebookApp({
   const selectedRef = useRef(selected)
   selectedRef.current = selected
   useEffect(() => {
+    if (!visible) return
     const controller = new AbortController()
     setRefresh(value => value + 1)
     const current = selectedRef.current
@@ -126,7 +129,7 @@ export function NotebookApp({
         })
         .catch(() => {})
     return () => controller.abort()
-  }, [syncChange])
+  }, [syncChange, visible])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -170,8 +173,8 @@ export function NotebookApp({
     }
   }, [projectId, search, sort, trash, page, refresh])
   useEffect(() => {
-    panel.current?.focus()
-  }, [])
+    if (visible && !panel.current?.contains(document.activeElement)) panel.current?.focus({ preventScroll: true })
+  }, [visible])
   useEffect(() => {
     const controller = new AbortController()
     const openHash = () => {
@@ -399,6 +402,9 @@ export function NotebookApp({
         ref={panel}
         tabIndex={-1}
         className="nook-workspace"
+        // Keep the page and editor instance alive across shell navigation. Inline
+        // display also hides portalled descendants despite the workspace flex rule.
+        style={visible ? undefined : { display: 'none' }}
         data-nook-theme={appearance}
         role="dialog"
         aria-modal="true"
@@ -581,6 +587,7 @@ export function NotebookApp({
           </div>
         </aside>
         <SyncControl
+          visible={visible}
           disabled={syncDisabled}
           update={updater && <UpdatePanel controller={updater} />}
           api={sync}
