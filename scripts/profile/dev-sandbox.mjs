@@ -1,7 +1,8 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile, lstat, unlink, rmdir } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile, lstat, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { PROFILE_DIR, ROOT, devRuntimeEnv } from './profile-lib.mjs'
+import { acquireNativeFileLock } from '../shared/native-file-lock.mjs'
 
 /** Keep development writes separate from the persistent usage home. */
 export async function createDevSandbox({ persistent = false, desktop = false } = {}) {
@@ -10,26 +11,30 @@ export async function createDevSandbox({ persistent = false, desktop = false } =
     : await mkdtemp(join(tmpdir(), 'nook-dev-'))
   await mkdir(home, { recursive: true, mode: 0o700 })
   const lock = `${home}.lock`
+  let releaseLock
   if (persistent) {
+    // Directory/owner.json leftovers from older launchers are not live locks.
+    await mkdir(lock, { recursive: true, mode: 0o700 })
     try {
-      await mkdir(lock, { mode: 0o700 })
+      releaseLock = acquireNativeFileLock(resolve(lock, 'lease'))
     } catch (error) {
-      throw new Error(`Development data is in use: ${home}. After a crash, inspect ${lock}/owner.json.`, {
-        cause: error,
-      })
+      if (!['EAGAIN', 'EWOULDBLOCK'].includes(error.code)) throw error
+      throw new Error(
+        `Development data is in use by another running launcher: ${home}. Stop it before starting another.`,
+        {
+          cause: error,
+        },
+      )
     }
   }
   let disposed = false
   const dispose = async () => {
     if (disposed) return
     disposed = true
-    if (persistent) {
-      await rm(resolve(lock, 'owner.json'), { force: true })
-      await rmdir(lock)
-    } else await rm(home, { recursive: true, force: true })
+    if (persistent) releaseLock()
+    else await rm(home, { recursive: true, force: true })
   }
   try {
-    if (persistent) await writeFile(resolve(lock, 'owner.json'), JSON.stringify({ pid: process.pid, home }))
     const profile = resolve(home, 'profiles/nook')
     await mkdir(profile, { recursive: true })
     await mkdir(resolve(home, 'agents'), { recursive: true })

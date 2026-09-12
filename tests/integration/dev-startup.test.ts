@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { execFile } from 'node:child_process'
+import { execFile, fork } from 'node:child_process'
+import { once } from 'node:events'
 import { copyFile, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { createServer } from 'node:net'
@@ -70,6 +71,7 @@ async function launcherFixture(t: TestContext) {
     'profile/web-port.mjs',
     'shared/process-scope.mjs',
     'shared/corepack-command.mjs',
+    'shared/release-port.mjs',
     'profile/dev-watch.mjs',
     'profile/dev-sandbox.mjs',
   ]) {
@@ -79,6 +81,10 @@ async function launcherFixture(t: TestContext) {
   }
   // Keep dependency installation real, with a local-only Profile in place of
   // the product's external runtime. Profile generation has its own coverage.
+  await writeFile(
+    resolve(root, 'scripts/shared/native-file-lock.mjs'),
+    `export { acquireNativeFileLock } from ${JSON.stringify(pathToFileURL(resolve(ROOT, 'scripts/shared/native-file-lock.mjs')).href)}`,
+  )
   await writeFile(
     resolve(root, 'scripts/profile/dev-seed.mjs'),
     `import { writeFile } from 'node:fs/promises'
@@ -132,6 +138,50 @@ test('dev:seed prepares data without starting a runtime', async t => {
   await launch(['--seed'])
   assert.equal(await readFile(resolve(root, '.dsh-dev/sandboxes/web/seeded'), 'utf8'), 'examples')
   await assert.rejects(readFile(resolve(root, 'booted.txt')), { code: 'ENOENT' })
+})
+
+test('dev boots with legacy lock leftovers, including incomplete metadata and reused PIDs', async t => {
+  const { root, launch } = await launcherFixture(t)
+  const home = resolve(root, '.dsh-dev/sandboxes/web')
+  const lock = `${home}.lock`
+  await mkdir(home, { recursive: true })
+  await mkdir(lock)
+  await writeFile(resolve(home, 'user-note'), 'keep my edits')
+  for (const owner of [undefined, '{incomplete', JSON.stringify({ pid: process.pid, home })]) {
+    if (owner !== undefined) await writeFile(resolve(lock, 'owner.json'), owner)
+    await launch()
+    assert.equal(await readFile(resolve(root, 'boot-home.txt'), 'utf8'), home)
+    assert.equal(await readFile(resolve(home, 'user-note'), 'utf8'), 'keep my edits')
+    if (owner !== undefined) assert.equal(await readFile(resolve(lock, 'owner.json'), 'utf8'), owner)
+  }
+})
+
+test('dev restarts after the sandbox owner is forcibly killed without cleanup', { timeout: 30_000 }, async t => {
+  const { root, launch } = await launcherFixture(t)
+  const worker = resolve(root, 'crash-owner.mjs')
+  await writeFile(
+    worker,
+    `import { createDevSandbox } from './scripts/profile/dev-sandbox.mjs'
+     const sandbox = await createDevSandbox({ persistent: true })
+     process.on('message', () => {})
+     process.send(sandbox.home)`,
+  )
+  const child = fork(worker, { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] })
+  const exited = once(child, 'exit')
+  t.after(async () => {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+    await exited
+  })
+  const [home] = await once(child, 'message')
+  const { createDevSandbox } = await import(pathToFileURL(resolve(root, 'scripts/profile/dev-sandbox.mjs')).href)
+  await assert.rejects(createDevSandbox({ persistent: true }), /another running launcher/)
+  await writeFile(resolve(home, 'user-note'), 'saved before crash')
+  child.kill('SIGKILL')
+  await exited
+  await launch()
+  assert.equal(await readFile(resolve(root, 'boot-home.txt'), 'utf8'), home)
+  assert.equal(await readFile(resolve(home, 'user-note'), 'utf8'), 'saved before crash')
+  await launch()
 })
 
 test('persistent sandbox rejects concurrent use and preserves data after preparation failure', async t => {
