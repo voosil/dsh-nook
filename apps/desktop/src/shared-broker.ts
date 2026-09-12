@@ -109,14 +109,14 @@ async function serve(options: BrokerOptions) {
       await health(url)
       const launch = candidateLaunch(state, candidate, source, port)
       await commitHome(state, { protocol: 1, launch })
-      for (const socket of leases) send(socket, { type: 'ready', url })
+      for (const socket of leases) send(socket, { type: 'ready', url, instance: options.instance })
     } catch (error) {
       await runtime?.stop()
       await recoverHome(state, backup)
       config = previous
       runtime = new DesktopRuntime(config, writeLog, failure)
       url = await runtime.ready
-      for (const socket of leases) send(socket, { type: 'ready', url })
+      for (const socket of leases) send(socket, { type: 'ready', url, instance: options.instance })
       throw error
     } finally {
       switching = false
@@ -146,11 +146,15 @@ async function serve(options: BrokerOptions) {
               () => send(socket, { error: '更新操作不可用，请稍后重试。' }),
             )
             .finally(() => socket.end())
+        } else if (value.type === 'shutdown' && value.version === 1) {
+          clearTimeout(timer)
+          send(socket, { type: 'stopping' })
+          void stop()
         } else if (value.type === 'attach' && value.version === 1 && !leases.has(socket)) {
           clearTimeout(timer)
           clearTimeout(unclaimed)
           leases.add(socket)
-          if (url) send(socket, { type: 'ready', url })
+          if (url) send(socket, { type: 'ready', url, instance: options.instance })
         } else if (value.type === 'release' && leases.delete(socket)) {
           void (async () => {
             await refreshRetention()
@@ -257,7 +261,7 @@ async function serve(options: BrokerOptions) {
       config.updateControl = { socket: path, token: updateToken }
       runtime = new DesktopRuntime(config, writeLog, failure)
       url = await runtime.ready
-      if (!stopping) for (const socket of leases) send(socket, { type: 'ready', url })
+      if (!stopping) for (const socket of leases) send(socket, { type: 'ready', url, instance: options.instance })
     })().catch(error => {
       if (!stopping) failure(error instanceof Error ? error : new Error(String(error)))
     })

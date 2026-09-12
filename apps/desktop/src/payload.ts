@@ -100,7 +100,12 @@ async function createOnce(path: string, content: string) {
 
 /** Runtime versions are retained; upgrades never replace user patches or data. */
 export async function installPayload(seed: string, state: string, signal?: AbortSignal): Promise<RuntimeConfig> {
-  const home = safeHome(join(state, 'harness'))
+  return activateProfile({ state, ...(await preparePayload(seed, state, signal)) })
+}
+
+/** Install immutable files before stopping the current backend; activation alone changes its Profile. */
+export async function preparePayload(seed: string, state: string, signal?: AbortSignal) {
+  safeHome(join(state, 'harness'))
   const manifest = JSON.parse(await readFile(join(seed, 'manifest.json'), 'utf8')) as PayloadManifest
   const fingerprint = createHash('sha256').update(JSON.stringify(manifest)).digest('hex')
   const versions = join(state, 'runtimes')
@@ -132,12 +137,11 @@ export async function installPayload(seed: string, state: string, signal?: Abort
     }
   } else await verifyPayload(destination, manifest, signal)
 
-  return activateProfile({
-    state,
+  return {
     seedProfile: join(destination, 'home', 'profiles', 'nook'),
     node: join(destination, 'node', 'bin', 'node'),
     supervisor: join(destination, 'boot', 'supervisor.mjs'),
-  })
+  }
 }
 
 /** Attach a fixed installed package snapshot to the writable user Profile. */

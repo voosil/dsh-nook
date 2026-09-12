@@ -19,13 +19,11 @@ export async function findListeningPids(port) {
   try {
     if (process.platform === 'win32') {
       const script = `(Get-NetTCPConnection -State Listen -LocalPort ${port} -ErrorAction SilentlyContinue).OwningProcess`
-      const { stdout } = await execFileAsync('powershell.exe', [
-        '-NoLogo',
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        script,
-      ])
+      const { stdout } = await execFileAsync(
+        'powershell.exe',
+        ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', script],
+        { windowsHide: true, timeout: 10_000 },
+      )
       return parsePids(stdout)
     }
     const { stdout } = await execFileAsync('lsof', ['-nP', `-tiTCP:${port}`, '-sTCP:LISTEN'])

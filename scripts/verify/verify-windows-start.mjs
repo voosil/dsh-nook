@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { fork } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -18,23 +18,32 @@ let peer
 let succeeded = false
 const redact = text => text.replace(/([?&]token=)[^\s&#]+/g, '$1<REDACTED>')
 
-async function launch(port) {
+async function launch(port, onPreparing) {
   const args = ['--test-state', state, ...(port === undefined ? [] : ['--port', port])]
   const child = fork(join(ROOT, 'scripts/profile/start-profile.mjs'), args, {
     cwd: ROOT,
     execArgv: ['--import', pathToFileURL(join(ROOT, 'apps/desktop/dist/windows-shutdown.mjs')).href],
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     windowsHide: true,
-    env: { ...process.env, DSH_HOME: join(state, 'harness'), DSH_TELEMETRY_MODE: 'DISABLED' },
+    env: {
+      ...process.env,
+      DSH_HOME: join(state, 'harness'),
+      DSH_TELEMETRY_MODE: 'DISABLED',
+      // The shared browser smoke exercises an offline installation, without this checkout's real update remote.
+      NOOK_UPDATE_REMOTE: 'nook-start-acceptance-no-remote',
+    },
   })
   children.add(child)
   child.once('exit', () => children.delete(child))
   child.send({ type: 'start' })
   let logs = ''
+  let preparationCheck
   const url = await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`Startup timeout\n${redact(logs)}`)), 600_000)
     const consume = chunk => {
       logs = (logs + chunk.toString()).slice(-80_000)
+      if (onPreparing && !preparationCheck && logs.includes('Preparing current workspace snapshot;'))
+        preparationCheck = Promise.resolve(onPreparing()).catch(reject)
       const match = /dsh web: (http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+)\s/.exec(logs)
       if (match) {
         clearTimeout(timer)
@@ -52,6 +61,7 @@ async function launch(port) {
       reject(new Error(`Start exited ${code}\n${redact(logs)}`))
     })
   })
+  await preparationCheck
   return { child, url }
 }
 
@@ -70,7 +80,7 @@ async function close(child) {
 
 try {
   console.log(`Windows start acceptance uses disposable state: ${state}`)
-  const first = await launch()
+  const first = await launch('0')
   console.log('First start: authenticated URL received from a clean packed Profile.')
   const origin = new URL(first.url).origin
   assert.equal((await fetch(origin)).status, 401)
@@ -92,15 +102,22 @@ try {
     () => {},
   )
   assert.equal(await peer.ready, first.url)
-  await close(first.child)
-  assert.equal((await fetch(origin, { headers: { cookie } })).status, 200)
+  // A stale saved update must not override the current source launch.
+  await mkdir(join(state, 'updates'), { recursive: true })
+  await writeFile(join(state, 'updates/active.json'), JSON.stringify({ protocol: -1, stale: true }))
+  const oldExited = once(first.child, 'exit')
+  let preparedWhileServing = false
+  const second = await launch(new URL(first.url).port, async () => {
+    // The old broker keeps serving while the new snapshot is being prepared.
+    assert.equal((await fetch(origin, { headers: { cookie } })).status, 200)
+    preparedWhileServing = true
+  })
+  assert.ok(preparedWhileServing)
+  await oldExited
+  assert.notEqual(first.url, second.url, 'A fresh backend issues a new process token')
   await peer.stop()
   peer = undefined
-  assert.equal(await sharedRuntimeRunning(state), false)
-  await assert.rejects(fetch(origin, { signal: AbortSignal.timeout(1000) }))
-  assert.equal(await exists(join(state, 'harness/nook.lock')), false)
-  console.log('Shared leases and final process/lock shutdown passed.')
-  const second = await launch(new URL(first.url).port)
+  console.log('Source restart replaced the running backend and all old leases on the same port.')
   const backups = await readdir(join(state, 'backups'))
   const complete = backups.filter(name => !name.startsWith('.'))
   assert.ok(complete.length)

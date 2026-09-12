@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createServer } from 'node:net'
 import { once } from 'node:events'
 import { test } from 'node:test'
-import { selectWebPort, checkWebPort } from '../../scripts/profile/web-port.mjs'
+import { selectWebPort, checkWebPort, requireStartPort } from '../../scripts/profile/web-port.mjs'
 
 function conflictError(code: string) {
   return Object.assign(new Error('fixture port conflict'), { code })
@@ -45,6 +45,8 @@ test('a real conflicting listener yields a bindable port and the probe releases 
   await once(owner, 'listening')
   const port = (owner.address() as { port: number }).port
   try {
+    await assert.rejects(requireStartPort(port), /unavailable.*No unrelated process was stopped/)
+    assert.ok(owner.listening, 'Strict formal startup must preserve an unrelated listener')
     const selected = await selectWebPort(port, { log: () => {} })
     assert.notEqual(selected, port)
     assert.ok(owner.listening)

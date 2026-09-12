@@ -14,7 +14,7 @@ Status: implemented
 
 更新进行期间，Client 显示覆盖整个应用视口的不透明加载层，居中只放一个进度条和说明当前阶段的文字；阶段与文案取自更新状态（preparing → switching → succeeded），完成后页面自动刷新离开该层。加载层挂在工作区之外并自带主题标记，更新中切到对话页仍被覆盖；页面会话一旦见过 preparing 或 switching 就保持显示到刷新为止，broker 里残留的 succeeded 状态不会挡住无关会话，failed 等其他阶段则立即撤除。
 
-更新提交通过独立 Git ref 固定，使用 detached worktree 保护开发工作区。候选 Profile 安装在最终目录，避免 Windows junction 搬迁失效。准备器把自身使用的 Node 可执行文件复制到候选 runtime，保持原生模块 ABI 一致；路径与链接检查要求 Node 也归候选目录所有。构建 worktree 的生命周期限于准备阶段：核对安装路径与符号链接后通过 Git 移除源码，再执行无源码的隔离启动验收。失败与正常取消只清理当前准备器创建且未被意外修改的目录，保留运行快照和恢复数据。生产 Profile 在旧 Host 退出前不发生变化；源码启动和桌面启动读取同一成功版本记录。
+更新提交通过独立 Git ref 固定，使用 detached worktree 保护开发工作区。候选 Profile 安装在最终目录，避免 Windows junction 搬迁失效。准备器把自身使用的 Node 可执行文件复制到候选 runtime，保持原生模块 ABI 一致；路径与链接检查要求 Node 也归候选目录所有。构建 worktree 的生命周期限于准备阶段：核对安装路径与符号链接后通过 Git 移除源码，再执行无源码的隔离启动验收。失败与正常取消只清理当前准备器创建且未被意外修改的目录，保留运行快照和恢复数据。生产 Profile 在旧 Host 退出前不发生变化；桌面独立启动读取成功版本记录；源码入口按[共享运行环境决策](../architecture/2026-09-08-shared-runtime.md)始终准备并启动当前工作区，保留更新记录用于桌面和恢复。
 
 [完整更新备份](../../../docs/backup.md#应用更新备份)覆盖会话和配置，补足仅业务数据备份无法恢复 DSH 迁移的边界。原始 home 与失败候选 home 均保留，恢复不删除用户内容。Windows 备份库从安装 Profile 解析，保留其 Koffi 依赖解析位置。
 

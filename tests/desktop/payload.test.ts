@@ -3,7 +3,14 @@ import { mkdir, mkdtemp, readFile, readdir, readlink, rm, symlink, writeFile } f
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { installPayload, inventory, verifyPayload, type PayloadManifest } from '../../apps/desktop/src/payload.ts'
+import {
+  installPayload,
+  preparePayload,
+  activateProfile,
+  inventory,
+  verifyPayload,
+  type PayloadManifest,
+} from '../../apps/desktop/src/payload.ts'
 
 async function seed(root: string, version: string) {
   const seed = join(root, version)
@@ -43,7 +50,15 @@ test('runtime upgrades retain user patch, data, prior runtime and writable Profi
     await mkdir(join(config.home, 'nook'))
     await writeFile(join(config.home, 'nook/user.json'), '{"preserved":true}')
     const next = await seed(root, 'v2')
-    const upgraded = await installPayload(next.seed, state)
+    const beforeModules = await readlink(join(config.home, 'profiles/nook/node_modules/@deepseek-ai/dsh'))
+    const prepared = await preparePayload(next.seed, state)
+    assert.equal(
+      await readlink(join(config.home, 'profiles/nook/node_modules/@deepseek-ai/dsh')),
+      beforeModules,
+      'Preparation must leave the running Profile on its old dependencies',
+    )
+    assert.equal(await readFile(config.bin, 'utf8'), 'v1')
+    const upgraded = await activateProfile({ state, ...prepared })
     assert.notEqual(upgraded.bin, config.bin)
     assert.equal(await readFile(config.bin, 'utf8'), 'v1')
     assert.match(await readFile(patch, 'utf8'), /custom/)

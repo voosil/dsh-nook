@@ -1,4 +1,5 @@
 import type { UpdateSource } from './update.js'
+import { randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { connect, type Socket } from 'node:net'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -14,6 +15,7 @@ export interface BrokerOptions {
   config?: RuntimeConfig
   snapshot?: { seedProfile: string; node: string; supervisor: string }
   port?: number
+  instance?: string
 }
 export interface BrokerLaunch {
   node: string
@@ -64,6 +66,7 @@ export class SharedRuntime {
     log: (line: string) => void,
     failed: (error: Error) => void,
     restarted?: (url: string) => void,
+    reuse = true,
   ) {
     let resolveReady!: (url: string) => void
     let rejectReady!: (error: Error) => void
@@ -85,11 +88,17 @@ export class SharedRuntime {
       reject(new Error('Shared Nook startup timed out'))
       void this.stop()
     }, 600_000)
+    let expectedInstance: string | undefined
     this.startup = (async () => {
       let socket = await connectSocket(state)
+      if (socket && !reuse) {
+        socket.destroy()
+        throw new Error('Another Nook backend started during restart; run pnpm start again.')
+      }
       if (!socket && !this.stopped) {
         const launch = await prepare()
         if (this.stopped) return
+        if (!reuse) launch.options.instance = expectedInstance = randomUUID()
         const child = spawn(launch.node, [launch.broker, JSON.stringify(launch.options)], {
           detached: true,
           windowsHide: true,
@@ -118,6 +127,8 @@ export class SharedRuntime {
         try {
           const value = JSON.parse(line)
           if (value.type === 'ready' && typeof value.url === 'string') {
+            if (expectedInstance && value.instance !== expectedInstance)
+              throw new Error('Another Nook launcher won startup; refusing to reuse its backend.')
             const url = launchUrl(`dsh web: ${value.url}`)
             if (!url) throw new Error('Invalid shared Nook URL')
             clearTimeout(timer)

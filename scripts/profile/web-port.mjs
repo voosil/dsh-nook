@@ -1,4 +1,5 @@
 import { createServer } from 'node:net'
+import { findListeningPids } from '../shared/release-port.mjs'
 
 /** Probe only our loopback binding; never stop the existing owner. */
 export function checkWebPort(port) {
@@ -18,6 +19,25 @@ export function checkWebPort(port) {
 const CONFLICT_CODES = ['EACCES', 'EADDRINUSE']
 const SCAN_ATTEMPTS = 10
 const MAX_PORT = 65_535
+
+/** Formal startup uses an exact port and reports its owner without terminating unrelated listeners. */
+export async function requireStartPort(port) {
+  try {
+    return await selectWebPort(port, { explicit: true })
+  } catch (error) {
+    if (!CONFLICT_CODES.includes(error.cause?.code)) throw error
+    let owners = []
+    try {
+      owners = await findListeningPids(port)
+    } catch {
+      /* The bind error remains actionable without process access. */
+    }
+    throw new Error(
+      `${error.message}${owners.length ? ` Listener PID: ${owners.join(', ')}.` : ''} No unrelated process was stopped.`,
+      { cause: error },
+    )
+  }
+}
 
 export async function selectWebPort(
   port,

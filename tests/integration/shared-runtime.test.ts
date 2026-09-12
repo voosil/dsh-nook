@@ -9,6 +9,7 @@ import { test } from 'node:test'
 import { pathToFileURL } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 import { SharedRuntime, type BrokerLaunch } from '../../apps/desktop/src/shared-client.ts'
+import { stopSharedRuntime } from '../../scripts/profile/restart-shared.mjs'
 
 async function fixture(root: string): Promise<BrokerLaunch> {
   const home = join(root, 'harness')
@@ -16,12 +17,13 @@ async function fixture(root: string): Promise<BrokerLaunch> {
   await mkdir(join(profile, 'node_modules/@nook-dsh'), { recursive: true })
   await mkdir(join(profile, 'node_modules/@deepseek-ai'), { recursive: true })
   await writeFile(join(profile, 'package.json'), '{}')
-  await symlink(resolve('packages/storage-backup'), join(profile, 'node_modules/@nook-dsh/storage-backup'))
+  await symlink(resolve('packages/storage-backup'), join(profile, 'node_modules/@nook-dsh/storage-backup'), 'junction')
   const require = createRequire(import.meta.url)
   const dsh = createRequire(require.resolve('@deepseek-ai/dsh/package.json'))
   await symlink(
     dirname(dsh.resolve('@deepseek-ai/dsh-base/package.json')),
     join(profile, 'node_modules/@deepseek-ai/dsh-base'),
+    'junction',
   )
   const bin = join(root, 'fake-dsh.mjs')
   await writeFile(
@@ -103,6 +105,47 @@ test(
     assert.equal(await readFile(join(root, 'starts'), 'utf8'), 'start\nstart\n')
   },
 )
+
+test('source restart stops all leases and refuses to reuse a concurrent backend', { timeout: 30_000 }, async t => {
+  const root = await mkdtemp(join(tmpdir(), 'nook-source-restart-'))
+  const clients: SharedRuntime[] = []
+  t.after(async () => {
+    await Promise.all(clients.map(client => client.stop()))
+    await rm(root, { recursive: true, force: true })
+  })
+  const launch = await fixture(root)
+  const open = (reuse = true) => {
+    const client = new SharedRuntime(
+      root,
+      async () => launch,
+      () => {},
+      () => {},
+      undefined,
+      reuse,
+    )
+    clients.push(client)
+    return client
+  }
+  const first = open(),
+    peer = open()
+  const oldUrl = await first.ready
+  assert.equal(await peer.ready, oldUrl)
+  const cancelled = new AbortController()
+  cancelled.abort()
+  await assert.rejects(stopSharedRuntime(root, { signal: cancelled.signal }), { name: 'AbortError' })
+  assert.equal(await (await fetch(oldUrl)).text(), 'shared')
+  const refused = open(false)
+  await assert.rejects(refused.ready, /Another Nook backend/)
+  await refused.stop()
+  assert.equal(await (await fetch(oldUrl)).text(), 'shared')
+  assert.equal(await stopSharedRuntime(root, { log: () => {} }), true)
+  await assert.rejects(fetch(oldUrl, { signal: AbortSignal.timeout(1000) }))
+  const next = open(false)
+  await next.ready
+  assert.equal(await readFile(join(root, 'starts'), 'utf8'), 'start\nstart\n')
+  await next.stop()
+  assert.equal(await stopSharedRuntime(root, { log: () => {} }), false)
+})
 
 test('closing a frontend before broker startup settles readiness and shutdown', { timeout: 10_000 }, async t => {
   const root = await mkdtemp(join(tmpdir(), 'nook-shared-cancel-'))
