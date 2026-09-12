@@ -16,6 +16,7 @@ export async function verifySafeUi(url, { profileDirectory }) {
       await dismissOnboarding(page)
       const workspace = await prepareWorkspace(page, profileDirectory)
       await page.reload()
+      await dismissOnboarding(page)
       await page.getByRole('button', { name: '新建会话', exact: true }).first().click()
       await page.getByRole('button', { name: '选择工作区', exact: true }).click()
       await page.getByRole('menuitem', { name: workspace.title, exact: true }).click()

@@ -14,6 +14,8 @@ Profile 行清单、HTML 包名、CSS 规则和生成命令的字符串检查会
 
 包验收独立发现工作区包，以发布清单为交付契约验证入口和安装隔离，再执行业务流程，不复制启动器的包成员或 Bundle 行清单。[运行时辅助函数](../../../../tests/helpers/runtime/web.mjs)只准备环境；[Profile 用例](../../../../tests/e2e/profile/profile-boot.test.ts)和[独立安装用例](../../../../tests/e2e/distribution/package/installation.test.mjs)显式验收业务。[同步与恢复探针](../../../../tests/fixtures/notebook/outcomes.mjs)从目标安装目录解析模块。Safe UI 通过官方会话可用及 Nook 入口消失验收。外观检查读取实际计算样式和滚动结果，不读取样式表规则或 token 绑定。桌面与原生验收分别检查渲染进程的 Node 可用性、锁竞争和释放结果。
 
+[Safe UI 场景](../../../../tests/helpers/scenarios/authentication.mjs)在准备工作区后的页面重载处再次处理官方引导；“稍后配置”只结束当前页面的模型引导，不能假设跨页面持久化。[开发重载验收](../../../../tests/e2e/runtime/dev-modes.test.ts)先确认 Host PID 更替，再通过原页面的认证 cookie 轮询只读笔记接口。macOS 实测新进程已监听时创建接口仍返回 HTTP 404，因此端口归属只证明进程接管，不能作为业务写入的就绪条件。接口就绪后只执行一次 UI 创建并通过读取验证保存，同时保留页面未刷新与正式实例未变化的断言。
+
 ## Alternatives considered
 
 仅添加规则而保留原断言，会继续让实现自身决定通过条件。把断言机械替换成同义的字符串检查，也无法获得独立结果证据。
@@ -22,6 +24,10 @@ Profile 行清单、HTML 包名、CSS 规则和生成命令的字符串检查会
 
 打开历史记录虽然是用户操作，但会主动刷新保存，因此不能代替自动保存的只读等待。
 
+固定延迟依赖机器速度，强制点击会绕过真实引导遮挡，反复点击创建可能产生重复笔记；这些做法均不能代替明确的页面准备与只读就绪检查。
+
 ## Consequences
 
 Profile 验收需要实际启动和浏览器，耗时高于配置转储。下载验收只证明部署包可取得、解压，不宣称服务器安装成功；安装行为仍由独立的部署测试负责。Windows 源码启动和 macOS arm64 桌面安装需要各自平台执行，不能用语法检查替代平台验收。
+
+2026-09-12 在 macOS arm64 上验证引导与重启就绪修正：`pnpm verify` 通过全部工程门禁、构建、普通测试及 17 个源码 e2e；`pnpm verify:package` 的 16 个独立安装与更新用例全部通过。Windows 本次未执行。

@@ -216,13 +216,45 @@ test(
       return pids.length > 0 && pids.every(pid => !originalHostPids.includes(pid))
     }, dev.logs)
     t.diagnostic('Build recovery and Host restart passed; verifying reconnect and cleanup')
+    // The new process binds its port before the Notebook RPC is registered.
+    // Read through the existing authenticated page before attempting a write.
+    await until(
+      () =>
+        page.evaluate(async () => {
+          const method = 'nookNotebookRpc/list'
+          const response = await fetch(`/api/${method}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            signal: AbortSignal.timeout(5000),
+            body: JSON.stringify({
+              type: 'client-request',
+              rpcId: crypto.randomUUID(),
+              method,
+              payload: { args: { request: {} } },
+            }),
+          })
+          if (response.status === 404) return false
+          if (!response.ok) throw new Error(`Notebook readiness failed: HTTP ${response.status}`)
+          const { result } = await response.json()
+          if (!result.ok || !result.value.ok) throw new Error(`Notebook readiness failed: ${JSON.stringify(result)}`)
+          return Array.isArray(result.value.value.notes)
+        }),
+      dev.logs,
+      30_000,
+    )
     // Exercise real RPC after reconnect without reloading the document.
     const workspace = page.getByRole('dialog', { name: 'Nook 笔记工作区', exact: true })
     await workspace
       .getByRole('button', { name: /写一条笔记/ })
       .first()
       .click()
-    await workspace.getByRole('textbox', { name: '笔记标题', exact: true }).fill('saved after Host restart')
+    try {
+      await workspace.getByRole('textbox', { name: '笔记标题', exact: true }).fill('saved after Host restart')
+    } catch (error) {
+      t.diagnostic(redact(await page.locator('body').innerText()))
+      t.diagnostic(redact(dev.logs().slice(-8000)))
+      throw error
+    }
     await waitForNoteSave(page)
     assert.equal(
       await page.evaluate(() => (window as Window & { nookHmrProbe?: string }).nookHmrProbe),

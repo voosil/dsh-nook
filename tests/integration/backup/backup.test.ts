@@ -270,9 +270,11 @@ test('data lock recovers a dead legacy owner without removing metadata or user d
   writeFileSync(join(source, 'keep'), 'saved')
   const lock = `${source}.lock`
   mkdirSync(lock)
-  const exited = spawnSync(process.execPath, ['-e', 'console.log(process.pid)'], { encoding: 'utf8' })
+  const exited = spawnSync(process.execPath, ['-e', 'process.stdout.write(String(process.pid))'], { encoding: 'utf8' })
   assert.equal(exited.status, 0)
-  const owner = JSON.stringify({ pid: Number(exited.stdout.trim()), createdAt: '2026-09-12T01:57:18.881Z' })
+  const pid = Number(exited.stdout.trim())
+  assert.ok(Number.isSafeInteger(pid) && pid > 0)
+  const owner = JSON.stringify({ pid, createdAt: '2026-09-12T01:57:18.881Z' })
   writeFileSync(join(lock, 'owner.json'), owner)
   const release = acquireDataLock(source)
   try {

@@ -12,7 +12,7 @@ test('port release terminates a real listener owned by the test', { timeout: 45_
     process.execPath,
     [
       '-e',
-      "const server=require('node:net').createServer(); server.listen(0,'127.0.0.1',()=>console.log(server.address().port))",
+      "const server=require('node:net').createServer(); server.listen(0,'127.0.0.1',()=>process.stdout.write(String(server.address().port)))",
     ],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   )

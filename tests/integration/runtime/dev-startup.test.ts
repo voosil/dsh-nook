@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { createServer } from 'node:net'
 import { dirname, join, relative, resolve } from 'node:path'
 import { test, type TestContext } from 'node:test'
-import { promisify } from 'node:util'
+import { promisify, stripVTControlCharacters } from 'node:util'
 import { pathToFileURL } from 'node:url'
 import { ROOT } from '../../../scripts/profile/profile-lib.mjs'
 
@@ -150,7 +150,7 @@ test('dev boots with legacy lock leftovers, including incomplete metadata and re
   for (const owner of [undefined, '{incomplete', JSON.stringify({ pid: process.pid, home })]) {
     if (owner !== undefined) await writeFile(resolve(lock, 'owner.json'), owner)
     await launch()
-    assert.equal(await readFile(resolve(root, 'boot-home.txt'), 'utf8'), home)
+    assert.equal(await readFile(resolve(root, 'boot-home.txt'), 'utf8'), await realpath(home))
     assert.equal(await readFile(resolve(home, 'user-note'), 'utf8'), 'keep my edits')
     if (owner !== undefined) assert.equal(await readFile(resolve(lock, 'owner.json'), 'utf8'), owner)
   }
@@ -235,7 +235,11 @@ test('dev stops before boot when Profile dependency installation fails', async t
     resolve(root, 'profile-source.json'),
     JSON.stringify({ dependencies: { '@fixture/missing': 'file:../../../missing-package' } }),
   )
-  await assert.rejects(launch(), /missing-\s*package/)
+  await assert.rejects(launch(), error => {
+    assert.ok(error instanceof Error)
+    assert.match(stripVTControlCharacters(error.message), /missing-\s*package/)
+    return true
+  })
   await assert.rejects(readFile(resolve(root, 'booted.txt')), { code: 'ENOENT' })
 })
 
