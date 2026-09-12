@@ -5,7 +5,7 @@ description: Place, write, and check Nook documentation and decision notes again
 
 # Nook 文档工作流
 
-规范本体在 [docs/AGENTS.md](../../../docs/AGENTS.md)(文档分层与写作规则)和 [.notes/AGENTS.md](../../../.notes/AGENTS.md)(决策笔记规则);本 skill 只承载操作顺序。
+规范本体在 [docs/AGENTS.md](../../../docs/AGENTS.md)(文档分层与写作规则)和 [.agents/notes/AGENTS.md](../../../.agents/notes/AGENTS.md)(决策笔记规则);本 skill 只承载操作顺序。
 
 ## 放置
 
@@ -14,7 +14,7 @@ description: Place, write, and check Nook documentation and decision notes again
 
 ## 决策笔记
 
-3. 新建笔记前先在 `.notes/` 查同主题旧笔记;完全被取代的在同一变更内合并,部分被取代的互链保留。
+3. 新建笔记前先在 `.agents/notes/` 查同主题旧笔记;完全被取代的在同一变更内合并,部分被取代的互链保留。
 4. 按生命周期骨架写,`## Alternatives considered` 必须有;状态行与所在目录一致。
 
 ## 校验

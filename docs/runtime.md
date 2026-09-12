@@ -35,7 +35,7 @@ Windows 使用命名管道连接共享后端，并通过 Job Object 管理 DSH �
 
 ## 运行时切换
 
-更新由 Host 外的共享 broker 准备独立运行快照，原工作区和正在运行的依赖不被覆盖。候选安装在最终路径，携带独立 Node 可执行文件以保持原生模块 ABI 和生命周期；不得引用会随旧入口退出而清理的 Node 或源码链接。准备器只清理自己创建且未被意外修改的 worktree，移除源码后再做隔离启动验收。完整切换与恢复约束见[备份边界](backup.md#应用更新备份)，实现取舍和测试入口见[更新决策](../.notes/implemented/feature/2026-09-10-application-update.md)。
+更新由 Host 外的共享 broker 准备独立运行快照，原工作区和正在运行的依赖不被覆盖。候选安装在最终路径，携带独立 Node 可执行文件以保持原生模块 ABI 和生命周期；不得引用会随旧入口退出而清理的 Node 或源码链接。准备器只清理自己创建且未被意外修改的 worktree，移除源码后再做隔离启动验收。完整切换与恢复约束见[备份边界](backup.md#应用更新备份)，实现取舍和测试入口见[更新决策](../.agents/notes/implemented/feature/2026-09-10-application-update.md)。
 
 桌面独立启动通过正式根目录内的成功版本记录选择快照。`pnpm start` 始终使用当前工作区，忽略历史成功版本选择。历史更新记录和恢复回执保留，恢复与数据备份约束不变。更新来源由启动器记录，可用 `NOOK_UPDATE_REMOTE`、`NOOK_UPDATE_BRANCH` 指定，Git 认证不提供交互式登录。
 
@@ -53,4 +53,4 @@ Windows 使用命名管道连接共享后端，并通过 Job Object 管理 DSH �
 
 自动导入仅覆盖 Nook 业务数据。旧 `.dsh-dev` 中的 DSH 对话、凭据、模型配置及用户 Profile patch 保留在原处，不与桌面已有配置自动合并。两端之后使用共享 home 中的 DSH 配置；它不等于两个历史 Harness home 的完整迁移。备份覆盖范围和恢复操作见[备份指南](backup.md)。
 
-架构取舍和测试依据见[共享运行环境决策](../.notes/implemented/architecture/2026-09-08-shared-runtime.md)。
+架构取舍和测试依据见[共享运行环境决策](../.agents/notes/implemented/architecture/2026-09-08-shared-runtime.md)。

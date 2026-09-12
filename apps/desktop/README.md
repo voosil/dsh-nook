@@ -43,4 +43,4 @@ Renderer 开启 sandbox、上下文隔离和 Web 安全，关闭 Node integratio
 
 视频采集与浏览器预览仍使用各自的外部依赖，见[视频功能](../../packages/feature-video/README.md)与[浏览器适配器](../../packages/adapter-browser-community/src/index.ts)。Electron 的 Chromium 不替代社区浏览器 Provider。开发者签名、公证、自动更新及其他操作系统的发布不在当前安装产物中。
 
-方案取舍、参考项目评审与验证依据见[桌面化决策](../../.notes/implemented/architecture/2026-09-08-electron-desktop.md)。
+方案取舍、参考项目评审与验证依据见[桌面化决策](../../.agents/notes/implemented/architecture/2026-09-08-electron-desktop.md)。

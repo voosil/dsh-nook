@@ -3,7 +3,7 @@
 // (verify-md-links + verify-agent-note-format). No dependencies.
 // Checks:
 //   1. Every relative Markdown link (path and #anchor) resolves.
-//   2. Agent Notes under .notes/{proposed,implemented,rejected} follow the
+//   2. Agent Notes under .agents/notes/{proposed,implemented,rejected} follow the
 //      header format and carry the mandatory skeleton sections.
 //   3. Notes never sit outside a lifecycle folder.
 
@@ -20,7 +20,7 @@ const errors = []
 async function walk(dir, out = []) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (SKIP_DIRS.has(entry.name)) continue
-    if (entry.name.startsWith('.') && entry.name !== '.notes' && entry.name !== '.agents') continue
+    if (entry.name.startsWith('.') && entry.name !== '.agents') continue
     const full = join(dir, entry.name)
     if (entry.isDirectory()) await walk(full, out)
     else if (entry.name.endsWith('.md')) out.push(full)
@@ -65,10 +65,7 @@ async function checkLink(file, target) {
   }
 }
 
-const files = []
-for (const dir of [ROOT, join(ROOT, 'docs'), join(ROOT, '.notes'), join(ROOT, '.agents')]) {
-  files.push(...(await walk(dir)))
-}
+const files = await walk(ROOT)
 
 for (const file of [...new Set(files)]) {
   const rel = relative(ROOT, file)
@@ -77,10 +74,10 @@ for (const file of [...new Set(files)]) {
     await checkLink(file, match[1])
   }
 
-  if (!rel.startsWith(`.notes${sep}`)) continue
-  const parts = rel.split(sep) // .notes / <lifecycle|AGENTS.md> / ...
-  if (parts.length === 2) continue // .notes/AGENTS.md
-  const folder = parts[1]
+  if (!rel.startsWith(`.agents${sep}notes${sep}`)) continue
+  const parts = rel.split(sep) // .agents / notes / <lifecycle|AGENTS.md> / ...
+  if (parts.length === 3) continue // .agents/notes/AGENTS.md
+  const folder = parts[2]
   if (!LIFECYCLE.has(folder)) {
     errors.push(`${rel}: note outside a lifecycle folder (proposed/implemented/rejected)`)
     continue

@@ -12,7 +12,7 @@
 - Every meaningful change must be typechecked, built, tested, integration-verified, and package-verified in proportion to its risk.
 - Static checks that apply to a package family must discover matching packages automatically; adding a package must not require updating a separate checker allowlist.
 - Preserve the Host/Client boundary. Cross it only with Nook-owned JSON-safe DTOs; never transfer Cordis contexts, services, React elements, Sessions, or arbitrary runtime objects.
-- Follow [docs/AGENTS.md](docs/AGENTS.md) for documentation: current state lives in `docs/`, decisions as Agent Notes under `.notes/` per [.notes/AGENTS.md](.notes/AGENTS.md); every non-trivial change adds or updates one note in the same change.
+- Follow [docs/AGENTS.md](docs/AGENTS.md) for documentation: current state lives in `docs/`, decisions as Agent Notes under `.agents/notes/` per [.agents/notes/AGENTS.md](.agents/notes/AGENTS.md); every non-trivial change adds or updates one note in the same change.
 - Follow `.agents/skills/dsh-plugin-development/SKILL.md` for DSH work.
 - Organize `packages/ui-*` code using the lightweight [UI package standard](docs/ui-packages.md).
 - For DSH release upgrades, follow [dsh-upgrade](.agents/skills/dsh-upgrade/SKILL.md) and update its version-scoped lessons with newly verified migration problems in the same change.
