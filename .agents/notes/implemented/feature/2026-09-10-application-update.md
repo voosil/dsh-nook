@@ -38,7 +38,7 @@ Status: implemented
 
 一次手动启动完成更新器引导。更新速度取决于本机工具链与网络，日志和快照占用磁盘且不自动回收。broker 保持当前协议直到所有入口退出；后续启动使用候选版本携带的 broker。协议不兼容候选在准备阶段失败。干净安装门禁同时要求消费 RPC 包的 UI 传递必要 Host peer；知识 UI 补齐其 Adapter 的 system-prompt peer 声明。
 
-[Gateway 测试](../../../../tests/contract/update.test.ts)验证固定命令、输入校验和生命周期退出。[备份测试](../../../../tests/desktop/update.test.ts)验证配置与 SQLite 恢复、备份失败和成功版本记录。[共享 broker 集成测试](../../../../tests/integration/update.test.ts)验证两条入口连接、更新后再次启动和候选迁移失败恢复。正式发布继续经过 Profile 与干净打包门禁。
+[Gateway 测试](../../../../tests/integration/update/update.test.ts)验证固定命令、输入校验和生命周期退出。[备份测试](../../../../tests/integration/desktop/update.test.ts)验证配置与 SQLite 恢复、备份失败和成功版本记录。[共享 broker 集成测试](../../../../tests/integration/update/update.test.ts)验证两条入口连接、更新后再次启动和候选迁移失败恢复。正式发布继续经过 Profile 与干净打包门禁。
 
 macOS 验收还覆盖真实候选打包与完整 Harness 备份恢复，以及浏览器点击检查、更新、自动刷新和更新前笔记保留。常规回归为 118 项通过、3 项平台条件跳过；Windows 原生更新流程需要对应设备验收。
 

@@ -22,7 +22,7 @@ async function supervise() {
   if (config.updateValidating) env.NOOK_UPDATE_VALIDATING = '1'
   else delete env.NOOK_UPDATE_VALIDATING
   let child: ChildProcess | undefined
-  let release: (() => void) | undefined
+  let release: ((() => void) & { fd?: number }) | undefined
   let stopping: Promise<void> | undefined
   let ready = false
   let job: ReturnType<typeof windowsJob> | undefined
@@ -113,7 +113,12 @@ async function supervise() {
         env,
         detached: true,
         windowsHide: true,
-        stdio: process.platform === 'win32' ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe'],
+        // POSIX flock follows the inherited open file description, keeping
+        // backups excluded while an orphaned Host still uses this data.
+        stdio:
+          process.platform === 'win32'
+            ? ['ignore', 'pipe', 'pipe', 'ipc']
+            : ['ignore', 'pipe', 'pipe', ...(release?.fd === undefined ? [] : [release.fd])],
       },
     )
     if (child.pid && job) {

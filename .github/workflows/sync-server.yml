@@ -44,10 +44,10 @@ jobs:
             echo 'Release tag and image version differ' >&2
             exit 1
           fi
-          python3 tests/sync-server/test_setup.py
+          python3 scripts/test/python.py tests/integration/sync-server/posix
           docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "nook-sync:$VERSION" scripts/sync-server
       - name: Verify real Compose lifecycle
-        run: python3 tests/sync-server/verify_docker.py
+        run: python3 scripts/test/python.py tests/e2e/sync-server/docker
       - name: Publish verified architecture
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}

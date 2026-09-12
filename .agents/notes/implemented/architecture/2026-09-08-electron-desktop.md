@@ -91,7 +91,7 @@ CLI 输出解析与日志分离，完整 token URL 只交给受限窗口完成�
 
 ## Consequences
 
-构建、类型、契约、集成、边界、peer、独立 tarball 安装和 Web 开发模式验证覆盖共用流水线。[真实打包窗口门禁](../../../../scripts/verify/verify-desktop.mjs)搬移 `.app` 到包含中文与空格的目录，使用不含开发工具的 PATH，覆盖 cookie、RPC、笔记持久化、备份、第二次启动、资源损坏后重试和退出清理。[生命周期测试](../../../../tests/integration/desktop-runtime.test.ts)覆盖重复停止和父进程崩溃，[安装测试](../../../../tests/desktop/payload.test.ts)覆盖数据和 patch 保留、损坏与越界链接。
+构建、类型、契约、集成、边界、peer、独立 tarball 安装和 Web 开发模式验证覆盖共用流水线。[真实打包窗口门禁](../../../../tests/e2e/distribution/desktop/lifecycle.test.mjs)搬移 `.app` 到包含中文与空格的目录，使用不含开发工具的 PATH，覆盖 cookie、RPC、笔记持久化、备份、第二次启动、资源损坏后重试和退出清理。[生命周期测试](../../../../tests/integration/desktop/desktop-runtime.test.ts)覆盖重复停止和父进程崩溃，[安装测试](../../../../tests/integration/desktop/payload.test.ts)覆盖数据和 patch 保留、损坏与越界链接。
 
 本机两轮打包窗口验收测得首次启动约 31–41 秒、再次启动约 9 秒；这包含安装或完整性校验，是单机观测，不是跨设备性能承诺。独立 Node 与版本目录保留增加磁盘占用，完整校验增加冷启动 I/O；不以跳过校验或自动删除用户数据换取速度。缓存优化、增量安装和历史版本清理需要各自的恢复与中断验收。
 

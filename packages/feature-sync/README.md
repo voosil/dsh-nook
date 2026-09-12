@@ -34,7 +34,7 @@
 
 非本机地址要求 HTTPS；可在“服务器 CA 证书”中填写部署工具生成的公共 CA 证书，该信任仅用于当前同步连接，仍校验主机名、证书链与有效期，不修改系统信任或关闭证书验证。公开可信证书保留此字段为空。认证使用 Basic 用户名和存储密码／令牌，不支持 Digest、交互式 OAuth 或重定向。同步目录的上级目录须预先存在。WebDAV 服务或代理配置更改后应重新验证，有限探测不能证明服务在所有负载下的行为。
 
-[独立服务测试](../../tests/helpers/apache-webdav.mjs)使用 macOS Apache 2.4.62、mod_dav_fs、prefork 单工作进程与关闭 KeepAlive 的隔离配置。该测试只监听回环地址；公网部署需自行配置 HTTPS、认证、权限及同等写入串行性。不能从此测试推断多工作进程、NAS 或网盘配置兼容。WsgiDAV 4.3.5 的文件 Provider 在实测中对同一秒内的等长更新复用 ETag，未通过验证，不列为可用目标。其他实际存储服务的兼容性为 UNKNOWN。
+[独立服务测试](../../tests/helpers/services/apache-webdav.mjs)使用 macOS Apache 2.4.62、mod_dav_fs、prefork 单工作进程与关闭 KeepAlive 的隔离配置。该测试只监听回环地址；公网部署需自行配置 HTTPS、认证、权限及同等写入串行性。不能从此测试推断多工作进程、NAS 或网盘配置兼容。WsgiDAV 4.3.5 的文件 Provider 在实测中对同一秒内的等长更新复用 ETag，未通过验证，不列为可用目标。其他实际存储服务的兼容性为 UNKNOWN。
 
 ## 通用协议与扩展
 

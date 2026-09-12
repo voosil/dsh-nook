@@ -51,17 +51,17 @@ sudo systemctl status nook-sync-renew.timer
 
 ## 验证范围
 
-[纯逻辑测试](../../tests/sync-server/test_setup.py)覆盖模式校验、参数注入拒绝、文件权限、备份失败和占用端口保护。[Linux 验收程序](../../tests/sync-server/verify_linux.py)在一次性容器中运行真实 Apache、OpenSSL、认证和 HTTPS 并发探测，覆盖三种输入模式、重复执行、目标变更拒绝及私有证书更新。
+[纯逻辑测试](../../tests/integration/sync-server/posix/test_setup.py)覆盖模式校验、参数注入拒绝、文件权限、备份失败和占用端口保护。[Linux 验收程序](../../tests/fixtures/sync-server/linux.py)在一次性容器中运行真实 Apache、OpenSSL、认证和 HTTPS 并发探测，覆盖三种输入模式、重复执行、目标变更拒绝及私有证书更新。
 
 容器不运行 systemd，也不持有可签发的公网域名，因此验收替代 systemctl 激活和 Certbot 公网签发调用；真实网络请求、TLS、密码文件与 Apache 配置不模拟。公网签发成功及宿主机开机启动需在实际服务器验收，工具会在失败时停止并报告，不能把测试替代当成已签发公网证书。
 
-生成的服务与定时器通过 `systemd-analyze verify` 校验。Linux 验收结束后保留一个仅供测试的 HTTPS 服务；把容器中的 `/tmp/nook-test-client.json` 复制出来，可在仓库运行 `node --import tsx tests/sync-server/verify_client.ts /tmp/nook-test-client.json`。该验收只接受固定的本机测试地址，使用真实 Nook Adapter 检查私有 CA、两个副本并发编辑、冲突解决及最终一致性。回执含测试密码，完成后随一次性容器一起清理。
+生成的服务与定时器通过 `systemd-analyze verify` 校验。Linux 验收结束后保留一个仅供测试的 HTTPS 服务；把容器中的 `/tmp/nook-test-client.json` 复制出来，可在仓库运行 `node --import tsx tests/fixtures/sync-server/client.ts /tmp/nook-test-client.json`。该验收只接受固定的本机测试地址，使用真实 Nook Adapter 检查私有 CA、两个副本并发编辑、冲突解决及最终一致性。回执含测试密码，完成后随一次性容器一起清理。
 
 公开证书调用依据 [Certbot standalone 文档](https://eff-certbot.readthedocs.io/en/stable/using.html#standalone)，独立服务配置依据 [Apache WebDAV](https://httpd.apache.org/docs/2.4/mod/mod_dav.html) 与 [prefork](https://httpd.apache.org/docs/2.4/mod/prefork.html)。
 
 ## 安装助手约束
 
-修改 [assistant.py](assistant.py) 时保留目标地址与数据卷身份：助手回执和证书绑定原 Tailscale IPv4，地址变化时停止；缺失身份不自动改证书、迁移同步库或重置客户端。每个卷只能有一个服务写入。依赖安装复用已有 Docker/Tailscale，不卸载冲突运行时。支持矩阵与安装分支以源码及[依赖验收](../../tests/sync-server/verify_dependencies.py)为准。
+修改 [assistant.py](assistant.py) 时保留目标地址与数据卷身份：助手回执和证书绑定原 Tailscale IPv4，地址变化时停止；缺失身份不自动改证书、迁移同步库或重置客户端。每个卷只能有一个服务写入。依赖安装复用已有 Docker/Tailscale，不卸载冲突运行时。支持矩阵与安装分支以源码及[依赖验收](../../tests/integration/sync-server/linux/test_dependencies.py)为准。
 
 systemd 等待 Docker、Tailscale 和原地址后启动服务；容器重启策略不能替代宿主机的启动顺序。备份停止服务并只读归档数据卷，逐文件比对 SHA-256 后恢复服务。备份包含私钥与密码；恢复使用独立新卷，不覆盖运行卷。程序更新前验证备份，程序选择失败只回退程序，不自动用备份覆盖业务数据。
 
@@ -69,4 +69,4 @@ systemd 等待 Docker、Tailscale 和原地址后启动服务；容器重启策�
 
 [发布工作流](../../.github/workflows/sync-assistant.yml)在原生双架构验收后创建 Release，并验证匿名下载与校验值；手动触发只验证。工作区打包成功不证明安装地址已公开可用。交付命令前检查对应发布结果；Agent 部署流程由[随包技能](../../packages/feature-agent/skills/nook-sync-deploy/SKILL.md)承载，不在此复制。
 
-[助手验收](../../tests/sync-server/verify_assistant.py)使用一次性卷验证镜像、备份恢复和重建；[入口验收](../../tests/sync-server/verify_bootstrap.py)验证校验失败不执行代码。容器中替代的 Tailscale 身份、systemd 和软件安装调用不能证明真实授权、跨网络连接或物理机重启成功，宿主服务单元另用 `systemd-analyze verify` 检查。
+[助手验收](../../tests/integration/sync-server/docker/test_assistant.py)使用一次性卷验证镜像、备份恢复和重建；[入口验收](../../tests/fixtures/sync-server/bootstrap.py)验证校验失败不执行代码。容器中替代的 Tailscale 身份、systemd 和软件安装调用不能证明真实授权、跨网络连接或物理机重启成功，宿主服务单元另用 `systemd-analyze verify` 检查。

@@ -12,7 +12,7 @@ Status: implemented
 
 macOS broker 使用仅当前用户可访问的 Unix socket 传递启动 URL、日志和连接释放消息；Windows 使用命名管道。连接地址由正式根目录的指纹派生，避免 macOS 的 socket 路径长度限制。标准 Node 的原生文件锁决定唯一 broker，进程退出由内核释放锁；取得锁的进程才能清理自己的旧 Unix socket。数据备份锁继续由 DSH 监督进程持有。
 
-broker 的私有文件使用限制性 umask。macOS 复制符号链接时，其 inode 权限随 umask 改变，不能作为运行时完整性的稳定依据；清单对链接记录目标字符串，对普通文件和目录保留实际执行权限检查，并继续拒绝越界链接。限制性 umask 下的复制与校验由[运行时安装回归测试](../../../../tests/desktop/payload.test.ts)覆盖。
+broker 的私有文件使用限制性 umask。macOS 复制符号链接时，其 inode 权限随 umask 改变，不能作为运行时完整性的稳定依据；清单对链接记录目标字符串，对普通文件和目录保留实际执行权限检查，并继续拒绝越界链接。限制性 umask 下的复制与校验由[运行时安装回归测试](../../../../tests/integration/desktop/payload.test.ts)覆盖。
 
 每个入口持有独立连接。普通退出释放该连接；入口崩溃也会关闭 socket。最后一个连接结束才停止后端，因此首次启动它的入口退出不会影响其他入口。broker 与 DSH 之间保留独立监督进程的 IPC，broker 退出也触发进程组清理。目录安装及服务启动可取消，最后一次释放等待后端退出。
 
@@ -44,4 +44,4 @@ broker 的私有文件使用限制性 umask。macOS 复制符号链接时，其 
 
 创建新后端需要准备或校验运行时快照，加入现有后端只建立连接。桌面连接复用当前后端；源码入口每次完成构建、打包和安装后停止旧后端，在指定端口启动当前工作区，默认固定 3081。停止动作后置，准备失败不影响旧服务；既有连接和任务在切换时中断。历史成功更新记录不覆盖源码选择。[应用更新](../feature/2026-09-10-application-update.md)仍可在运行期间统一切换后端。两个前端的页面状态各自独立，数据共享不等于即时同步尚未保存的编辑。
 
-[迁移测试](../../../../tests/contract/migration.test.ts)覆盖双向数据保留、FTS、回收站、项目、冲突与中断继续。[共享生命周期测试](../../../../tests/integration/shared-runtime.test.ts)覆盖竞争启动、单后端复用、独立退出和再次启动。[真实窗口验收](../../../../scripts/verify/verify-desktop.mjs)在搬移后的应用和真实浏览器中验证同一笔记及后端地址。[开发模式验收](../../../../tests/e2e/dev-modes.test.ts)使用临时仓库及显式临时正式目录，避免触碰用户数据。
+[迁移测试](../../../../tests/integration/backup/migration.test.ts)覆盖双向数据保留、FTS、回收站、项目、冲突与中断继续。[共享生命周期测试](../../../../tests/integration/runtime/shared-runtime.test.ts)覆盖竞争启动、单后端复用、独立退出和再次启动。[真实窗口验收](../../../../tests/e2e/distribution/desktop/lifecycle.test.mjs)在搬移后的应用和真实浏览器中验证同一笔记及后端地址。[开发模式验收](../../../../tests/e2e/runtime/dev-modes.test.ts)使用临时仓库及显式临时正式目录，避免触碰用户数据。

@@ -16,4 +16,4 @@
 
 调用只传递 Nook 的 JSON-safe 版本 DTO；Automerge 文档不越过 Adapter 边界。取消请求终止 Worker 及其正在计算的批次，其他调用自动排入新 Worker，原始版本保留供重试；Notebook 卸载终止 Worker 并撤销监听。普通单分支保存不触发 CRDT 重放。
 
-`updateText` 是上游实验性接口，限于本 Adapter，使用固定依赖和[收敛测试](../../tests/contract/auto-merge.test.ts)约束。文本操作从保存快照推导，合并结果可能不符合原始编辑意图；原始版本永久保留用于恢复。
+`updateText` 是上游实验性接口，限于本 Adapter，使用固定依赖和[收敛测试](../../tests/integration/sync/auto-merge.test.ts)约束。文本操作从保存快照推导，合并结果可能不符合原始编辑意图；原始版本永久保留用于恢复。

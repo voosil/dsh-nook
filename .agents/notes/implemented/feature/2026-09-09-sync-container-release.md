@@ -8,7 +8,7 @@ Status: implemented
 
 ## Decision
 
-[发布工作流](../../../../.github/workflows/sync-server.yml)由独立版本标签或专用发布分支触发，使用原生 amd64 和 arm64 runner 分别构建与执行 [Compose 验收](../../../../tests/sync-server/verify_docker.py)，验证成功才推送架构镜像并合成固定版本清单。Actions 使用短期 GITHUB_TOKEN 的 packages:write 权限，源码通过 OCI source 标签关联仓库。版本清单不覆盖已有版本；工作流按仓库串行发布，失败可定位到具体架构。
+[发布工作流](../../../../.github/workflows/sync-server.yml)由独立版本标签或专用发布分支触发，使用原生 amd64 和 arm64 runner 分别构建与执行 [Compose 验收](../../../../tests/e2e/sync-server/docker/test_compose.py)，验证成功才推送架构镜像并合成固定版本清单。Actions 使用短期 GITHUB_TOKEN 的 packages:write 权限，源码通过 OCI source 标签关联仓库。版本清单不覆盖已有版本；工作流按仓库串行发布，失败可定位到具体架构。
 
 发布所需源文件可以在隔离检出中形成专门的版本提交；当前工作区的其他未提交产品改动不因镜像发布而自动提交。容器只复制明确列出的服务源文件，不包含本地配置、凭据或数据。部署方式和版本由 [Docker 部署说明](../../../../scripts/sync-server/DOCKER.md)承载。
 

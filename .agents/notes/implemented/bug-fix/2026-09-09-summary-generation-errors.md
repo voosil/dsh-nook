@@ -26,7 +26,7 @@ Generation 请求接受 Nook 自有字符串 `sessionId`，适配器把它传入
 
 ## Validation
 
-[智能流程测试](../../../../tests/contract/intelligence.test.ts)通过真实 DSH LLM Runtime、测试模型适配器、总结 Feature 和严格 Gateway 验证失败提示、HTTP 状态回退、目录读取失败、不完整输出拒绝、取消、重试成功以及原笔记与数量不变。测试模型不访问外部服务，不能证明用户所选模型的实际可用性。
+[智能流程测试](../../../../tests/integration/intelligence/intelligence.test.ts)通过真实 DSH LLM Runtime、测试模型适配器、总结 Feature 和严格 Gateway 验证失败提示、HTTP 状态回退、目录读取失败、不完整输出拒绝、取消、重试成功以及原笔记与数量不变。测试模型不访问外部服务，不能证明用户所选模型的实际可用性。
 
 同一回归测试验证所有生成请求带会话标识、分批总结共享标识、独立总结相互隔离，以及调用方标识透传。在线验收只使用临时数据库中由助手编写的合成笔记，不读取用户笔记。
 

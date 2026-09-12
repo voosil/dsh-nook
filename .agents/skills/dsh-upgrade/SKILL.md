@@ -17,7 +17,7 @@ Apply the [DSH development workflow](../dsh-plugin-development/SKILL.md). Read t
 
 ## Verification and reporting
 
-Run the repository's current typecheck/build, contract tests, Provider integrations, full Profile composition, real-browser acceptance, peer and boundary checks, and clean packed-install gate. Consult [package scripts](../../../package.json) for the current commands. Compiler success alone does not prove browser service activation, authentication or module compatibility. Validate both development and non-watching launch modes when their contracts change.
+Follow the [test rules](../../../tests/AGENTS.md) and current [command semantics](../../../docs/development.md#verification): run `pnpm verify`, then the independent `pnpm verify:package` gate and affected platform acceptance. Source e2e includes Profile and Safe UI; composition dumps are diagnostic only. Compiler success alone does not prove browser service activation, authentication or module compatibility. Validate both development and non-watching launch modes when their contracts change.
 
 Update the owning Agent Note, shared discovery baseline and affected package contracts with the verified target and remaining `UNKNOWN` items in their respective homes. Report failures as failures; a blocked browser or package gate is not a completed upgrade. Redact tokens, cookies and credentials in diagnostics and notes.
 

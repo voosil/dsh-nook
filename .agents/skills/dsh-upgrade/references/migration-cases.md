@@ -28,7 +28,7 @@ Cause: readiness URLs include a process token. Stripping the query loses the tok
 
 Resolution: parse the complete readiness URL, exchange it with redirects disabled, verify HTTP 303 and the cookie, and request the clean origin with that cookie. Browser acceptance navigates to the complete launch URL. Return only the clean origin in reports and redact tokens from failure logs. Keep authentication enabled.
 
-Evidence: [official frontend acceptance](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.3-alpha.2/packages/host/frontend-static/tests/frontend-static.spec.ts), [Nook runtime acceptance](../../../../scripts/verify/runtime-verify.mjs). `node --import tsx --test tests/e2e/profile-boot.test.ts` passes both full and Safe UI boots; `pnpm verify:package` passes all 29 packed packages and the notebook workflow.
+Evidence: [official frontend acceptance](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.3-alpha.2/packages/host/frontend-static/tests/frontend-static.spec.ts), [Nook authentication acceptance](../../../../tests/helpers/scenarios/authentication.mjs), [Profile cases](../../../../tests/e2e/profile/profile-boot.test.ts). The migration verified both full and Safe UI boots and all 29 then-published packages through `pnpm verify:package`. Current grouping and platform reporting follow the [test rules](../../../../tests/AGENTS.md).
 
 ## pnpm 12.1.0: explicitly selected fresh prereleases
 

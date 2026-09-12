@@ -26,7 +26,7 @@ Client plugins use public Cordis `Context` and renderer types. The closure loads
 
 Client Slots use `ctx.slots.inject(...)` and `ctx.slots.register(...)` with lifecycle cleanup. `shell.overlay` is a root list with a non-interactive container; interactive contributions set their own pointer events. `sidebar.footer.action` is a root list with `wide`; `conversation.session.header.actions` is a session list with `sessionId` and the session kit.
 
-Remote services require `ctx.remote.$mount({ package, descriptors })` followed by injection of the traced `remote.<namespace>` service. Host `ctx.typert.register` runs in a lifecycle effect; Gateway calls require a visible `TypertRemoteService`, matching named parameters, the final cancellation signal and validated request/return schemas. Use the official authenticated connection. [Gateway tests](../tests/contract/notebook.test.ts) and [browser acceptance](../scripts/verify/notebook-smoke.mjs) cover this boundary.
+Remote services require `ctx.remote.$mount({ package, descriptors })` followed by injection of the traced `remote.<namespace>` service. Host `ctx.typert.register` runs in a lifecycle effect; Gateway calls require a visible `TypertRemoteService`, matching named parameters, the final cancellation signal and validated request/return schemas. Use the official authenticated connection. [Gateway tests](../tests/integration/notes/rpc.test.ts) and [browser acceptance](../tests/helpers/scenarios/notebook.mjs) cover this boundary.
 
 ## Client hot reload
 

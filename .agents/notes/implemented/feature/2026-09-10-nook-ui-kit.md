@@ -25,7 +25,7 @@ Nook 的 UI 此前散落四处且互相独立实现按钮/弹窗/菜单/提示�
 - 迁移即清理：删除 ui-notes 本地 `button.tsx` / `action-menu.tsx` / `export-toast.tsx`，`index.css` 删除全部被 kit 覆盖的组件样式块（按钮/输入全局重置、`.nook-modal` 弹窗、`.nook-action-menu`、`.nook-export-toast`、`.nook-sync-tabs` 等），保留布局/响应式/tiptap 内容样式并把颜色全部换成 token。
 - 消费端接线：ui-sidebar / ui-project / ui-knowledge 依赖 `workspace:*` 并补 `react-dom` peer（base-ui portal 需要它）；根 tsconfig `references` 与 `scripts/profile/profile-lib.mjs` 的 `LOCAL_PACKAGES` 登记 ui-kit。
 
-参考 [UI 系统草稿](../../wip/UI-system.md)，交互时长、按钮层级与弹层定位由 kit 统一。按压不缩放；secondary 用浅灰绿填充建立可辨识的操作区域，不显示描边；删除页面全局按钮重置以保护主按钮对比度。同步弹窗布局决策见[同步设置](../simplification/2026-09-09-sync-settings-layout.md)。
+参考 UI 系统草稿（历史草稿未纳入当前仓库），交互时长、按钮层级与弹层定位由 kit 统一。按压不缩放；secondary 用浅灰绿填充建立可辨识的操作区域，不显示描边；删除页面全局按钮重置以保护主按钮对比度。同步弹窗布局决策见[同步设置](../simplification/2026-09-09-sync-settings-layout.md)。
 
 ## Alternatives considered
 

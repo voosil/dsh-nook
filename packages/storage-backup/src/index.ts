@@ -13,10 +13,11 @@ import {
   readdirSync,
   readSync,
   realpathSync,
-  rmdirSync,
+  renameSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { durableRename, syncPath } from './durability.js'
@@ -309,30 +310,56 @@ export function restoreBackup(directory: string, target: string): BackupManifest
   return manifest
 }
 
-/** Coordinate repository launchers and offline backups. A crash leaves a fail-closed lock. */
-export function acquireDataLock(source: string): () => void {
+export type DataLock = (() => void) & { readonly fd: number }
+
+/** Coordinate launchers and offline backups with a crash-released OS lock. */
+export function acquireDataLock(source: string): DataLock {
   const lock = `${physicalPath(source)}.lock`
-  mkdirSync(dirname(lock), { recursive: true, mode: 0o700 })
+  mkdirSync(lock, { recursive: true, mode: 0o700 })
+  const { flockSync } = createRequire(import.meta.url)('fs-ext') as {
+    flockSync(fd: number, operation: string): void
+  }
+  const fd = openSync(join(lock, 'lease'), constants.O_CREAT | constants.O_RDWR | constants.O_NOFOLLOW, 0o600)
   try {
-    mkdirSync(lock, { mode: 0o700 })
+    flockSync(fd, 'exnb')
   } catch (error) {
-    throw new Error(`Nook data is locked: ${lock}. Stop Nook before backup; inspect owner.json after a crash.`, {
+    closeSync(fd)
+    if (!['EAGAIN', 'EWOULDBLOCK'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error
+    throw new Error(`Nook data is locked by a running process: ${lock}. Stop Nook before backup.`, {
       cause: error,
     })
   }
   try {
-    durableWrite(join(lock, 'owner.json'), JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }))
+    // One-time compatibility with the old directory-lock protocol. Never evict
+    // a known live old supervisor or discard the evidence used for recovery.
+    const ownerPath = join(lock, 'owner.json')
+    if (existsSync(ownerPath)) {
+      const owner = JSON.parse(readFileSync(ownerPath, 'utf8')) as { pid?: number }
+      if (!Number.isSafeInteger(owner?.pid) || owner.pid! <= 0)
+        throw new Error(`Cannot verify legacy Nook lock owner: ${ownerPath}`)
+      let dead = false
+      try {
+        process.kill(owner.pid!, 0)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ESRCH') dead = true
+        else throw error
+      }
+      if (!dead) throw new Error(`Nook data is locked by legacy process ${owner.pid}: ${lock}. Stop it first.`)
+      renameSync(ownerPath, join(lock, `legacy-owner-${randomUUID()}.json`))
+    }
   } catch (error) {
-    // This directory contains coordination metadata only, never user data.
-    if (existsSync(join(lock, 'owner.json'))) unlinkSync(join(lock, 'owner.json'))
-    rmdirSync(lock)
+    closeSync(fd)
     throw error
   }
   let released = false
-  return () => {
-    if (released) return
-    unlinkSync(join(lock, 'owner.json'))
-    rmdirSync(lock)
-    released = true
-  }
+  return Object.assign(
+    () => {
+      if (released) return
+      released = true
+      // Do not unlink the lease or explicitly unlock it: a POSIX Host inherits
+      // this descriptor and must retain exclusion if its supervisor dies first.
+      closeSync(fd)
+    },
+    { fd },
+  )
 }

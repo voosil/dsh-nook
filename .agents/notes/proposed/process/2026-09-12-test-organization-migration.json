@@ -1,0 +1,1265 @@
+{
+  "baseline": "Working tree snapshot before migration, including uncommitted edits",
+  "mapping": [
+    {
+      "from": "tests/contract/notebook.test.ts",
+      "to": "tests/integration/notes/persistence.test.ts",
+      "tests": [
+        "test('notes persist, search Chinese, enforce revisions, and atomically update/remove/restore knowledge', async () => {"
+      ],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/notebook.test.ts",
+      "to": "tests/integration/notes/rpc.test.ts",
+      "tests": [
+        "test('strict DSH Gateway invokes Nook DTOs, rejects malformed calls, and withdraws with plugin', async () => {"
+      ],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/notebook.test.ts",
+      "to": "tests/unit/notes/autosave.test.ts",
+      "tests": ["test('autosave serializes overlapping edits and preserves unsaved input on failure', async () => {"],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/notebook.test.ts",
+      "to": "tests/integration/projects/order.test.ts",
+      "tests": ["for (const integrated of [false, true]) {"],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/project-feature.test.ts",
+      "to": "tests/unit/projects/feature.test.ts",
+      "tests": ["test('feature consumes the project capability and survives remount', async () => {"],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/project-feature.test.ts",
+      "to": "tests/integration/projects/provider.test.ts",
+      "tests": ["test('local project provider persists across unmount and remount', async () => {"],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/corepack-command.test.ts",
+      "to": "tests/integration/runtime/process-scope.test.ts",
+      "tests": ["test("],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/corepack-command.test.ts",
+      "to": "tests/unit/runtime/corepack-command.test.ts",
+      "tests": ["test('Unix retains the Corepack executable and pinned arguments', () => {"],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/corepack-command.test.ts",
+      "to": "tests/integration/runtime/corepack-command.test.ts",
+      "tests": [
+        "test('Windows launches the declared CLI with literal arguments and paths containing spaces', async () => {"
+      ],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/desktop/policy.test.ts",
+      "to": "tests/unit/desktop/policy.test.ts",
+      "tests": [
+        "test('authenticated launch URL parser rejects alternate authorities, paths and credentials', () => {",
+        "test('line buffering redacts tokens across every chunk split and bounds unterminated output', () => {"
+      ],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/desktop/policy.test.ts",
+      "to": "tests/integration/desktop/home-isolation.test.ts",
+      "tests": ["test('real DSH home aliases are refused', async () => {"],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/sync-server.test.ts",
+      "to": "tests/integration/sync-server/artifacts.test.ts",
+      "tests": [
+        "test('embedded one-line installer contains the exact downloadable source without shell interpolation', async () => {",
+        "test('assistant pins the complete bootstrap/source/archive/image chain', async () => {",
+        "test('downloaded Docker archive contains exact allowlisted build sources and no local credentials', async () => {"
+      ],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/sync-server.test.ts",
+      "to": "tests/unit/sync/connection.test.ts",
+      "tests": [
+        "test('portable connection accepts versioned and legacy exports without leaking malformed secrets', () => {"
+      ],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/sync-server.test.ts",
+      "to": "tests/integration/sync-server/posix",
+      "tests": ["Python wrapper removed; original Python cases are discovered directly once."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/sync-onboarding.test.ts",
+      "to": "tests/unit/sync/onboarding.test.ts",
+      "tests": ["test('deployment starts a fresh draft through public controllers without sending', async () => {"],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/sync-onboarding.test.ts",
+      "to": "tests/integration/sync-server/line-endings.test.ts",
+      "tests": [
+        "test('CRLF deployment inputs produce the same archive and published checksum chain as LF', async () => {"
+      ],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/agent-lifecycle.test.ts",
+      "to": "tests/unit/agent/agent-lifecycle.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/autosave-schedule.test.ts",
+      "to": "tests/unit/notes/autosave-schedule.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/note-history.test.ts",
+      "to": "tests/unit/notes/note-history.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/notes-list-deletion.test.ts",
+      "to": "tests/unit/notes/notes-list-deletion.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/notes-markdown.test.ts",
+      "to": "tests/unit/notes/notes-markdown.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/preview-feature.test.ts",
+      "to": "tests/unit/preview/preview-feature.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/refinement.test.ts",
+      "to": "tests/unit/refinement/refinement.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/tasks.test.ts",
+      "to": "tests/unit/tasks/tasks.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/run-profile.test.ts",
+      "to": "tests/unit/runtime/run-profile.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/artifact-provider.test.ts",
+      "to": "tests/integration/artifacts/artifact-provider.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/auto-merge.test.ts",
+      "to": "tests/integration/sync/auto-merge.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/sync.test.ts",
+      "to": "tests/integration/sync/sync.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/sync-epochs.test.ts",
+      "to": "tests/integration/sync/sync-epochs.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/backup.test.ts",
+      "to": "tests/integration/backup/backup.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/migration.test.ts",
+      "to": "tests/integration/backup/migration.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/client-bundle.test.ts",
+      "to": "tests/integration/client/client-bundle.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/intelligence.test.ts",
+      "to": "tests/integration/intelligence/intelligence.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/update.test.ts",
+      "to": "tests/integration/update/update.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/contract/web-port.test.ts",
+      "to": "tests/integration/runtime/web-port.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/desktop/note-export.test.ts",
+      "to": "tests/integration/desktop/note-export.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/desktop/payload.test.ts",
+      "to": "tests/integration/desktop/payload.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/desktop/update.test.ts",
+      "to": "tests/integration/desktop/update.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/browser-provider.test.ts",
+      "to": "tests/integration/browser/browser-provider.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/data-backup.test.ts",
+      "to": "tests/integration/backup/data-backup.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/desktop-runtime.test.ts",
+      "to": "tests/integration/desktop/desktop-runtime.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/dev-lock.test.ts",
+      "to": "tests/integration/runtime/dev-lock.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/dev-seed.test.ts",
+      "to": "tests/integration/runtime/dev-seed.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/dev-startup.test.ts",
+      "to": "tests/integration/runtime/dev-startup.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/dev-watch.test.ts",
+      "to": "tests/integration/runtime/dev-watch.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/release-port.test.ts",
+      "to": "tests/integration/runtime/release-port.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/shared-runtime.test.ts",
+      "to": "tests/integration/runtime/shared-runtime.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/sync-onboarding.test.ts",
+      "to": "tests/integration/sync/sync-onboarding.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/task-execution.test.ts",
+      "to": "tests/integration/tasks/task-execution.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/task-rpc.test.ts",
+      "to": "tests/integration/tasks/task-rpc.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/task-system.test.ts",
+      "to": "tests/integration/tasks/task-system.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/update-worktree.test.ts",
+      "to": "tests/integration/update/update-worktree.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/update.test.ts",
+      "to": "tests/integration/update/update.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/integration/webdav-sync.test.ts",
+      "to": "tests/integration/sync/webdav-sync.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["local Node/tsx"]
+    },
+    {
+      "from": "tests/e2e/dev-data.test.ts",
+      "to": "tests/e2e/runtime/dev-data.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["linked source Profile"]
+    },
+    {
+      "from": "tests/e2e/dev-modes.test.ts",
+      "to": "tests/e2e/runtime/dev-modes.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["linked source Profile"]
+    },
+    {
+      "from": "tests/e2e/notes-empty-list-item.test.ts",
+      "to": "tests/e2e/notes/notes-empty-list-item.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["linked source Profile"]
+    },
+    {
+      "from": "tests/e2e/notes-ime.test.ts",
+      "to": "tests/component/notes/notes-ime.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["isolated browser component"]
+    },
+    {
+      "from": "tests/e2e/notes-list-deletion.test.ts",
+      "to": "tests/e2e/notes/notes-list-deletion.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["linked source Profile"]
+    },
+    {
+      "from": "tests/e2e/notes-list-numbering.test.ts",
+      "to": "tests/e2e/notes/notes-list-numbering.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["linked source Profile"]
+    },
+    {
+      "from": "tests/e2e/notes-navigation.test.ts",
+      "to": "tests/e2e/notes/notes-navigation.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["linked source Profile"]
+    },
+    {
+      "from": "tests/e2e/profile-boot.test.ts",
+      "to": "tests/e2e/profile/profile-boot.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["linked source Profile"]
+    },
+    {
+      "from": "tests/e2e/theme-scrollbar.test.ts",
+      "to": "tests/e2e/notes/theme-scrollbar.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["linked source Profile"]
+    },
+    {
+      "from": "tests/e2e/ui-kit.test.ts",
+      "to": "tests/component/ui-kit/ui-kit.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["isolated browser component"]
+    },
+    {
+      "from": "tests/e2e/update-worktree.test.ts",
+      "to": "tests/e2e/distribution/update/update-worktree.test.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["clean installed packages"]
+    },
+    {
+      "from": "tests/helpers/webdav.mjs",
+      "to": "tests/helpers/services/webdav.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "tests/helpers/apache-webdav.mjs",
+      "to": "tests/helpers/services/apache-webdav.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "tests/helpers/task-store.ts",
+      "to": "tests/helpers/services/task-store.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "tests/fixtures/notes-ime.tsx",
+      "to": "tests/fixtures/notes/ime.tsx",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "tests/fixtures/ui-kit.tsx",
+      "to": "tests/fixtures/ui-kit/controls.tsx",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "tests/sync-server/test_setup.py",
+      "to": "tests/integration/sync-server/posix/test_setup.py",
+      "tests": ["All existing cases retained."],
+      "environments": ["POSIX local"]
+    },
+    {
+      "from": "tests/sync-server/test_assistant.py",
+      "to": "tests/integration/sync-server/posix/test_assistant.py",
+      "tests": ["All existing cases retained."],
+      "environments": ["POSIX local"]
+    },
+    {
+      "from": "tests/sync-server/verify_assistant.py",
+      "to": "tests/integration/sync-server/docker/test_assistant.py",
+      "tests": ["All existing cases retained."],
+      "environments": ["Docker/Compose amd64", "Docker/Compose arm64"]
+    },
+    {
+      "from": "tests/sync-server/verify_dependencies.py",
+      "to": "tests/integration/sync-server/linux/test_dependencies.py",
+      "tests": ["All existing cases retained."],
+      "environments": ["Debian 12 container amd64/arm64", "Ubuntu 24.04 container amd64/arm64"]
+    },
+    {
+      "from": "tests/sync-server/verify_linux.py",
+      "to": "tests/fixtures/sync-server/linux.py",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "tests/sync-server/verify_bootstrap.py",
+      "to": "tests/fixtures/sync-server/bootstrap.py",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "tests/sync-server/verify_client.ts",
+      "to": "tests/fixtures/sync-server/client.ts",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "tests/sync-server/verify_docker.py",
+      "to": "tests/e2e/sync-server/docker/test_compose.py",
+      "tests": ["All existing cases retained."],
+      "environments": ["Docker/Compose amd64", "Docker/Compose arm64"]
+    },
+    {
+      "from": "scripts/verify/desktop-native-smoke.mjs",
+      "to": "tests/fixtures/desktop/native.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "scripts/verify/notebook-smoke.mjs",
+      "to": "tests/helpers/scenarios/notebook.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "scripts/verify/notebook-outcomes.mjs",
+      "to": "tests/helpers/scenarios/notebook-outcomes.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "scripts/verify/task-smoke.mjs",
+      "to": "tests/helpers/scenarios/tasks.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "scripts/verify/runtime-verify.mjs",
+      "to": "tests/helpers/runtime/web.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["called by explicit test owners"]
+    },
+    {
+      "from": "scripts/verify/verify-package.mjs",
+      "to": "tests/e2e/distribution/package/installation.test.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["clean installed packages"]
+    },
+    {
+      "from": "scripts/verify/verify-desktop.mjs",
+      "to": "tests/e2e/distribution/desktop/lifecycle.test.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["macOS arm64 packaged app"]
+    },
+    {
+      "from": "scripts/verify/verify-windows-start.mjs",
+      "to": "tests/e2e/distribution/windows/start.test.mjs",
+      "tests": ["All existing cases retained."],
+      "environments": ["Windows installed startup"]
+    },
+    {
+      "from": "tests/contract/sync-server.test.ts",
+      "to": "tests/integration/sync-server/posix/installer.test.ts",
+      "environments": ["POSIX with Python"],
+      "tests": ["embedded one-line installer contains the exact downloadable source without shell interpolation"]
+    },
+    {
+      "from": "scripts/verify/notebook-smoke.mjs",
+      "to": "tests/helpers/scenarios/notebook-settings.mjs",
+      "tests": ["settings navigation, appearance persistence and mobile layout"],
+      "environments": [
+        "linked source Profile",
+        "clean installed packages",
+        "Windows installed startup",
+        "macOS arm64 packaged app"
+      ]
+    },
+    {
+      "from": "scripts/verify/notebook-smoke.mjs",
+      "to": "tests/helpers/scenarios/notebook-concurrency.mjs",
+      "tests": ["independent windows merge and reload"],
+      "environments": [
+        "linked source Profile",
+        "clean installed packages",
+        "Windows installed startup",
+        "macOS arm64 packaged app"
+      ]
+    },
+    {
+      "from": "scripts/verify/notebook-smoke.mjs",
+      "to": "tests/helpers/scenarios/notebook-history.mjs",
+      "tests": ["history grouping, restored title/text and fresh-reader result"],
+      "environments": [
+        "linked source Profile",
+        "clean installed packages",
+        "Windows installed startup",
+        "macOS arm64 packaged app"
+      ]
+    },
+    {
+      "from": "scripts/verify/notebook-smoke.mjs",
+      "to": "tests/helpers/scenarios/notebook-lifecycle.mjs",
+      "tests": ["project order/rename/removal, autosave/reopen, export, trash/restore"],
+      "environments": [
+        "linked source Profile",
+        "clean installed packages",
+        "Windows installed startup",
+        "macOS arm64 packaged app"
+      ]
+    },
+    {
+      "from": "scripts/verify/notebook-smoke.mjs",
+      "to": "tests/helpers/scenarios/notebook-sync.mjs",
+      "tests": ["sync onboarding/configuration and independent receiving store"],
+      "environments": ["linked source Profile", "clean installed packages", "Windows installed startup"]
+    },
+    {
+      "from": "scripts/verify/notebook-outcomes.mjs",
+      "to": "tests/fixtures/notebook/outcomes.mjs",
+      "tests": ["actual restoration and independent sync receiver using target modules"],
+      "environments": [
+        "linked source Profile",
+        "clean installed packages",
+        "Windows installed startup",
+        "macOS arm64 packaged app"
+      ]
+    },
+    {
+      "from": "scripts/verify/runtime-verify.mjs",
+      "to": "tests/helpers/scenarios/authentication.mjs",
+      "tests": ["unauthenticated rejection, launch-cookie exchange, authenticated shell"],
+      "environments": ["linked source Profile", "clean installed packages"]
+    },
+    {
+      "from": "scripts/verify/runtime-verify.mjs",
+      "to": "tests/e2e/profile/profile-boot.test.ts",
+      "tests": ["Safe UI conversation draft with isolated workspace precondition"],
+      "environments": ["linked source Profile with Safe UI patch"]
+    }
+  ],
+  "removed": [
+    {
+      "from": "tests/contract/sync-server.test.ts",
+      "reason": "Node test only forwarding to Python removed; original Python cases are executed directly through scripts/test/python.py."
+    },
+    {
+      "from": "scripts/verify/verify-profile.mjs + tests/e2e/profile-boot.test.ts",
+      "reason": "Duplicate source Profile execution converges on tests/e2e/profile/profile-boot.test.ts; compatibility command remains."
+    },
+    {
+      "from": "bootAndVerifyWeb implicit assertions on every source browser test",
+      "reason": "Authentication and shared workflows execute once through explicit source Profile cases; focused e2e retains its own assertions. Installed and platform combinations remain explicit."
+    }
+  ],
+  "originalCases": [
+    {
+      "from": "tests/contract/notebook.test.ts",
+      "cases": [
+        "'notes persist, search Chinese, enforce revisions, and atomically update/remove/restore knowledge'",
+        "'strict DSH Gateway invokes Nook DTOs, rejects malformed calls, and withdraws with plugin'",
+        "'autosave serializes overlapping edits and preserves unsaved input on failure'",
+        "`project order survives restart and rejects stale or duplicate lists (${integrated ? 'SQLite' : 'JSON'})`"
+      ],
+      "destinations": [
+        "tests/integration/notes/persistence.test.ts",
+        "tests/integration/notes/rpc.test.ts",
+        "tests/unit/notes/autosave.test.ts",
+        "tests/integration/projects/order.test.ts"
+      ]
+    },
+    {
+      "from": "tests/contract/project-feature.test.ts",
+      "cases": [
+        "'feature consumes the project capability and survives remount'",
+        "'local project provider persists across unmount and remount'"
+      ],
+      "destinations": ["tests/unit/projects/feature.test.ts", "tests/integration/projects/provider.test.ts"]
+    },
+    {
+      "from": "tests/contract/corepack-command.test.ts",
+      "cases": [
+        "'Windows build cancellation reaps the owned subprocess tree'",
+        "'Unix retains the Corepack executable and pinned arguments'",
+        "'Windows launches the declared CLI with literal arguments and paths containing spaces'"
+      ],
+      "destinations": [
+        "tests/integration/runtime/process-scope.test.ts",
+        "tests/unit/runtime/corepack-command.test.ts",
+        "tests/integration/runtime/corepack-command.test.ts"
+      ]
+    },
+    {
+      "from": "tests/desktop/policy.test.ts",
+      "cases": [
+        "'authenticated launch URL parser rejects alternate authorities, paths and credentials'",
+        "'line buffering redacts tokens across every chunk split and bounds unterminated output'",
+        "'real DSH home aliases are refused'"
+      ],
+      "destinations": ["tests/unit/desktop/policy.test.ts", "tests/integration/desktop/home-isolation.test.ts"]
+    },
+    {
+      "from": "tests/contract/sync-server.test.ts",
+      "cases": [
+        "'embedded one-line installer contains the exact downloadable source without shell interpolation'",
+        "'installer validates targets, preserves backups and refuses occupied ports'",
+        "'assistant pins the complete bootstrap/source/archive/image chain'",
+        "'portable connection accepts versioned and legacy exports without leaking malformed secrets'",
+        "'downloaded Docker archive contains exact allowlisted build sources and no local credentials'"
+      ],
+      "destinations": [
+        "tests/integration/sync-server/artifacts.test.ts",
+        "tests/unit/sync/connection.test.ts",
+        "tests/integration/sync-server/posix",
+        "tests/integration/sync-server/posix/installer.test.ts"
+      ]
+    },
+    {
+      "from": "tests/contract/sync-onboarding.test.ts",
+      "cases": [
+        "'deployment starts a fresh draft through public controllers without sending'",
+        "'CRLF deployment inputs produce the same archive and published checksum chain as LF'"
+      ],
+      "destinations": ["tests/unit/sync/onboarding.test.ts", "tests/integration/sync-server/line-endings.test.ts"]
+    },
+    {
+      "from": "tests/contract/agent-lifecycle.test.ts",
+      "cases": ["'Agent Tools clean up on unmount and register again on remount'"],
+      "destinations": ["tests/unit/agent/agent-lifecycle.test.ts"]
+    },
+    {
+      "from": "tests/contract/autosave-schedule.test.ts",
+      "cases": [
+        "'continuous Chinese confirmations coalesce, a quiet pause saves once, unchanged input is silent'",
+        "'continuous typing saves within 30 seconds, navigation flushes immediately and disposal cancels timers'",
+        "'automatic saves wait for quiet input again after an in-flight edit; manual flush drains it'",
+        "'a recovered lost request retries its exact identity even when the current note already shows its text'"
+      ],
+      "destinations": ["tests/unit/notes/autosave-schedule.test.ts"]
+    },
+    {
+      "from": "tests/contract/note-history.test.ts",
+      "cases": [
+        "'continuous edits collapse across raw pages without dropping versions or changing stage identity'",
+        "'checkpoints, branch points and unrelated branches stay outside editing stages'",
+        "'five-minute pauses and reversed or invalid clocks split stages while equal timestamps can group'"
+      ],
+      "destinations": ["tests/unit/notes/note-history.test.ts"]
+    },
+    {
+      "from": "tests/contract/notes-list-deletion.test.ts",
+      "cases": [
+        "`${listName}: removes the empty middle item, preserves siblings and selects the next item`",
+        "'nested list: only removes the empty item at the caret depth'",
+        "`${name}: falls through without discarding content or changing list-exit behavior`",
+        "'text, whitespace, selections and standalone empty paragraphs retain normal deletion'",
+        "'undo restores the empty item separately from clearing its text'"
+      ],
+      "destinations": ["tests/unit/notes/notes-list-deletion.test.ts"]
+    },
+    {
+      "from": "tests/contract/notes-markdown.test.ts",
+      "cases": [
+        "'markdown round-trip keeps trailing empty ordered list item editable'",
+        "'fixEmptyBlocks leaves schema-valid documents untouched'",
+        "'plugin fixes any transaction that leaves an empty required container, keeping the caret editable'",
+        "`markdown refresh preserves ${selection} multiple empty list items`",
+        "'plugin does not alter transactions on already-valid documents'"
+      ],
+      "destinations": ["tests/unit/notes/notes-markdown.test.ts"]
+    },
+    {
+      "from": "tests/contract/preview-feature.test.ts",
+      "cases": ["'preview feature consumes only owned capability contracts'"],
+      "destinations": ["tests/unit/preview/preview-feature.test.ts"]
+    },
+    {
+      "from": "tests/contract/refinement.test.ts",
+      "cases": [
+        "'initial understanding debounces, ignores formatting, and updates the same topic'",
+        "'failed or stale generation does not advance understanding baseline'",
+        "'approved proposals remain immutable and later changes become new proposals'",
+        "'deleted input and removed paragraphs preserve the distinction from appended text'",
+        "'completed plans become versioned derived sources and do not repeat refinement after restart'",
+        "'incremental comparison preserves nested lists, indented code and repeated paragraph changes'"
+      ],
+      "destinations": ["tests/unit/refinement/refinement.test.ts"]
+    },
+    {
+      "from": "tests/contract/tasks.test.ts",
+      "cases": [
+        "'manual tasks keep distinct reminder/start/deadline, reorder and complete'",
+        "'duplicate requests are idempotent and non-owner waits for receipt'",
+        "'external claims require readiness, exclusive ownership and fresh tokens'",
+        "'AI acceptance allows two repairs and then asks for intervention'",
+        "'unverified evidence never becomes automatically accepted'",
+        "'dependency cycles, expired deadlines and occupied default directories block execution'",
+        "'recurrence resolves local calendar time, skips DST gaps, and only materializes latest missed occurrence'",
+        "'proposal approval is version-bound, creates a dependency graph and pauses its children'",
+        "'successful AI acceptance completes the submitted artifact revision and rejects stale review credentials'"
+      ],
+      "destinations": ["tests/unit/tasks/tasks.test.ts"]
+    },
+    {
+      "from": "tests/contract/run-profile.test.ts",
+      "cases": [
+        "'development launcher defaults to port 3080'",
+        "'development launcher can select an ephemeral default without replacing an explicit port'",
+        "'development launcher accepts a port override and Safe UI mode'",
+        "'port release first terminates gracefully'",
+        "'port release force-kills a listener after the grace period'"
+      ],
+      "destinations": ["tests/unit/runtime/run-profile.test.ts"]
+    },
+    {
+      "from": "tests/contract/artifact-provider.test.ts",
+      "cases": ["'local artifact provider persists, validates, deletes, and remounts'"],
+      "destinations": ["tests/integration/artifacts/artifact-provider.test.ts"]
+    },
+    {
+      "from": "tests/contract/auto-merge.test.ts",
+      "cases": [
+        "'CRDT replay converges for reversed delivery, same-position edits, and late branches'",
+        "'deletion is edit-wins, unrelated fields and independent roots preserve all history'",
+        "'worker runs off the Host thread and cancellation leaves its next invocation usable'",
+        "'stale saves merge, idempotent retries retain input identity, history and restore are durable'",
+        "'a checkpoint failure rolls back the restored note, versions and request receipt together'",
+        "'checkpoint records reject malformed identity and mutation, and trash boundaries remain explicit'",
+        "'backup failure aborts a stale write without changing the working note or its heads'",
+        "'autosave follows submitted branches while typing and retries the exact lost request'",
+        "'three devices converge without copies, recover after restart and synchronize restored history'",
+        "'merge rechecks heads after background computation and rolls back if its recovery backup fails'",
+        "'IME composition pauses in-flight autosave adoption until its input is complete'",
+        "'project text capacity fallback is deterministic and leaves source versions intact'",
+        "'unchanged saves do not add history or timestamp-only branches, including stale baselines and retries'"
+      ],
+      "destinations": ["tests/integration/sync/auto-merge.test.ts"]
+    },
+    {
+      "from": "tests/contract/sync.test.ts",
+      "cases": [
+        "'generic records persist offline, sync incrementally and tolerate lost responses and concurrent local edits'",
+        "'simultaneous writers preserve both branches, resolution and copies converge without duplicates'",
+        "'unknown schemas and binary dependencies survive another client and later writes'",
+        "'remote rollback, missing blobs and corrupted objects do not advance the replica'",
+        "'a failed recovery backup leaves conflict resolution and pending changes untouched'",
+        "'new types use capability writes, atomic validation and optimistic revisions without engine changes'",
+        "'incomplete or corrupt remote objects never publish business projections'",
+        "'offline versions survive process reopen and reject oversized records before committing'",
+        "'bounded transfers converge full histories, deduplicate blobs and reuse verified objects on CAS retry'",
+        "'failed parallel upload drains requests, leaves the index unpublished and can retry safely'",
+        "'failed or cancelled parallel download never applies a partial batch and leaves no active requests'",
+        "'a thousand-version history downloads in compressed blocks and reuses sealed prefixes on the next edit'",
+        "'legacy indices remain readable, new clients publish acceleration for existing histories, and raw objects survive'",
+        "'failed history pack publication preserves pending writes and a failed receive never caches partial blocks'",
+        "'valid outer pack hashes do not excuse corrupt versions, cross-record data or oversized decompression'"
+      ],
+      "destinations": ["tests/integration/sync/sync.test.ts"]
+    },
+    {
+      "from": "tests/contract/sync-epochs.test.ts",
+      "cases": [
+        "'same-vault epoch removes selected history, preserves current values, fences legacy format and permits subsequent sync'",
+        "'offline edits based on a removed version survive as a rebased branch without resurrecting all retired history'",
+        "'clients can skip several epochs, unknown migrations and broken backups leave local data untouched'",
+        "'epoch CAS loses safely to an old writer, and cancellation does not publish the new epoch'",
+        "'a registered future migration uses the same transport, backup and adoption lifecycle'",
+        "'epoch-local archives recover a browser draft based on a pruned version after multiple migrations'",
+        "'a lost publication response is retryable with the same plan and cannot create a second epoch'",
+        "'cancelled publication, invalid parents and corrupt transition leave the active index and local data intact'",
+        "'projection failures roll back epoch archives, reset, active versions and migration receipts together'",
+        "'a fresh client refuses an unsupported epoch migration before importing records'",
+        "'unknown cross-record references preserve the exact referenced snapshot and all its ancestry'"
+      ],
+      "destinations": ["tests/integration/sync/sync-epochs.test.ts"]
+    },
+    {
+      "from": "tests/contract/backup.test.ts",
+      "cases": [
+        "'backup can repeatedly snapshot a cleanly closed WAL database and restore its contents'",
+        "'backup restores committed WAL, FTS, projects, trash, preferences, and artifact bytes into a usable store'",
+        "'verification rejects corrupt, extra, linked, traversing and unsupported backup contents before restore'",
+        "'backup refuses nested outputs including aliased paths, symlinks and missing sources'",
+        "'recovery records precede project, artifact, note and project-association deletion'",
+        "'backup write failures preserve projects, artifact bytes, notes, indexes and project associations'",
+        "'data lock is exclusive, survives alias paths and disposes idempotently'",
+        "'data lock recovers a dead legacy owner without removing metadata or user data'",
+        "'data lock refuses a live or unverified legacy owner and releases its native handle on failure'"
+      ],
+      "destinations": ["tests/integration/backup/backup.test.ts"]
+    },
+    {
+      "from": "tests/contract/migration.test.ts",
+      "cases": [
+        "'migration merges Web and desktop notes, FTS, projects, trash and files without overwriting originals'",
+        "'divergent note IDs abort before publication and keep both verified backups'",
+        "'prepared migration resumes the directory handoff after interruption'",
+        "'migration refuses unknown notebook tables before replacing the desktop store'",
+        "'migration preserves a complete sync library and refuses to combine distinct sync histories'",
+        "'legacy Web data migrates into an initialized empty sync notebook and upgrades on boot'",
+        "'complete sync history and binding can migrate into an initialized empty target'",
+        "'an empty legacy notebook does not permit replacing projects held outside SQLite'",
+        "`empty-target migration refuses a target with ${name}`"
+      ],
+      "destinations": ["tests/integration/backup/migration.test.ts"]
+    },
+    {
+      "from": "tests/contract/client-bundle.test.ts",
+      "cases": ["'built Client plugins use the DSH module-loader closure and verified Slots'"],
+      "destinations": ["tests/integration/client/client-bundle.test.ts"]
+    },
+    {
+      "from": "tests/contract/intelligence.test.ts",
+      "cases": [
+        "'standalone knowledge plugin follows session/project switch and safely renders literal template syntax'",
+        "'generation accepts only complete visible text and reflection retains source revisions'",
+        "'real DSH stream failures reach summary RPC as safe, actionable errors and retries can succeed'",
+        "'real Python collector feeds video workflow from cached cards with source identity and retry deduplication'",
+        "'video writer applies its skill, revises failed audits, caches successful steps and fails closed'",
+        "'video cancellation retains acquired source while preventing a completed AI article'"
+      ],
+      "destinations": ["tests/integration/intelligence/intelligence.test.ts"]
+    },
+    {
+      "from": "tests/contract/update.test.ts",
+      "cases": ["'update RPC accepts fixed commands without task coordination, validates input, and disposes'"],
+      "destinations": ["tests/integration/update/update.test.ts"]
+    },
+    {
+      "from": "tests/contract/web-port.test.ts",
+      "cases": [
+        "'unavailable defaults scan upward for a free port, explicit requests fail loudly'",
+        "'a real conflicting listener yields a bindable port and the probe releases its socket'"
+      ],
+      "destinations": ["tests/integration/runtime/web-port.test.ts"]
+    },
+    {
+      "from": "tests/desktop/note-export.test.ts",
+      "cases": ["'note exports preserve existing files, mint reveal receipts, validate input and confine filenames'"],
+      "destinations": ["tests/integration/desktop/note-export.test.ts"]
+    },
+    {
+      "from": "tests/desktop/payload.test.ts",
+      "cases": [
+        "'runtime upgrades retain user patch, data, prior runtime and writable Profile'",
+        "'corrupt payload or escaping links fail before user state is created'",
+        "'runtime symlink integrity is independent of a restrictive process umask'"
+      ],
+      "destinations": ["tests/integration/desktop/payload.test.ts"]
+    },
+    {
+      "from": "tests/desktop/update.test.ts",
+      "cases": [
+        "'full update backup restores configuration and SQLite; failed migrated home is retained'",
+        "'failed backup leaves the original home and prevents activation'",
+        "'committed update survives restart through the atomic recovery receipt'",
+        "'interrupted recovery completes after the original home has already been restored'"
+      ],
+      "destinations": ["tests/integration/desktop/update.test.ts"]
+    },
+    {
+      "from": "tests/integration/browser-provider.test.ts",
+      "cases": ["'real community provider works through the Nook adapter'"],
+      "destinations": ["tests/integration/browser/browser-provider.test.ts"]
+    },
+    {
+      "from": "tests/integration/data-backup.test.ts",
+      "cases": [
+        "'refreshing a development Profile preserves existing user patch configuration'",
+        "'backup CLI round trip, nonzero failures and cross-process runtime exclusion'",
+        "'POSIX Host retains the data lock after its supervisor releases the inherited descriptor'"
+      ],
+      "destinations": ["tests/integration/backup/data-backup.test.ts"]
+    },
+    {
+      "from": "tests/integration/desktop-runtime.test.ts",
+      "cases": [
+        "'Windows kernel job reaps descendants if the supervisor crashes'",
+        "'desktop shutdown is idempotent, redacts logs, and reaps DSH descendants'",
+        "'supervisor reaps runtime when its desktop parent crashes'"
+      ],
+      "destinations": ["tests/integration/desktop/desktop-runtime.test.ts"]
+    },
+    {
+      "from": "tests/integration/dev-lock.test.ts",
+      "cases": [
+        "'native development lock stays exclusive through aliases and repeated disposal'",
+        "'simultaneous processes have one lock owner and recover after forced exit'"
+      ],
+      "destinations": ["tests/integration/runtime/dev-lock.test.ts"]
+    },
+    {
+      "from": "tests/integration/dev-seed.test.ts",
+      "cases": [
+        "'real development fixtures persist, remain editable, and repeated seeding preserves edits and deletions'"
+      ],
+      "destinations": ["tests/integration/runtime/dev-seed.test.ts"]
+    },
+    {
+      "from": "tests/integration/dev-startup.test.ts",
+      "cases": [
+        "'dev preserves data and configuration across launches; clean stays disposable and unseeded'",
+        "'dev:seed prepares data without starting a runtime'",
+        "'dev boots with legacy lock leftovers, including incomplete metadata and reused PIDs'",
+        "'dev restarts after the sandbox owner is forcibly killed without cleanup'",
+        "'persistent sandbox rejects concurrent use and preserves data after preparation failure'",
+        "`${['dev', ...args].join(' ')} builds missing and stale Host/Client output before boot`",
+        "`dev repairs a missing dependency link when the cached manifest ${declared ? 'declares' : 'omits'} it`",
+        "'dev stops before boot when Profile dependency installation fails'",
+        "'dev stops before boot when the build fails'",
+        "'Windows dev rejects an unavailable explicit port before building'"
+      ],
+      "destinations": ["tests/integration/runtime/dev-startup.test.ts"]
+    },
+    {
+      "from": "tests/integration/dev-watch.test.ts",
+      "cases": [
+        "'watcher serializes edits, keeps running after build failure, and separates Client from Host updates'"
+      ],
+      "destinations": ["tests/integration/runtime/dev-watch.test.ts"]
+    },
+    {
+      "from": "tests/integration/release-port.test.ts",
+      "cases": ["'port release terminates a real listener owned by the test'"],
+      "destinations": ["tests/integration/runtime/release-port.test.ts"]
+    },
+    {
+      "from": "tests/integration/shared-runtime.test.ts",
+      "cases": [
+        "'simultaneous Web and desktop leases share one backend; closing either preserves the other'",
+        "'source restart stops all leases and refuses to reuse a concurrent backend'",
+        "'closing a frontend before broker startup settles readiness and shutdown'",
+        "'the frontend that starts the broker can crash while another frontend keeps working'",
+        "'task execution host keeps the backend after the last frontend leaves and explicit quit stops it'"
+      ],
+      "destinations": ["tests/integration/runtime/shared-runtime.test.ts"]
+    },
+    {
+      "from": "tests/integration/sync-onboarding.test.ts",
+      "cases": ["'agent file import verifies target before network, keeps secrets private, backs up and syncs'"],
+      "destinations": ["tests/integration/sync/sync-onboarding.test.ts"]
+    },
+    {
+      "from": "tests/integration/task-execution.test.ts",
+      "cases": [
+        "'DSH adapter requires explicit evidence, persists reports, and rejects changed artifacts during acceptance'"
+      ],
+      "destinations": ["tests/integration/tasks/task-execution.test.ts"]
+    },
+    {
+      "from": "tests/integration/task-rpc.test.ts",
+      "cases": ["'Gateway, conversation tools and local MCP bridge share persisted task operations and clean up'"],
+      "destinations": ["tests/integration/tasks/task-rpc.test.ts"]
+    },
+    {
+      "from": "tests/integration/task-system.test.ts",
+      "cases": [
+        "'two real SQLite replicas exchange commands and receipts without double execution; state survives restart'",
+        "'shared storage atomically assigns one execution host even before replicas exchange settings'"
+      ],
+      "destinations": ["tests/integration/tasks/task-system.test.ts"]
+    },
+    {
+      "from": "tests/integration/update-worktree.test.ts",
+      "cases": [
+        "`update removes only its owned worktree after ${failure || 'success'}`",
+        "'pre-existing and modified checkouts are retained'",
+        "'snapshot links into source are rejected; internal links are accepted'",
+        "'candidate owns an executable that survives removal of its preparing launcher'",
+        "'candidate rejects executable paths and symlinks into an external Web launcher'"
+      ],
+      "destinations": ["tests/integration/update/update-worktree.test.ts"]
+    },
+    {
+      "from": "tests/integration/update.test.ts",
+      "cases": [
+        "`broker update ${fail ? 'recovers after candidate migration and startup failure' : 'switches both leases and persists the selected runtime'}`"
+      ],
+      "destinations": ["tests/integration/update/update.test.ts"]
+    },
+    {
+      "from": "tests/integration/webdav-sync.test.ts",
+      "cases": [
+        "'WebDAV verifies conditional writes, rejects incompatible or unauthorized endpoints'",
+        "'two notebooks migrate projects and sync notes, source versions, trash, conflicts and project deletion over HTTP'",
+        "'sync RPC keeps credentials private, disabling preserves pending data, and disposal releases work'",
+        "'independent Apache mod_dav single-worker reference converges two replicas'",
+        "'private CA trust is connection-scoped and rejects missing trust or wrong certificate host before sending credentials'",
+        "'WebDAV reuses connections within a run and closes them on disposal'",
+        "'same-directory epochs preserve note sources, offline edits, search and late browser drafts over WebDAV'"
+      ],
+      "destinations": ["tests/integration/sync/webdav-sync.test.ts"]
+    },
+    {
+      "from": "tests/e2e/dev-data.test.ts",
+      "cases": ["'development runtime shows examples and disables sync including guide deep links'"],
+      "destinations": ["tests/e2e/runtime/dev-data.test.ts"]
+    },
+    {
+      "from": "tests/e2e/dev-modes.test.ts",
+      "cases": ["'dev reloads Client and Host while start serves its fixed build'"],
+      "destinations": ["tests/e2e/runtime/dev-modes.test.ts"]
+    },
+    {
+      "from": "tests/e2e/notes-empty-list-item.test.ts",
+      "cases": ["'trailing empty ordered list item stays editable across note switches'"],
+      "destinations": ["tests/e2e/notes/notes-empty-list-item.test.ts"]
+    },
+    {
+      "from": "tests/e2e/notes-ime.test.ts",
+      "cases": ["'task text keeps its caret when IME candidates are deleted or cancelled'"],
+      "destinations": ["tests/component/notes/notes-ime.test.ts"]
+    },
+    {
+      "from": "tests/e2e/notes-list-deletion.test.ts",
+      "cases": ["`${key} on an empty middle item preserves the ordered list`"],
+      "destinations": ["tests/e2e/notes/notes-list-deletion.test.ts"]
+    },
+    {
+      "from": "tests/e2e/notes-list-numbering.test.ts",
+      "cases": ["'nested ordered lists number levels as 1. → α. → ① → a)'"],
+      "destinations": ["tests/e2e/notes/notes-list-numbering.test.ts"]
+    },
+    {
+      "from": "tests/e2e/notes-navigation.test.ts",
+      "cases": ["'notebook navigation retains selection, filters, pagination, scrolling and editor history'"],
+      "destinations": ["tests/e2e/notes/notes-navigation.test.ts"]
+    },
+    {
+      "from": "tests/e2e/profile-boot.test.ts",
+      "cases": [
+        "'full official + community + product Profile boots and serves Nook UI'",
+        "'Safe UI patch boots the official shell without Nook Client plugins'"
+      ],
+      "destinations": ["tests/e2e/profile/profile-boot.test.ts"]
+    },
+    {
+      "from": "tests/e2e/theme-scrollbar.test.ts",
+      "cases": ["'every appearance themes Nook scrollbars with its own narrow light thumb'"],
+      "destinations": ["tests/e2e/notes/theme-scrollbar.test.ts"]
+    },
+    {
+      "from": "tests/e2e/ui-kit.test.ts",
+      "cases": ["'kit controls preserve geometry, keyboard interaction, floating placement and reduced motion'"],
+      "destinations": ["tests/component/ui-kit/ui-kit.test.ts"]
+    },
+    {
+      "from": "tests/e2e/update-worktree.test.ts",
+      "cases": ["'packed update boots and serves real workflows after its worktree is removed'"],
+      "destinations": ["tests/e2e/distribution/update/update-worktree.test.ts"]
+    },
+    {
+      "from": "tests/helpers/webdav.mjs",
+      "cases": [],
+      "destinations": ["tests/helpers/services/webdav.mjs"]
+    },
+    {
+      "from": "tests/helpers/apache-webdav.mjs",
+      "cases": [],
+      "destinations": ["tests/helpers/services/apache-webdav.mjs"]
+    },
+    {
+      "from": "tests/helpers/task-store.ts",
+      "cases": [],
+      "destinations": ["tests/helpers/services/task-store.ts"]
+    },
+    {
+      "from": "tests/fixtures/notes-ime.tsx",
+      "cases": [],
+      "destinations": ["tests/fixtures/notes/ime.tsx"]
+    },
+    {
+      "from": "tests/fixtures/ui-kit.tsx",
+      "cases": [],
+      "destinations": ["tests/fixtures/ui-kit/controls.tsx"]
+    },
+    {
+      "from": "tests/sync-server/test_setup.py",
+      "cases": [
+        "test_modes_and_injection_rejection",
+        "test_atomic_permissions_and_verified_backup",
+        "test_port_conflict_aborts",
+        "test_backup_failure_aborts_leaf_replacement",
+        "test_ipv6_url_and_serial_worker"
+      ],
+      "destinations": ["tests/integration/sync-server/posix/test_setup.py"]
+    },
+    {
+      "from": "tests/sync-server/test_assistant.py",
+      "cases": [
+        "test_repeated_install_preserves_identity_and_selected_port",
+        "test_target_change_stops_before_writing_configuration",
+        "test_download_failure_leaves_receipt_and_can_resume",
+        "test_failed_first_start_can_resume_without_reselecting_target",
+        "test_unknown_nonempty_root_or_volume_is_not_adopted",
+        "test_upgrade_requires_verified_backup_and_downgrade_is_refused",
+        "test_boot_waits_for_original_tailscale_identity",
+        "test_backup_reads_each_file_and_rejects_corruption_and_links",
+        "test_checksum_fails_closed",
+        "test_failed_upgrade_restores_previous_program_and_state",
+        "test_backup_failure_still_restarts_the_original_service",
+        "test_port_selection_skips_busy_port",
+        "test_existing_login_does_not_change_tailscale_preferences",
+        "test_boot_does_not_attempt_interactive_authorization"
+      ],
+      "destinations": ["tests/integration/sync-server/posix/test_assistant.py"]
+    },
+    {
+      "from": "tests/sync-server/verify_assistant.py",
+      "cases": [],
+      "destinations": ["tests/integration/sync-server/docker/test_assistant.py"]
+    },
+    {
+      "from": "tests/sync-server/verify_dependencies.py",
+      "cases": [],
+      "destinations": ["tests/integration/sync-server/linux/test_dependencies.py"]
+    },
+    {
+      "from": "tests/sync-server/verify_linux.py",
+      "cases": [],
+      "destinations": ["tests/fixtures/sync-server/linux.py"]
+    },
+    {
+      "from": "tests/sync-server/verify_bootstrap.py",
+      "cases": [],
+      "destinations": ["tests/fixtures/sync-server/bootstrap.py"]
+    },
+    {
+      "from": "tests/sync-server/verify_client.ts",
+      "cases": [],
+      "destinations": ["tests/fixtures/sync-server/client.ts"]
+    },
+    {
+      "from": "tests/sync-server/verify_docker.py",
+      "cases": [],
+      "destinations": ["tests/e2e/sync-server/docker/test_compose.py"]
+    },
+    {
+      "from": "scripts/verify/desktop-native-smoke.mjs",
+      "cases": [],
+      "destinations": ["tests/fixtures/desktop/native.mjs"]
+    },
+    {
+      "from": "scripts/verify/notebook-smoke.mjs",
+      "cases": [],
+      "destinations": [
+        "tests/helpers/scenarios/notebook.mjs",
+        "tests/helpers/scenarios/notebook-settings.mjs",
+        "tests/helpers/scenarios/notebook-concurrency.mjs",
+        "tests/helpers/scenarios/notebook-history.mjs",
+        "tests/helpers/scenarios/notebook-lifecycle.mjs",
+        "tests/helpers/scenarios/notebook-sync.mjs"
+      ]
+    },
+    {
+      "from": "scripts/verify/notebook-outcomes.mjs",
+      "cases": [],
+      "destinations": ["tests/helpers/scenarios/notebook-outcomes.mjs", "tests/fixtures/notebook/outcomes.mjs"]
+    },
+    {
+      "from": "scripts/verify/task-smoke.mjs",
+      "cases": [],
+      "destinations": ["tests/helpers/scenarios/tasks.mjs"]
+    },
+    {
+      "from": "scripts/verify/runtime-verify.mjs",
+      "cases": [],
+      "destinations": [
+        "tests/helpers/runtime/web.mjs",
+        "tests/helpers/scenarios/authentication.mjs",
+        "tests/e2e/profile/profile-boot.test.ts"
+      ]
+    },
+    {
+      "from": "scripts/verify/verify-package.mjs",
+      "cases": [],
+      "destinations": ["tests/e2e/distribution/package/installation.test.mjs"]
+    },
+    {
+      "from": "scripts/verify/verify-desktop.mjs",
+      "cases": [],
+      "destinations": ["tests/e2e/distribution/desktop/lifecycle.test.mjs"]
+    },
+    {
+      "from": "scripts/verify/verify-windows-start.mjs",
+      "cases": [],
+      "destinations": ["tests/e2e/distribution/windows/start.test.mjs"]
+    }
+  ]
+}

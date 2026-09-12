@@ -29,7 +29,7 @@ Status: implemented
 
 ## Validation
 
-[端到端测试](../../../../tests/e2e/notes-list-numbering.test.ts)驱动真实 UI:逐层输入并 Tab 下钻构造四层有序列表,断言四个 `<ol>` 的 computed `list-style-type` 依次为 `decimal` / `lower-greek` / `nook-list-circled` / `nook-list-alpha-paren`,截图人工核验 marker 字形为 `1.` / `α.` / `①` / `a)`,切走再切回经 markdown 往返后结构与样式不变,全程无 `pageerror`。Chromium 对 `::marker` 的 computed `content` 恒返回 `normal`,该探针不可用,故字形以截图为准。`pnpm lint:css` 与 typecheck 通过;既有列表 e2e(空项编辑、中间删除)不依赖 marker 样式,不受纯 CSS 变更影响。
+[端到端测试](../../../../tests/e2e/notes/notes-list-numbering.test.ts)驱动真实 UI:逐层输入并 Tab 下钻构造四层有序列表,断言四个 `<ol>` 的 computed `list-style-type` 依次为 `decimal` / `lower-greek` / `nook-list-circled` / `nook-list-alpha-paren`,截图人工核验 marker 字形为 `1.` / `α.` / `①` / `a)`,切走再切回经 markdown 往返后结构与样式不变,全程无 `pageerror`。Chromium 对 `::marker` 的 computed `content` 恒返回 `normal`,该探针不可用,故字形以截图为准。`pnpm lint:css` 与 typecheck 通过;既有列表 e2e(空项编辑、中间删除)不依赖 marker 样式,不受纯 CSS 变更影响。
 
 ## Consequences
 

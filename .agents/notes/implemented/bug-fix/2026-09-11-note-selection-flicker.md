@@ -28,7 +28,7 @@ Status: implemented
 
 ## Validation
 
-[类型检查](../../../../package.json)（`tsc -b` 与 desktop 工程）通过；契约与桌面单测共 112 项通过、1 项按平台跳过，两轮修复后复跑结果一致。客户端构建（`build-client`）随单测运行完成。[autosave 契约测试](../../../../tests/contract/notebook.test.ts)只断言布尔返回值与 note 状态，回调为空操作，`drain` 的事件收紧不与其冲突。仓库内没有针对 NotebookApp 选择行为的组件级测试，闪烁与加载指示属于视觉回归，现有测试基建（ui-kit e2e fixture）不覆盖该场景，按仓库"与风险成比例"的验证约定未新增测试。
+[类型检查](../../../../package.json)（`tsc -b` 与 desktop 工程）通过；契约与桌面单测共 112 项通过、1 项按平台跳过，两轮修复后复跑结果一致。客户端构建（`build-client`）随单测运行完成。[autosave 契约测试](../../../../tests/integration/notes/rpc.test.ts)只断言布尔返回值与 note 状态，回调为空操作，`drain` 的事件收紧不与其冲突。仓库内没有针对 NotebookApp 选择行为的组件级测试，闪烁与加载指示属于视觉回归，现有测试基建（ui-kit e2e fixture）不覆盖该场景，按仓库"与风险成比例"的验证约定未新增测试。
 
 ## Consequences
 

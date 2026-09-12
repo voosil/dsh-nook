@@ -33,7 +33,7 @@ Nook 侧新增 [fill-empty-blocks](../../../../packages/ui-notes/src/client/lib/
 
 ## Validation
 
-[契约测试](../../../../tests/contract/notes-markdown.test.ts)七个用例：断言 pinned 版本确实解析出 `listItem content: []`（记录缺陷形状）、`fixEmptyBlocks` 修复后通过 `doc.check()` 且重序列化回原文、插件在事务后修复并可在原空项内输入文字、合法文档（含空 bullet/task 项与空标题）零改动，以及 Markdown 内容刷新时多个空项之前的光标、反向选区和之后的光标保持原段落内的位置与方向，后续输入落点正确。加强的原有光标断言及三个刷新用例在整篇替换实现上均失败，在局部事务实现上均通过。[端到端测试](../../../../tests/e2e/notes-empty-list-item.test.ts)驱动真实 UI 复现用户路径：输入 `1. xxx` 回车自动续出 `2.`，切走再切回后点击空项输入文字，内容落在 `2.` 项且再往返不丢，全程无 `pageerror`。
+[契约测试](../../../../tests/unit/notes/notes-markdown.test.ts)七个用例：断言 pinned 版本确实解析出 `listItem content: []`（记录缺陷形状）、`fixEmptyBlocks` 修复后通过 `doc.check()` 且重序列化回原文、插件在事务后修复并可在原空项内输入文字、合法文档（含空 bullet/task 项与空标题）零改动，以及 Markdown 内容刷新时多个空项之前的光标、反向选区和之后的光标保持原段落内的位置与方向，后续输入落点正确。加强的原有光标断言及三个刷新用例在整篇替换实现上均失败，在局部事务实现上均通过。[端到端测试](../../../../tests/e2e/notes/notes-empty-list-item.test.ts)驱动真实 UI 复现用户路径：输入 `1. xxx` 回车自动续出 `2.`，切走再切回后点击空项输入文字，内容落在 `2.` 项且再往返不丢，全程无 `pageerror`。
 
 ## Consequences
 

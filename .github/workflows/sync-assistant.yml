@@ -29,8 +29,7 @@ jobs:
           node-version: '22'
       - name: Verify installer and real Docker lifecycle
         run: |
-          python3 tests/sync-server/test_assistant.py
-          python3 tests/sync-server/verify_assistant.py
+          python3 scripts/test/python.py tests/integration/sync-server/posix tests/integration/sync-server/docker
           bash -n .pack/sync-server/install.sh
           (cd .pack/sync-server && sha256sum -c SHA256SUMS)
       - name: Verify generated systemd unit
@@ -66,7 +65,7 @@ jobs:
           DISTRO: ${{ matrix.distro }}
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/source:ro" "$DISTRO" sh -c \
-            'apt-get update && apt-get install -y python3 systemd ca-certificates && python3 /source/tests/sync-server/verify_dependencies.py'
+            'apt-get update && apt-get install -y python3 systemd ca-certificates && python3 /source/scripts/test/python.py /source/tests/integration/sync-server/linux'
 
   publish:
     if: startsWith(github.ref, 'refs/tags/sync-assistant-v')

@@ -35,12 +35,32 @@ Usage data, migration, working directory and shutdown behavior belong to the [fo
 
 ## Repository scripts
 
-Scripts are grouped by responsibility: `scripts/build/` bundles Client and desktop code; `scripts/profile/` manages Profile setup, launchers, development watching and packed installation; `scripts/desktop/` prepares the desktop runtime and distribution; `scripts/verify/` contains repository checks and runtime acceptance; `scripts/data/` provides backup and recovery commands; `scripts/shared/` holds reusable process, port and peer-policy helpers. The [sync server tools](../scripts/sync-server/README.md) own deployment assets in `scripts/sync-server/`.
+Scripts are grouped by responsibility: `scripts/build/` bundles Client and desktop code; `scripts/profile/` manages Profile setup, launchers, development watching and packed installation; `scripts/desktop/` prepares the desktop runtime and distribution; `scripts/verify/` owns [engineering checks and preparation entrypoints](../scripts/verify/AGENTS.md); `scripts/test/` discovers and dispatches existing Node/tsx and Python runners; `scripts/data/` provides backup and recovery commands; `scripts/shared/` holds reusable process, port and peer-policy helpers. Product assertions and test environments belong to centralized [tests](../tests/AGENTS.md). The [sync server tools](../scripts/sync-server/README.md) own deployment assets in `scripts/sync-server/`.
 
 The [root package scripts](../package.json) define the public command names. Internal imports and test fixtures follow the same directory layout.
 
 ## Verification
 
-`pnpm verify:windows` builds and runs the [Windows startup acceptance](../scripts/verify/verify-windows-start.mjs) using a temporary path with spaces and Chinese characters. It explicitly selects a free test port so acceptance cannot replace a real user backend. It installs all packed Nook packages, opens Chrome, checks authenticated notebook operations and sync, shares the backend between clients, and restarts on the same port to verify persistent credentials, pre-start backups and shutdown. It does not import the repository's old usage data. The screenshot is saved to `.pack/windows-start.png`.
+Public commands prepare their required build/Profile or package once per invocation. The aggregate reuses that preparation; `--prepared` is for a caller that already completed it in the current run. No test file allowlist is maintained.
 
-The [mode acceptance test](../tests/e2e/dev-modes.test.ts) creates a disposable workspace and opens both modes in Chrome. It checks repeated Client updates, CSS/Slot remounting, build-failure recovery, Host restart/reconnection, usage snapshot isolation and process cleanup. The [watcher integration test](../tests/integration/dev-watch.test.ts) covers edits during an in-flight build and shutdown. The [package gate](../scripts/verify/verify-package.mjs) uses the same snapshot installer as usage startup.
+| Command                   | Scope                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `pnpm test:unit`          | Single-module behavior                                                                          |
+| `pnpm test:component`     | Independently mounted components                                                                |
+| `pnpm test:integration`   | Local module, storage, protocol and process collaboration                                       |
+| `pnpm test`               | The preceding three groups, in order                                                            |
+| `pnpm test:e2e`           | Source workflows, including Profile and Safe UI                                                 |
+| `pnpm verify:profile`     | Compatibility entry for the same Profile cases included in source e2e                           |
+| `pnpm verify:package`     | Clean packed installation and its workflows                                                     |
+| `pnpm verify:desktop`     | macOS arm64 packaged delivery and native lifecycle; `--skip-package` reuses an existing package |
+| `pnpm verify:windows`     | Windows startup and installed-runtime lifecycle                                                 |
+| `pnpm sync-server:verify` | Existing Docker/Compose acceptance                                                              |
+| `pnpm verify`             | Engineering checks, one build, local tests and source e2e; Profile runs once                    |
+
+Ordinary groups do not start Docker, install system packages or package the desktop. CI keeps its system/architecture matrix and uses the [Python dispatcher](../scripts/test/python.py) in Python-only containers. The Node dispatcher also provides `sync-assistant` and `sync-linux` groups for these explicit environments. Missing prerequisites fail an explicitly selected gate; unsupported platforms and unexecuted gates must be reported separately. Browser cases need Chrome; TLS integration needs OpenSSL on PATH. Python can be selected with `NOOK_TEST_PYTHON`.
+
+For focused execution, use `node scripts/test/run.mjs integration --match sync --prepared`; `--list` reports recursive discovery without execution. Native Node test-name filtering can select a single named case after preparation. Test artifacts stay outside source directories; existing screenshot variables and `NOOK_KEEP_VERIFY_TEMP` remain supported.
+
+`pnpm verify:windows` builds and runs the [Windows startup acceptance](../tests/e2e/distribution/windows/start.test.mjs) using a temporary path with spaces and Chinese characters. It explicitly selects a free test port so acceptance cannot replace a real user backend. It installs all packed Nook packages, opens Chrome, checks authenticated notebook operations and sync, shares the backend between clients, and restarts on the same port to verify persistent credentials, pre-start backups and shutdown. It does not import the repository's old usage data. The screenshot is saved to `.pack/windows-start.png`.
+
+The [mode acceptance test](../tests/e2e/runtime/dev-modes.test.ts) creates a disposable workspace and opens both modes in Chrome. It checks repeated Client updates, CSS/Slot remounting, build-failure recovery, Host restart/reconnection, usage snapshot isolation and process cleanup. The [watcher integration test](../tests/integration/runtime/dev-watch.test.ts) covers edits during an in-flight build and shutdown. The [package gate](../tests/e2e/distribution/package/installation.test.mjs) uses the same snapshot installer as usage startup.

@@ -36,9 +36,9 @@ Nook 面向个人的开源产品需要跨设备接续工作，不需要 Nook 账
 
 ## Validation
 
-[契约测试](../../../../tests/contract/sync.test.ts)覆盖并发编辑、丢失确认、发送中继续编辑、未知类型及 schema、二进制依赖、索引回退、对象损坏、备份失败和类型注册后的原子批量写入。[HTTP 集成](../../../../tests/integration/webdav-sync.test.ts)覆盖真实 notebook 迁移、项目归属、回收站、冲突副本、索引更新、凭据隔离、卸载及独立 Apache mod_dav 双副本对账。
+[契约测试](../../../../tests/integration/sync/sync.test.ts)覆盖并发编辑、丢失确认、发送中继续编辑、未知类型及 schema、二进制依赖、索引回退、对象损坏、备份失败和类型注册后的原子批量写入。[HTTP 集成](../../../../tests/integration/sync/webdav-sync.test.ts)覆盖真实 notebook 迁移、项目归属、回收站、冲突副本、索引更新、凭据隔离、卸载及独立 Apache mod_dav 双副本对账。
 
-[迁移测试](../../../../tests/contract/migration.test.ts)验证完整同步库搬迁与不同历史拒绝拼接。[浏览器验收](../../../../scripts/verify/notebook-smoke.mjs)通过完整 Host 设置同步、等待完成及关闭；链接 Profile 和干净 tarball 安装复用同一流程。E2E 使用独立临时数据目录，不在使用目录开启测试同步。指南验收覆盖独立路由、返回时保留配置输入、可复制的一行命令和窄窗口布局，并检查实际安装包截图。
+[迁移测试](../../../../tests/integration/backup/migration.test.ts)验证完整同步库搬迁与不同历史拒绝拼接。[浏览器验收](../../../../tests/helpers/scenarios/notebook.mjs)通过完整 Host 设置同步、等待完成及关闭；链接 Profile 和干净 tarball 安装复用同一流程。E2E 使用独立临时数据目录，不在使用目录开启测试同步。指南验收覆盖独立路由、返回时保留配置输入、可复制的一行命令和窄窗口布局，并检查实际安装包截图。
 
 ## Consequences
 

@@ -4,7 +4,7 @@ Status: implemented
 
 ## Problem
 
-个人记录需要随时输入、快速找回，并能服务于学习问答和项目复盘。视频资料质量不一致，笔记选择与文稿风格需要各自可替换。原始需求见[启动草稿](../../wip/startup.md)。
+个人记录需要随时输入、快速找回，并能服务于学习问答和项目复盘。视频资料质量不一致，笔记选择与文稿风格需要各自可替换。原始需求来自启动草稿（历史草稿未纳入当前仓库）。
 
 ## Decision
 
@@ -28,7 +28,7 @@ Status: implemented
 
 ## Validation
 
-[笔记契约测试](../../../../tests/contract/notebook.test.ts)覆盖 SQLite 重启、中文检索、索引变更、版本冲突、RPC 验证与卸载。[智能流程测试](../../../../tests/contract/intelligence.test.ts)覆盖会话开关、项目范围、完整模型输出、总结来源及真实 Python 进程的缓存采集。浏览器验收覆盖保存、刷新、找回、回收站和项目删除保留正文；安装包门禁将相同流程用于全新 tarball 安装。
+[笔记契约测试](../../../../tests/integration/notes/rpc.test.ts)覆盖 SQLite 重启、中文检索、索引变更、版本冲突、RPC 验证与卸载。[智能流程测试](../../../../tests/integration/intelligence/intelligence.test.ts)覆盖会话开关、项目范围、完整模型输出、总结来源及真实 Python 进程的缓存采集。浏览器验收覆盖保存、刷新、找回、回收站和项目删除保留正文；安装包门禁将相同流程用于全新 tarball 安装。
 
 全新安装使用仓库锁文件里的外部运行时约束。安装验收发现仅固定 DSH 顶层版本仍会拉取要求更新 Cordis 的工具插件，因此开发 Profile 与 tarball Profile 共享该约束，避免链接环境掩盖版本漂移。
 

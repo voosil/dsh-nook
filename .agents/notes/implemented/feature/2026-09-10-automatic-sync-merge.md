@@ -26,7 +26,7 @@ Actor、转换时间和遍历顺序确定化；相同内容的 Automerge 二进�
 
 ## Validation
 
-[自动合并测试](../../../../tests/contract/auto-merge.test.ts)覆盖同位置文本、晚到分支、三个副本收敛、重启恢复、删除与编辑、响应丢失、提交前头变化、备份失败和连续输入。现有[同步契约测试](../../../../tests/contract/sync.test.ts)保留未知类型、格式及对象完整性覆盖。[HTTP 集成](../../../../tests/integration/webdav-sync.test.ts)检查真实 WebDAV 下无副本的笔记收敛及历史保留。[浏览器验收](../../../../scripts/verify/notebook-smoke.mjs)检查双窗口编辑、历史展示和恢复，供链接与打包 Profile 共用。
+[自动合并测试](../../../../tests/integration/sync/auto-merge.test.ts)覆盖同位置文本、晚到分支、三个副本收敛、重启恢复、删除与编辑、响应丢失、提交前头变化、备份失败和连续输入。现有[同步契约测试](../../../../tests/integration/sync/sync.test.ts)保留未知类型、格式及对象完整性覆盖。[HTTP 集成](../../../../tests/integration/sync/webdav-sync.test.ts)检查真实 WebDAV 下无副本的笔记收敛及历史保留。[浏览器验收](../../../../tests/helpers/scenarios/notebook.mjs)检查双窗口编辑、历史展示和恢复，供链接与打包 Profile 共用。
 
 ## Consequences
 

@@ -10,4 +10,4 @@
 
 ## 提示词接入限制
 
-固定 DSH 版本的 `system-prompt/assemble` 是带 `next()` 的 waterfall，Agent 为上下文提供 `agent`；实现从 `agent.session.deriveMessages()` 中选择最新的用户来源消息，监听器随 Cordis 生命周期移除。模板变量名须匹配 `^[a-z][a-z0-9_]*$`，变量值中的模板语法不会递归求值。[智能流程测试](../../tests/contract/intelligence.test.ts)使用含字面模板标记的笔记验证资料作为数据插入。
+固定 DSH 版本的 `system-prompt/assemble` 是带 `next()` 的 waterfall，Agent 为上下文提供 `agent`；实现从 `agent.session.deriveMessages()` 中选择最新的用户来源消息，监听器随 Cordis 生命周期移除。模板变量名须匹配 `^[a-z][a-z0-9_]*$`，变量值中的模板语法不会递归求值。[智能流程测试](../../tests/integration/intelligence/intelligence.test.ts)使用含字面模板标记的笔记验证资料作为数据插入。

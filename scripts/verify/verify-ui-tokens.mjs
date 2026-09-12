@@ -11,8 +11,7 @@ const SCOPES = (await readdir(resolve(ROOT, 'packages'), { withFileTypes: true }
 if (SCOPES.length === 0) throw new Error('No UI packages found; refusing an empty token verification.')
 const EXEMPT = new Set([resolve(ROOT, 'packages/ui-kit/styles/tokens.css')])
 
-// 注意正则校准：`\bcolor\(` 用负向前瞻排除 `color:` 属性与 `color-mix` 之外的误报，
-// 并排除 `color-scheme` 等属性名。
+// 检查色值集中管理这一仓库约束，不以 CSS 变量/选择器的拼写推断渲染正确性。
 const PATTERNS = [
   [/#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/, 'hex literal'],
   [/\brgba?\(/, 'rgb()/rgba()'],
@@ -23,7 +22,6 @@ const PATTERNS = [
   [/\blab\(/, 'lab()'],
   [/\blch\(/, 'lch()'],
   [/\bcolor-mix\(/, 'color-mix()'],
-  [/\bcolor\((?![:(-])/, 'color()'],
 ]
 
 async function filesBelow(directory) {

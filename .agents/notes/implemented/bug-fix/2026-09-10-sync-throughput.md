@@ -26,9 +26,9 @@ Status: implemented
 
 ## Validation
 
-[同步契约测试](../../../../tests/contract/sync.test.ts)通过模拟每次请求的网络延迟验证有界并发、共享附件去重、索引竞争重试复用、完整历史收敛，以及上传校验失败和下载取消后的批次隔离。[WebDAV 集成测试](../../../../tests/integration/webdav-sync.test.ts)验证真实连接复用、连接上限和关闭后的请求拒绝，保留私有 CA 隔离与独立 Apache 兼容验收。
+[同步契约测试](../../../../tests/integration/sync/sync.test.ts)通过模拟每次请求的网络延迟验证有界并发、共享附件去重、索引竞争重试复用、完整历史收敛，以及上传校验失败和下载取消后的批次隔离。[WebDAV 集成测试](../../../../tests/integration/sync/webdav-sync.test.ts)验证真实连接复用、连接上限和关闭后的请求拒绝，保留私有 CA 隔离与独立 Apache 兼容验收。
 
-本次以原仓库版本叠加同步改动的临时源码快照完成全量类型检查与构建，避免将同期 UI 包的未完成类型改动纳入验收。契约、桌面和集成测试共 106 项通过、3 项按平台跳过；同步导入测试使用规范化临时目录重跑通过，排除 macOS 路径别名差异。[Profile 验证](../../../../scripts/verify/verify-profile.mjs)和[干净安装包验收](../../../../scripts/verify/verify-package.mjs)通过，覆盖 36 个打包包及实际运行时。模拟 10 ms 请求延迟的 54 版本上传约 310 ms，串行请求的等待下限为 1,100 ms；此结果不代表公网端到端耗时。
+本次以原仓库版本叠加同步改动的临时源码快照完成全量类型检查与构建，避免将同期 UI 包的未完成类型改动纳入验收。契约、桌面和集成测试共 106 项通过、3 项按平台跳过；同步导入测试使用规范化临时目录重跑通过，排除 macOS 路径别名差异。[Profile 验证](../../../../scripts/verify/verify-profile.mjs)和[干净安装包验收](../../../../tests/e2e/distribution/package/installation.test.mjs)通过，覆盖 36 个打包包及实际运行时。模拟 10 ms 请求延迟的 54 版本上传约 310 ms，串行请求的等待下限为 1,100 ms；此结果不代表公网端到端耗时。
 
 ## Consequences
 

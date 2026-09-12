@@ -32,6 +32,6 @@ Nook 工作区的滚动条一直沿用宿主 `dsh-client-ui-theme` 的全局样�
 
 ## Validation
 
-[主题滚动条验收](../../../../tests/e2e/theme-scrollbar.test.ts)在真实 Host 中逐套切换外观，断言每套主题解析出自己的拖块与悬停色、作用域内 `--dsh-scrollbar-thumb` 等于 Nook token 且不同于 `body` 的宿主取值、胜出的 `::-webkit-scrollbar` 宽度规则为 `var(--nook-scrollbar-width)`，并在引擎报出布局宽度时断言实际 gutter 等于 6px；[笔记本验收脚本](../../../../scripts/verify/notebook-smoke.mjs)的外观切换循环复用同一组断言，并额外要求四套主题的拖块与悬停色互不相同。
+[主题滚动条验收](../../../../tests/e2e/notes/theme-scrollbar.test.ts)在真实 Host 中逐套切换外观，断言每套主题解析出自己的拖块与悬停色、作用域内 `--dsh-scrollbar-thumb` 等于 Nook token 且不同于 `body` 的宿主取值、胜出的 `::-webkit-scrollbar` 宽度规则为 `var(--nook-scrollbar-width)`，并在引擎报出布局宽度时断言实际 gutter 等于 6px；[笔记本验收脚本](../../../../tests/helpers/scenarios/notebook.mjs)的外观切换循环复用同一组断言，并额外要求四套主题的拖块与悬停色互不相同。
 
 Chrome（有头与无头）实测：作用域内 gutter 6px、`scrollbar-color` 解析为 Nook 色，作用域外宿主滚动条保持 8px 布局宽度与宿主色；四套主题切换时 token 即时跟随。类型检查、构建、样式与色值门禁通过。

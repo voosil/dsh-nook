@@ -10,6 +10,8 @@
 - Extend official UI through verified additive Slots before keyed override or replacement. Never monkey-patch the DOM or import private official React components.
 - Every listener, timer, subscription, socket, Tool, service contribution, and UI Slot contribution requires a cleanup/disposer. Avoid module-scope runtime effects.
 - Every meaningful change must be typechecked, built, tested, integration-verified, and package-verified in proportion to its risk.
+- Verify public contracts, observable stage outcomes and final results. Never copy or translate the implementation under test to construct expected results; composition dumps and internal logs are diagnostic evidence, not proof of usable services or workflows.
+- Product behavior belongs in centralized [tests](tests/AGENTS.md); `scripts/verify/` contains engineering checks and thin preparation/test-runner entrypoints under its [local rules](scripts/verify/AGENTS.md).
 - Static checks that apply to a package family must discover matching packages automatically; adding a package must not require updating a separate checker allowlist.
 - Preserve the Host/Client boundary. Cross it only with Nook-owned JSON-safe DTOs; never transfer Cordis contexts, services, React elements, Sessions, or arbitrary runtime objects.
 - Follow [docs/AGENTS.md](docs/AGENTS.md) for documentation: current state lives in `docs/`, decisions as Agent Notes under `.agents/notes/` per [.agents/notes/AGENTS.md](.agents/notes/AGENTS.md); every non-trivial change adds or updates one note in the same change.

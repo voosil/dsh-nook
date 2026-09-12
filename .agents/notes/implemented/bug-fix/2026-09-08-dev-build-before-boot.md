@@ -24,7 +24,7 @@ Requiring manual `pnpm dev:profile` after membership changes leaves ordinary sta
 
 ## Validation
 
-The [launcher integration tests](../../../../tests/integration/dev-startup.test.ts) execute the real launcher scripts in disposable workspaces. An artifact consumer verifies missing and stale Host/Client output in both modes, and a failing build prevents consuming existing output. The [Profile acceptance tests](../../../../tests/e2e/profile-boot.test.ts) cover actual pinned DSH boot and the rendered application; the [package gate](../../../../scripts/verify/verify-package.mjs) checks isolated tarball installation.
+The [launcher integration tests](../../../../tests/integration/runtime/dev-startup.test.ts) execute the real launcher scripts in disposable workspaces. An artifact consumer verifies missing and stale Host/Client output in both modes, and a failing build prevents consuming existing output. The [Profile acceptance tests](../../../../tests/e2e/profile/profile-boot.test.ts) cover actual pinned DSH boot and the rendered application; the [package gate](../../../../tests/e2e/distribution/package/installation.test.mjs) checks isolated tarball installation.
 
 Launcher regression tests use real local dependency installation to cover missing links with stale and current manifests, plus installation failure before boot. The actual development command and browser smoke check validate the linked product Profile.
 

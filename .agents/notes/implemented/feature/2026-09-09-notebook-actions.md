@@ -30,8 +30,8 @@ Status: implemented
 
 具体操作与网页限制归属[笔记说明](../../../../packages/feature-notes/README.md)。顺序作为项目元数据同步，跨设备并发修改沿用项目版本冲突机制；新项目追加到已有排序之后。导出提示保留至关闭或下次导出，便于用户稍后定位文件。
 
-[契约测试](../../../../tests/contract/notebook.test.ts)覆盖 Gateway、顺序重启、重复及过期 ID；[同步集成测试](../../../../tests/integration/webdav-sync.test.ts)覆盖双副本顺序传播；[桌面文件测试](../../../../tests/desktop/note-export.test.ts)覆盖同名导出、路径约束、失败及回执撤销。[界面验收](../../../../scripts/verify/notebook-smoke.mjs)覆盖拖动刷新、侧栏改名删除、卡片菜单、未保存正文保护与导出提示，并从编辑器图标菜单进入历史版本和导出。自动保存等待依据临时草稿在服务器确认后清除，不依赖可见状态文字。
+[契约测试](../../../../tests/integration/notes/rpc.test.ts)覆盖 Gateway、顺序重启、重复及过期 ID；[同步集成测试](../../../../tests/integration/sync/webdav-sync.test.ts)覆盖双副本顺序传播；[桌面文件测试](../../../../tests/integration/desktop/note-export.test.ts)覆盖同名导出、路径约束、失败及回执撤销。[界面验收](../../../../tests/helpers/scenarios/notebook.mjs)覆盖拖动刷新、侧栏改名删除、卡片菜单、未保存正文保护与导出提示，并从编辑器图标菜单进入历史版本和导出。自动保存等待依据临时草稿在服务器确认后清除，不依赖可见状态文字。
 
-[桌面安装包验收](../../../../scripts/verify/verify-desktop.mjs)调用真实文件夹定位、验证导出字节及拒绝任意路径回执，并检查重启和共享后端。清理测试目录对 Finder 异步写入 `.DS_Store` 导致的目录非空执行有限重试。
+[桌面安装包验收](../../../../tests/e2e/distribution/desktop/lifecycle.test.mjs)调用真实文件夹定位、验证导出字节及拒绝任意路径回执，并检查重启和共享后端。清理测试目录对 Finder 异步写入 `.DS_Store` 导致的目录非空执行有限重试。
 
 编辑器菜单调整通过类型检查、构建、笔记与客户端契约测试，以及隔离 Host 的完整笔记浏览器验收。干净安装完成 37 个包的安装与笔记操作验证；完整流程在后续同步设置的键盘切换步骤失败，未计为全量验收通过。

@@ -18,7 +18,7 @@ Linking the whole module directory is shorter but fails the Windows reproduction
 
 ## Validation
 
-The [startup integration tests](../../../../tests/integration/dev-startup.test.ts) reproduce the missing-package failure through a relative scoped package link before the fix. Normal and Safe UI launches then pass with missing and stale build output, resolve the linked plugin, and keep a simulated fallback write out of the installed Profile. Build failure still prevents boot.
+The [startup integration tests](../../../../tests/integration/runtime/dev-startup.test.ts) reproduce the missing-package failure through a relative scoped package link before the fix. Normal and Safe UI launches then pass with missing and stale build output, resolve the linked plugin, and keep a simulated fallback write out of the installed Profile. Build failure still prevents boot.
 
 Windows acceptance passes on Node 22.20.0: the default `pnpm dev` starts after applying the [shared port policy](2026-09-09-windows-web-start.md), and its temporary home is removed after the test runtime exits. Twelve launcher, port and watcher tests and both real Profile boot tests pass, including browser notebook operations. Build/typecheck, formatting, documentation and package boundaries pass. Clean-package acceptance passes for all 35 Nook packages and 25 Profile rows with authenticated HTTP 200 and browser acceptance; dependency installation requires normal network permissions after sandbox DNS requests fail.
 

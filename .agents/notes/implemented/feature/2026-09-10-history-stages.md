@@ -26,7 +26,7 @@ Status: implemented
 
 ## Validation
 
-[分组契约测试](../../../../tests/contract/note-history.test.ts)覆盖分页边界、重复输入、五分钟间隔、时钟倒退和分支隔离。[自动合并测试](../../../../tests/contract/auto-merge.test.ts)及 [HTTP 集成](../../../../tests/integration/webdav-sync.test.ts)覆盖恢复标记的幂等、同步和重启。[浏览器验收](../../../../scripts/verify/notebook-smoke.mjs)覆盖默认聚合、展开原始保存、选择恢复和恢复节点展示，并供打包 Profile 使用。
+[分组契约测试](../../../../tests/unit/notes/note-history.test.ts)覆盖分页边界、重复输入、五分钟间隔、时钟倒退和分支隔离。[自动合并测试](../../../../tests/integration/sync/auto-merge.test.ts)及 [HTTP 集成](../../../../tests/integration/sync/webdav-sync.test.ts)覆盖恢复标记的幂等、同步和重启。[浏览器验收](../../../../tests/helpers/scenarios/notebook.mjs)覆盖默认聚合、展开原始保存、选择恢复和恢复节点展示，并供打包 Profile 使用。
 
 ## Consequences
 

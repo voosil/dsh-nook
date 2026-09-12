@@ -24,7 +24,7 @@ Status: implemented
 
 ## Validation
 
-[契约测试](../../../../tests/contract/notes-list-deletion.test.ts)覆盖三类列表、非默认起始序号、相邻项的格式与子列表、待办状态、嵌套层级、光标与撤销重做，以及不应拦截的边界。[浏览器测试](../../../../tests/e2e/notes-list-deletion.test.ts)通过真实键盘分别执行退格与向前删除，检查列表连续、撤销重做及自动保存后的切换重开。
+[契约测试](../../../../tests/unit/notes/notes-list-deletion.test.ts)覆盖三类列表、非默认起始序号、相邻项的格式与子列表、待办状态、嵌套层级、光标与撤销重做，以及不应拦截的边界。[浏览器测试](../../../../tests/e2e/notes/notes-list-deletion.test.ts)通过真实键盘分别执行退格与向前删除，检查列表连续、撤销重做及自动保存后的切换重开。
 
 ## Consequences
 
