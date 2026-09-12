@@ -25,7 +25,12 @@ export function RichEditor({
       StarterKit.configure({ link: { openOnClick: false }, underline: false }),
       Markdown,
       TaskList,
-      TaskItem.configure({ nested: true }),
+      TaskItem.configure({
+        nested: true,
+        // Chromium counts the hidden label in IME offsets. Its length must not
+        // change with candidate text, or cancelling composition moves the caret.
+        a11y: { checkboxLabel: () => '切换待办完成状态' },
+      }),
       FillEmptyBlocks,
       DeleteEmptyListItem,
     ],

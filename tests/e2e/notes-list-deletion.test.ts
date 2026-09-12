@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url)
 const { chromium } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
 
 for (const key of ['Backspace', 'Delete']) {
-  test(`${key} on an empty middle list item keeps subsequent numbering continuous`, { timeout: 180_000 }, async t => {
+  test(`${key} on an empty middle item preserves the ordered list`, { timeout: 180_000 }, async t => {
     const sandbox = await createDevSandbox()
     t.after(() => sandbox.dispose())
     await seedDevData(sandbox.home)
@@ -40,6 +40,8 @@ for (const key of ['Backspace', 'Delete']) {
 
           // 从 ccc 末尾回到 bbb 末尾，清空文字，再按一次退格。
           await page.keyboard.press('ArrowUp')
+          // 比例字体下向上移动保留的是横坐标，可能落在 bbb 的中间。
+          await page.keyboard.press('End')
           for (let i = 0; i < 3; i++) await page.keyboard.press('Backspace')
           assert.deepEqual(await body.locator('ol > li').allTextContents(), ['aaa', '', 'ccc'])
           await page.keyboard.press(key)
