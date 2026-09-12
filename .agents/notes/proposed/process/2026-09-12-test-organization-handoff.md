@@ -4,13 +4,36 @@ Status: proposed
 
 ## Problem
 
-这是 2026-09-12 Windows 工作区的阶段性交接。用户已批准完整的测试体系与 verify 整改，随后要求先提交当前工作，转到 Mac 继续。目录、用例、调度器与规则已迁移，但整体验收尚未完成；不要把本次提交视为全部平台通过，也不要重新开始目录方案讨论。
+这是 2026-09-12 Windows 工作区的阶段性交接。首次检查点为已推送的 `3f9da7e`；用户随后决定继续在本机处理，并要求放宽 Markdown 排版门禁。下文保留首次交接的诊断，后续结果以“本机继续后的状态”为准。目录方案已经确认，不重新开始讨论；未执行的平台不能报告通过。
 
 ## Proposal
 
+### 本机继续后的状态
+
+更新 worktree 清理已修复：Windows 使用进程级 longpaths、180 秒有界超时，删除失败不重试部分删除目录，准备与清理同时失败时保留两个原因。原始错误证据仍见下文。13 项清理集成测试通过；完整 `pnpm verify:package` 16 项通过，包含干净安装与源码移除后的更新安装业务。
+
+用户批准补齐 commit 技能和 UI 规范的文件末尾换行，随后明确取消 Markdown 排版门禁。`.md` 不参与 Prettier；文档检查只保留链接与生命周期状态一致性。Git 文本统一 LF。规则文字没有因末尾换行修复而修改；文档标准、笔记规范和文档技能的门禁描述按用户后续要求同步。
+
+本机工具链缺口也已处理：TLS 测试可以找到 Git for Windows 随附的 OpenSSL，并支持 `NOOK_TEST_OPENSSL`；创建证书失败也清理临时目录。端口释放用例允许多次各自有界的 Windows 查询，增加真实端口重新绑定并等待子进程退出。
+
+源码 e2e 继续暴露并修正了前置条件与观察方式：列表编号用例等待新建完成、使用唯一标题重开、逐层验证键盘输入，并通过服务端读取等待保存；独立重跑通过。开发模式为完整安装启动设置单独时限，以同端口监听进程是否更换验证 Host 重启，不依赖第二个不同的登录 URL；保留不刷新页面的 RPC 与持久化断言。
+
+后续验证结果：
+
+- Windows 交付：`pnpm verify:windows` 6 项通过，包含实际重启、同步、备份恢复、凭据与端口清理。
+- 完整 `pnpm verify` 已成功退出：工程检查、一次根构建、unit 54 项、component 4 项、integration 152 项和源码 e2e 17 项全部通过，另 2 项平台不适用。四个执行组各运行一次，没有额外重复 Profile。源码 e2e 包括 Safe UI、热更新、构建失败恢复、Host 进程替换和不刷新页面的 RPC 验证。
+- `pnpm sync-server:verify` 通过：公开命令先构建本次源码镜像，再验证真实 Compose、TLS、私有导出、卷互斥、重建、证书更新与地址保护。Docker 引擎由本轮启动。
+- 安装助手在现有 WSL 中经统一 Python 入口通过真实 Docker 安装、重试、备份恢复、容器重建和凭据保留。仅打包子进程复用本机 Node，不更改 WSL 工具链配置。
+- Debian 12 与 Ubuntu 24.04 的 amd64 一次性容器均通过真实 Docker/Tailscale 安装、依赖复用、systemd 单元和安装命令校验。容器不挂载主机 Docker socket，源码只读；测试容器和卷已清理。
+- POSIX 跨语言安装器，以及 assistant 14 项、setup 5 项 Python 测试，在 Node 22 Linux 容器通过。
+
+本地新日志仍在忽略目录 `.pack/test-refactor/`：`package-resume.log`、`windows-resume.log`、`docker-resume.log`、`assistant-resume.log`、`linux-debian-resume.log`、`linux-ubuntu-resume.log`、`posix-resume.log`、`release-port-fixed.log`、`tls-resume.log`、`list-numbering-fixed.log`。`verify-resume.log`保留端口超时和 OpenSSL PATH 缺失的失败，`verify-final.log`保留列表及启动时限失败，`dev-modes-resume.log`保留重启判断失败；最新完整运行记录在 `verify-complete.log`。
+
+剩余平台证据是 macOS arm64 桌面与原生能力、macOS Apache 参考实现、POSIX Host 锁继承，以及 Linux arm64 原生 CI 矩阵；不能由 Windows 或 amd64 容器结果推导通过。CI 的原生系统/架构矩阵保持不变。
+
 继续执行已确认的集中式 tests、分阶段完整整改。目录规范以 [tests/AGENTS.md](../../../../tests/AGENTS.md) 为唯一来源，命令语义见 [开发文档](../../../../docs/development.md)，已落地的取舍见 [测试组织决策](../../implemented/process/2026-09-12-test-organization.md)和[阶段结果证据决策](../../implemented/process/2026-09-12-verification-outcomes.md)。当前任务是修复剩余阻塞并补齐平台证据，不更换测试框架。
 
-### 已完成的工作
+### 首次检查点已完成的工作
 
 - 原 contract 按行为拆入 unit 或 integration；desktop、sync-server 降为子系统；独立挂载的浏览器组件归 component，完整流程归 e2e，安装与平台交付归 distribution。混合范围的笔记、项目、桌面策略和启动命令文件已拆开。
 - verify 收紧为工程检查和薄命令入口。启动、安装、认证准备与清理放入 helpers/runtime；产品断言留在测试与场景中。启动运行时不会隐式验收笔记、任务或认证。
@@ -28,7 +51,7 @@ Status: proposed
 
 完整原文件快照和原始日志在 Windows 的 `.pack/test-refactor/`，该目录被 Git 忽略，不会随提交同步。无需复制构建产物、node_modules、真实数据或临时认证材料；下文保存了跨机器接续所需的结论。
 
-### 已执行的验证
+### 首次交接时已执行的验证
 
 环境为 Windows、Node 22.20、pnpm 12.1.0，另使用已有 WSL Ubuntu/Python 3.12.3 执行纯 Python POSIX 用例。
 
@@ -50,7 +73,7 @@ integration 跳过的是 POSIX Host 锁描述符继承与独立 Apache mod_dav �
 
 对应本地日志为 `verification-tests.log`、`dev-modes.log`、`tooling-final.log`、`package.log`、`windows.log`、`verify.log`、`changed-format.log`；均位于上述忽略目录。交接文档新增后的文档与格式检查另行执行。
 
-### 未完成一：更新安装的 worktree 清理
+### 首次交接阻塞一：更新安装的 worktree 清理
 
 入口是 [distribution 更新测试](../../../../tests/e2e/distribution/update/update-worktree.test.ts)，由 verify:package 选择。失败发生在 [removeUpdateWorktree](../../../../scripts/update/update-worktree.mjs)和 [prepare-update](../../../../scripts/update/prepare-update.mjs)的清理协作。
 
@@ -58,23 +81,23 @@ integration 跳过的是 POSIX Host 锁描述符继承与独立 Apache mod_dav �
 
 证据来自临时 clone 的 Git Trace2：第二轮 worktree remove 在 05:00:04.730 开始、没有正常退出记录；05:00:34.778 进入重复 rev-parse，随后退出 128。第一轮则明确记录删除长路径错误及退出 255。测试已增加诊断跟踪、失败保留、临时 clone 的 longpaths 设置及 900 秒用例超时；这些均不修改真实仓库 Git 配置。
 
-**生产 scripts/update 的修复尚未实施。** 下一步应保留 HEAD/干净工作树/所有权检查，区分已经尝试删除与尚未开始删除，避免对部分删除目录盲目重试，保留原始失败和剩余现场；依据大型依赖树的实际耗时选择有界清理超时，必要时只为 Windows 清理命令启用进程级 longpaths。不能以强删任意目录、忽略失败或降低断言解决。
+首次交接时生产 scripts/update 尚未修复；后续已完成，结果见“本机继续后的状态”。修复保留 HEAD/干净工作树/所有权检查，避免对部分删除目录盲目重试，并保留原始失败和剩余现场；不能以强删任意目录、忽略失败或降低断言解决。
 
 Windows 失败现场分别为临时目录 `nook-update-package-409XIV` 和 `nook-update-package-ALDhW9`，位于当时用户的 Local/Temp，内有 `git-trace.jsonl`；这些目录不会同步到 Mac。本地日志为 `update-debug.log` 和 `update-final.log`。Mac 可先复现公共入口；即使 Mac 通过，也不能关闭已经确认的 Windows 清理问题。
 
-### 未完成二：全仓格式与完整聚合
+### 首次交接阻塞二：全仓格式与完整聚合
 
 Windows core.autocrlf=true 导致全仓 Prettier 报 279 个文件，主要是 CRLF 与项目 LF 约定冲突。以 end-of-line auto 作诊断后，仍剩两个既有内容格式问题：`.agents/skills/commit/SKILL.md` 和 `docs/ui-packages.md`。这仅是定位，不是修改门禁参数；既有问题没有借本次任务顺手修改。
 
-在 Mac 的正常 LF checkout 重新执行原始门禁，确认剩余实际差异。用户明确要求不改 commit 技能和文档标准，若仍需修改受约束文件，应先说明具体差异与范围，再决定处理方式。不要排除文件、禁用门禁或把检查成功写入本次记录。`.nook-backups` 含真实用户备份，不得为了格式检查清理或格式化它。
+后续已查明两处内容差异都只是缺少文件末尾换行，用户批准补齐，并进一步要求去掉 Markdown 的过严门禁，现已落实。代码格式门禁仍保留。`.nook-backups` 含真实用户备份，不得为了格式检查清理或格式化它。
 
 ### Mac 接续顺序
 
-1. 拉取本次提交，使用仓库声明的 Node/pnpm 版本安装冻结依赖；设置 DSH_HOME 为仓库 `.dsh-dev` 或全新临时目录。不要复制 Windows 的 node_modules、构建产物或真实用户数据。
-2. 阅读本 handoff、已落地决策、tests 规则和迁移映射。先运行原始格式与工程检查，确认 LF checkout 的结果，再执行 `pnpm verify`，补齐一次完整的源码聚合证据。
-3. 定位并修复 worktree 清理，补充真实失败/部分清理的回归验证，运行 `node scripts/test/run.mjs integration --match update-worktree` 和 `pnpm verify:package`。该组须同时证明干净安装业务与更新安装通过；继续保留失败现场选项。
+1. 同步包含后续修复的工作区，使用仓库声明的 Node/pnpm 版本安装冻结依赖；设置 DSH_HOME 为仓库 `.dsh-dev` 或全新临时目录。不要复制 Windows 的 node_modules、构建产物或真实用户数据。
+2. 阅读本 handoff、已落地决策、tests 规则和迁移映射。执行 `pnpm verify`，补齐 Mac 的源码聚合证据；Windows 的一次完整聚合已通过。
+3. 运行 `node scripts/test/run.mjs integration --match update-worktree` 和 `pnpm verify:package`，确认本机已修复的清理行为在 Mac 上也成立。该组须同时证明干净安装业务与更新安装通过；继续保留失败现场选项。
 4. 在 macOS arm64 运行 `pnpm verify:desktop`，完成打包、随包原生探针、启动、业务、重启与生命周期验收。仅在已有本次匹配产物时使用 `--skip-package`，不能以平台跳过代替通过。核对 POSIX 数据锁继承、fs-ext 原生依赖和 Apache 参考验证。
-5. 使用统一 Python 入口执行 POSIX 用例，并在有 Node 的 POSIX 环境运行跨语言 installer。Docker daemon 就绪后运行 `pnpm sync-server:verify`；按现有 CI 保留的系统/架构矩阵补齐 Docker/Compose 和独立 Linux 容器验收。Mac 不能替代原生 Linux 系统安装验证。
+5. 按现有 CI 保留的系统/架构矩阵补齐 Linux arm64 原生验收；amd64 Docker/Compose、安装助手与两种发行版依赖安装已有本轮证据，相关代码变化后再重跑。Mac 不能替代原生 Linux 系统安装验证。
 6. 如果修改共享启动、清理或更新代码，回到 Windows 重跑对应平台用例；记录平台、命令、通过/失败/未执行及原因。全部验收收口后更新本提案状态，不覆盖此前失败证据。
 
 调度器 `--list` 可先核对执行范围，`--match` 可定位文件；公开命令负责准备，只有本次准备确实完成才使用 `--prepared`。截图环境变量、失败现场保留和桌面跳过打包的既有行为须继续保留。

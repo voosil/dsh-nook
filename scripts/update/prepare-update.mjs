@@ -9,8 +9,9 @@ export async function prepareUpdate({ repo, commit, directory, state }, processe
   if (!/^[a-f0-9]{40}$/.test(commit)) throw new Error('Invalid update commit')
   let stopped = false,
     created = false,
-    removed = false,
+    removalAttempted = false,
     retainSource = false
+  let failure
   const checkout = join(directory, 'source')
   const stop = () => {
     stopped = true
@@ -52,8 +53,10 @@ export async function prepareUpdate({ repo, commit, directory, state }, processe
       retainSource = true
       throw error
     }
+    // Git may remove checkout metadata before failing. Never retry a partially
+    // removed worktree: retain the original error and any remaining evidence.
+    removalAttempted = true
     await removeUpdateWorktree(repo, checkout, commit)
-    removed = true
     // This smoke cannot accidentally read code or dependencies from the build checkout.
     await execute(
       process.execPath,
@@ -67,10 +70,21 @@ export async function prepareUpdate({ repo, commit, directory, state }, processe
         },
       },
     )
+  } catch (error) {
+    failure = error
+    throw error
   } finally {
     try {
       await processes.dispose()
-      if (created && !removed && !retainSource) await removeUpdateWorktree(repo, checkout, commit)
+      if (created && !removalAttempted && !retainSource) await removeUpdateWorktree(repo, checkout, commit)
+    } catch (error) {
+      if (failure)
+        throw new AggregateError(
+          [failure, error],
+          `Update preparation failed: ${failure.message}; cleanup failed: ${error.message}`,
+          { cause: failure },
+        )
+      throw error
     } finally {
       process.off('SIGTERM', stop)
       process.off('SIGINT', stop)

@@ -33,9 +33,6 @@ test('packed update boots and serves real workflows after its worktree is remove
   const files = ['prepare-update.mjs', 'pack-update.mjs', 'verify-update.mjs', 'update-worktree.mjs']
   for (const name of files) await copyFile(resolve('scripts/update', name), join(repo, 'scripts/update', name))
   const git = async (...args: string[]) => (await exec('git', ['-C', repo, ...args])).stdout.trim()
-  // The disposable Windows checkout contains pnpm's deeply nested package paths.
-  // Configure only this fixture repository, never the user's global Git settings.
-  if (process.platform === 'win32') await git('config', 'core.longpaths', 'true')
   await git('add', '--', ...files.map(name => 'scripts/update/' + name))
   await git(
     '-c',

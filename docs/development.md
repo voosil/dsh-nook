@@ -51,13 +51,15 @@ Public commands prepare their required build/Profile or package once per invocat
 | `pnpm test`               | The preceding three groups, in order                                                            |
 | `pnpm test:e2e`           | Source workflows, including Profile and Safe UI                                                 |
 | `pnpm verify:profile`     | Compatibility entry for the same Profile cases included in source e2e                           |
-| `pnpm verify:package`     | Clean packed installation and its workflows                                                     |
+| `pnpm verify:package`     | Clean packed installation, update installation and their workflows                              |
 | `pnpm verify:desktop`     | macOS arm64 packaged delivery and native lifecycle; `--skip-package` reuses an existing package |
 | `pnpm verify:windows`     | Windows startup and installed-runtime lifecycle                                                 |
-| `pnpm sync-server:verify` | Existing Docker/Compose acceptance                                                              |
+| `pnpm sync-server:verify` | Build the current source image and run Docker/Compose acceptance                                 |
 | `pnpm verify`             | Engineering checks, one build, local tests and source e2e; Profile runs once                    |
 
-Ordinary groups do not start Docker, install system packages or package the desktop. CI keeps its system/architecture matrix and uses the [Python dispatcher](../scripts/test/python.py) in Python-only containers. The Node dispatcher also provides `sync-assistant` and `sync-linux` groups for these explicit environments. Missing prerequisites fail an explicitly selected gate; unsupported platforms and unexecuted gates must be reported separately. Browser cases need Chrome; TLS integration needs OpenSSL on PATH. Python can be selected with `NOOK_TEST_PYTHON`.
+Ordinary groups do not start Docker, install system packages or package the desktop. CI keeps its system/architecture matrix and uses the [Python dispatcher](../scripts/test/python.py) in Python-only containers. The Node dispatcher also provides `sync-assistant` (POSIX with Node and Docker) and `sync-linux` groups for these explicit environments. Missing prerequisites fail an explicitly selected gate; unsupported platforms and unexecuted gates must be reported separately. Browser cases need Chrome; TLS integration finds OpenSSL on PATH or in Git for Windows, with `NOOK_TEST_OPENSSL` as an explicit override. Python can be selected with `NOOK_TEST_PYTHON`.
+
+Markdown layout is excluded from the Prettier gate. Documentation checks retain link integrity and note lifecycle consistency; formatting guidance belongs to the [documentation rules](AGENTS.md).
 
 For focused execution, use `node scripts/test/run.mjs integration --match sync --prepared`; `--list` reports recursive discovery without execution. Native Node test-name filtering can select a single named case after preparation. Test artifacts stay outside source directories; existing screenshot variables and `NOOK_KEEP_VERIFY_TEMP` remain supported.
 

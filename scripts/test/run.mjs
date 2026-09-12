@@ -88,10 +88,15 @@ export async function runGroups(names, options = {}) {
     throw new Error('Windows startup acceptance requires Windows.')
   if (selected.includes('sync-linux') && process.platform !== 'linux')
     throw new Error('Linux dependency acceptance requires a disposable Linux container.')
+  if (selected.includes('sync-assistant') && process.platform === 'win32')
+    throw new Error('Sync assistant acceptance requires a POSIX host with Node and Docker.')
   const childEnv = { ...env }
   // A runner invoked by another Node test must create its own test harness.
   delete childEnv.NODE_TEST_CONTEXT
-  if (suites.some(s => s.files.some(f => f.endsWith('.py')))) childEnv.NOOK_TEST_PYTHON = pythonExecutable(childEnv)
+  if (suites.some(s => s.files.some(f => f.endsWith('.py')))) {
+    childEnv.NOOK_TEST_PYTHON = pythonExecutable(childEnv)
+    childEnv.PYTHONUTF8 = '1'
+  }
   const scope = new ProcessScope()
   let interrupted = false
   let cleanup
@@ -120,6 +125,10 @@ export async function runGroups(names, options = {}) {
       }
     }
     if (!prepared) {
+      if (selected.includes('sync-server')) {
+        const { serverVersion } = await import('../sync-server/artifacts.mjs')
+        await run('docker', ['build', '-t', `nook-sync:${serverVersion}`, join(ROOT, 'scripts/sync-server')])
+      }
       if (selected.includes('desktop') && !skipPackage) await pnpm(['run', 'desktop:package'])
       else if (selected.some(name => name !== 'desktop' && !name.startsWith('sync-'))) await pnpm(['run', 'build'])
       if (selected.some(name => ['integration', 'e2e', 'profile'].includes(name))) await pnpm(['run', 'dev:profile'])

@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// Minimal documentation gates, adapted from DeepSeek Harness upstream
-// (verify-md-links + verify-agent-note-format). No dependencies.
+// Documentation integrity checks. Layout remains editorial guidance.
 // Checks:
 //   1. Every relative Markdown link (path and #anchor) resolves.
 //   2. Agent Notes under .agents/notes/{proposed,implemented,rejected} follow the
-//      header format and carry the mandatory skeleton sections.
+//      lifecycle metadata agrees with its folder.
 //   3. Notes never sit outside a lifecycle folder.
 
 import { readdir, readFile, stat } from 'node:fs/promises'
@@ -82,24 +81,9 @@ for (const file of [...new Set(files)]) {
     errors.push(`${rel}: note outside a lifecycle folder (proposed/implemented/rejected)`)
     continue
   }
-  const lines = text.split(/\r?\n/)
-  if (!lines[0].startsWith('# Agent Note: ')) {
-    errors.push(`${rel}: first line must start "# Agent Note: "`)
-  }
-  if (lines[1] !== '') {
-    errors.push(`${rel}: line 2 must be blank (header block)`)
-  }
-  const status = lines[2] ?? ''
-  const statusOk = status === `Status: ${folder}` || (folder === 'rejected' && /^Status: rejected — .+/.test(status))
-  if (!statusOk) {
-    errors.push(`${rel}: line 3 must be "Status: ${folder}" (or "rejected — reason")`)
-  }
-  if (!/^## Problem$/m.test(text)) {
-    errors.push(`${rel}: missing "## Problem" section`)
-  }
-  if (!/^## Alternatives considered$/m.test(text)) {
-    errors.push(`${rel}: missing "## Alternatives considered" section`)
-  }
+  const statuses = [...text.matchAll(/^[\t ]*Status:[\t ]*(proposed|implemented|rejected)\b[^\r\n]*$/gim)]
+  if (statuses.length !== 1 || statuses[0][1].toLowerCase() !== folder)
+    errors.push(`${rel}: one Status metadata entry must match its lifecycle folder "${folder}"`)
 }
 
 if (errors.length > 0) {

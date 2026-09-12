@@ -234,9 +234,20 @@ test(
 
 test('private CA trust is connection-scoped and rejects missing trust or wrong certificate host before sending credentials', async t => {
   const { execFileSync } = await import('node:child_process')
+  const { opensslExecutable } = await import('../../helpers/runtime/openssl.mjs')
   const { writeFileSync, readFileSync } = await import('node:fs')
   const root = await mkdtemp(join(tmpdir(), 'nook-ca-integration-'))
-  const openssl = (...args: string[]) => execFileSync('openssl', args, { cwd: root, stdio: 'ignore' })
+  let server: Awaited<ReturnType<typeof startWebDav>> | undefined
+  t.after(async () => {
+    try {
+      await server?.close()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+  const executable = opensslExecutable()
+  const openssl = (...args: string[]) =>
+    execFileSync(executable, args, { cwd: root, stdio: 'ignore', windowsHide: true })
   openssl(
     'req',
     '-x509',
@@ -291,12 +302,8 @@ test('private CA trust is connection-scoped and rejects missing trust or wrong c
     'server.pem',
   )
   const caCert = readFileSync(join(root, 'ca.pem'), 'utf8')
-  const server = await startWebDav({
+  server = await startWebDav({
     tls: { key: readFileSync(join(root, 'server.key')), cert: readFileSync(join(root, 'server.pem')) },
-  })
-  t.after(async () => {
-    await server.close()
-    await rm(root, { recursive: true, force: true })
   })
   const base = { url: server.url, username: 'tester', password: 'secret' }
   await assert.rejects(openWebDav(t, base).probe(signal()), /证书/)

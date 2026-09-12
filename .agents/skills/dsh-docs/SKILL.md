@@ -19,5 +19,5 @@ description: Place, write, and check Nook documentation and decision notes again
 
 ## 校验
 
-5. 提交前运行 `pnpm docs:check`(相对链接可达性 + 笔记格式),失败按提示修复。
+5. 提交前运行 `pnpm docs:check`(相对链接可达性 + 笔记状态与目录一致性),失败按提示修复。Markdown 排版不设自动门禁。
 6. 文档随代码同变更更新：更新受影响的既有契约与 owning 笔记；普通功能变更不要求新增说明文档或扩写 `docs/`。

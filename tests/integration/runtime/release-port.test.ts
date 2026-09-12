@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
+import { createServer } from 'node:net'
 import { test } from 'node:test'
 import { releasePort } from '../../../scripts/shared/release-port.mjs'
 
-test('port release terminates a real listener owned by the test', { timeout: 10_000 }, async () => {
+// Windows performs multiple separately bounded PowerShell inspections (10s
+// each); the whole test must allow those checks and verify the actual rebind.
+test('port release terminates a real listener owned by the test', { timeout: 45_000 }, async () => {
   const child = spawn(
     process.execPath,
     [
@@ -14,6 +17,7 @@ test('port release terminates a real listener owned by the test', { timeout: 10_
     { stdio: ['ignore', 'pipe', 'pipe'] },
   )
   child.stdout.setEncoding('utf8')
+  const exited = once(child, 'exit')
 
   try {
     const [chunk] = await once(child.stdout, 'data')
@@ -21,11 +25,19 @@ test('port release terminates a real listener owned by the test', { timeout: 10_
     assert.ok(Number.isSafeInteger(port) && port > 0)
     assert.ok(child.pid !== undefined)
 
-    const exited = once(child, 'exit')
     const released = await releasePort(port)
     assert.deepEqual(released, [child.pid])
     await exited
+    const replacement = createServer()
+    try {
+      replacement.listen(port, '127.0.0.1')
+      await once(replacement, 'listening')
+      assert.equal((replacement.address() as { port: number }).port, port)
+    } finally {
+      await new Promise<void>((resolve, reject) => replacement.close(error => (error ? reject(error) : resolve())))
+    }
   } finally {
     if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+    await exited
   }
 })

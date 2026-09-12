@@ -60,5 +60,11 @@ export async function removeUpdateWorktree(repo, checkout, commit) {
     timeout: 30000,
   })
   if (status.stdout.trim()) throw new Error('Update worktree has unexpected changes; source retained')
-  await exec('git', ['-C', repo, 'worktree', 'remove', '--force', checkout], { timeout: 30000 })
+  // Installed dependency trees can take longer to remove than to inspect. Keep
+  // the operation bounded and enable Windows long paths for this command only.
+  const config = process.platform === 'win32' ? ['-c', 'core.longpaths=true'] : []
+  await exec('git', [...config, '-C', repo, 'worktree', 'remove', '--force', checkout], {
+    timeout: 180_000,
+    windowsHide: true,
+  })
 }

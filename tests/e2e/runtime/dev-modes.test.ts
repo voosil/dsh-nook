@@ -12,16 +12,17 @@ import { dismissOnboarding, waitForNoteSave } from '../../helpers/browser/notebo
 import { verifyBackup } from '../../../packages/storage-backup/src/index.ts'
 import { desktopNode, NODE_VERSION } from '../../../scripts/desktop/desktop-node.mjs'
 import { ProcessScope } from '../../../scripts/shared/process-scope.mjs'
+import { findListeningPids } from '../../../scripts/shared/release-port.mjs'
 import { pathToFileURL } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const { chromium } = createRequire(require.resolve('dsh-browser-playwright/playwright'))('playwright-core')
 const redact = (text: string) => text.replace(/([?&]token=)[^\s&]+/g, '$1<REDACTED>')
 
-async function until(predicate: () => boolean, diagnostic: () => string, timeout = 90_000) {
+async function until(predicate: () => boolean | Promise<boolean>, diagnostic: () => string, timeout = 90_000) {
   const end = Date.now() + timeout
   while (Date.now() < end) {
-    if (predicate()) return
+    if (await predicate()) return
     await delay(100)
   }
   throw new Error(`dev mode acceptance timed out\n${redact(diagnostic())}`)
@@ -45,7 +46,7 @@ async function stop(child: ChildProcess, processes: ProcessScope) {
 test(
   'dev reloads Client and Host while start serves its fixed build',
   {
-    timeout: 600_000,
+    timeout: 900_000,
     skip:
       process.platform !== 'win32' &&
       !(process.platform === 'darwin' && process.arch === 'arm64') &&
@@ -134,7 +135,18 @@ test(
       return { child, urls, logs: () => output }
     }
     const stable = launch('start-profile.mjs')
-    await until(() => stable.urls.length === 1, stable.logs)
+    // Formal startup includes a complete build, 50-package installation and
+    // verified backup before serving. Give that preparation its own budget.
+    await until(
+      () => {
+        if (stable.child.exitCode !== null || stable.child.signalCode !== null)
+          throw new Error(`Formal startup exited before readiness\n${redact(stable.logs())}`)
+        return stable.urls.length === 1
+      },
+      () => `Formal startup\n${stable.logs()}`,
+      180_000,
+    )
+    t.diagnostic('Formal snapshot is serving; verifying backup and development startup')
     const backupRoot = resolve(root, 'user-state/backups')
     const backups = (await readdir(backupRoot)).filter(name => name !== 'migrations' && !name.startsWith('.'))
     const backup = backups
@@ -144,6 +156,13 @@ test(
     assert.equal(await readFile(resolve(backup, 'data/backup-acceptance.txt'), 'utf8'), 'preserve before startup')
     const dev = launch('run-profile.mjs')
     await until(() => dev.urls.length === 1, dev.logs)
+    t.diagnostic('Both runtimes are serving; verifying repeated Client HMR')
+    const devPort = Number(new URL(dev.urls[0]!).port)
+    const originalHostPids = await findListeningPids(devPort)
+    assert.ok(originalHostPids.length > 0, 'development Host must own the listening port')
+    const assertOriginalHost = async () => {
+      assert.deepEqual(await findListeningPids(devPort), originalHostPids, 'Client updates must retain the same Host')
+    }
     const browser = await chromium.launch({ channel: 'chrome', headless: true })
     t.after(() => browser.close())
     const errors: string[] = []
@@ -168,14 +187,15 @@ test(
         await page.evaluate(() => (window as Window & { nookHmrProbe?: string }).nookHmrProbe),
         'same document',
       )
-      assert.equal(dev.urls.length, 1, 'Client update must not restart the Host')
+      await assertOriginalHost()
       await stablePage.reload()
       assert.equal(await stablePage.getByRole('button', { name: '打开 Nook', exact: true }).count(), 1)
       assert.equal(stable.urls.length, 1)
     }
     await writeFile(sourcePath, original + '\nthis is invalid typescript !!!\n')
+    t.diagnostic('Repeated Client HMR passed; verifying build-failure recovery')
     await until(() => dev.logs().includes('Build/reload failed'), dev.logs, 30_000)
-    assert.equal(dev.urls.length, 1)
+    await assertOriginalHost()
     assert.equal(await page.getByRole('button', { name: '打开 Nook HMR 2', exact: true }).count(), 1)
     await writeFile(sourcePath, original.replace('aria-label="打开 Nook"', 'aria-label="打开 Nook recovered"'))
     await page.getByRole('button', { name: '打开 Nook recovered', exact: true }).waitFor({ timeout: 30_000 })
@@ -186,11 +206,16 @@ test(
       return element && getComputedStyle(element).getPropertyValue('--nook-hmr-probe').trim() === 'verified'
     })
     assert.equal(await page.locator('.nook-workspace').count(), 1, 'workspace Slot must not duplicate after remount')
-    assert.equal(dev.urls.length, 1, 'CSS update must not restart the Host')
+    await assertOriginalHost()
     const host = resolve(root, 'packages/ui-sidebar/src/index.ts')
     await writeFile(host, (await readFile(host, 'utf8')) + '\nexport const devAcceptance = true\n')
-    await until(() => dev.urls.length === 2, dev.logs, 30_000)
-    assert.equal(new URL(dev.urls[0]!).origin, new URL(dev.urls[1]!).origin)
+    // A full build and Host boot must complete, not just print a restart log.
+    // A persisted authentication URL need not change when the process does.
+    await until(async () => {
+      const pids = await findListeningPids(devPort)
+      return pids.length > 0 && pids.every(pid => !originalHostPids.includes(pid))
+    }, dev.logs)
+    t.diagnostic('Build recovery and Host restart passed; verifying reconnect and cleanup')
     // Exercise real RPC after reconnect without reloading the document.
     const workspace = page.getByRole('dialog', { name: 'Nook 笔记工作区', exact: true })
     await workspace

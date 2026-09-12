@@ -1,4 +1,6 @@
 node_modules/
+# Markdown layout is editorial guidance, not a build gate.
+**/*.md
 **/node_modules/
 **/lib/
 !packages/*/src/client/lib/

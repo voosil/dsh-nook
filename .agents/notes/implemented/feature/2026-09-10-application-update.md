@@ -36,6 +36,8 @@ Status: implemented
 
 ## Consequences
 
+Windows 的大型依赖树清理使用单次命令的 longpaths 配置和 180 秒有界超时，不改用户 Git 配置。删除一旦开始，准备器不会在 finally 中重试可能已失去 Git 元数据的目录；原始删除错误和现场保持可诊断。准备阶段失败后若清理也失败，错误同时保留两项原因，不以清理错误掩盖构建失败。回归验证锁定 worktree 的删除失败只尝试一次、长路径清理及意外修改数据保留。
+
 一次手动启动完成更新器引导。更新速度取决于本机工具链与网络，日志和快照占用磁盘且不自动回收。broker 保持当前协议直到所有入口退出；后续启动使用候选版本携带的 broker。协议不兼容候选在准备阶段失败。干净安装门禁同时要求消费 RPC 包的 UI 传递必要 Host peer；知识 UI 补齐其 Adapter 的 system-prompt peer 声明。
 
 [Gateway 测试](../../../../tests/integration/update/update.test.ts)验证固定命令、输入校验和生命周期退出。[备份测试](../../../../tests/integration/desktop/update.test.ts)验证配置与 SQLite 恢复、备份失败和成功版本记录。[共享 broker 集成测试](../../../../tests/integration/update/update.test.ts)验证两条入口连接、更新后再次启动和候选迁移失败恢复。正式发布继续经过 Profile 与干净打包门禁。

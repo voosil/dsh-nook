@@ -32,7 +32,7 @@ async function fixture(t: TestContext) {
   return { root, repo, directory, checkout, git, commit }
 }
 
-for (const failure of ['', 'install', 'build', 'pack', 'verify', 'cancel']) {
+for (const failure of ['', 'install', 'build', 'pack', 'verify', 'cancel', 'remove']) {
   test(`update removes only its owned worktree after ${failure || 'success'}`, async t => {
     const f = await fixture(t)
     const preserved = join(f.root, 'user-data')
@@ -40,6 +40,13 @@ for (const failure of ['', 'install', 'build', 'pack', 'verify', 'cancel']) {
     let disposed = false,
       verified = false
     const signals = process.listenerCount('SIGTERM')
+    const trace = join(f.root, 'git-trace.jsonl')
+    const oldTrace = process.env.GIT_TRACE2_EVENT
+    process.env.GIT_TRACE2_EVENT = trace
+    t.after(() => {
+      if (oldTrace === undefined) delete process.env.GIT_TRACE2_EVENT
+      else process.env.GIT_TRACE2_EVENT = oldTrace
+    })
     const runner = {
       async dispose() {
         disposed = true
@@ -73,6 +80,7 @@ for (const failure of ['', 'install', 'build', 'pack', 'verify', 'cancel']) {
               snapshot: { seedProfile: runtime, node: join(runtime, 'node'), supervisor: join(boot, 'supervisor.mjs') },
             }),
           )
+          if (failure === 'remove') await f.git('worktree', 'lock', f.checkout)
           return
         }
         assert.ok(args[0]!.endsWith('verify-update.mjs'))
@@ -84,16 +92,75 @@ for (const failure of ['', 'install', 'build', 'pack', 'verify', 'cancel']) {
       },
     }
     const action = prepareUpdate({ ...f, state: f.root }, runner)
-    if (failure) await assert.rejects(action, failure === 'cancel' ? /stopped/ : new RegExp(failure))
+    if (failure)
+      await assert.rejects(
+        action,
+        failure === 'cancel' ? /stopped/ : failure === 'remove' ? /locked/ : new RegExp(failure),
+      )
     else await action
     assert.equal(disposed, true)
     assert.equal(verified, failure === '' || failure === 'verify')
     assert.equal(await readFile(preserved, 'utf8'), 'preserve data and rollback copies')
+    if (failure === 'remove') {
+      assert.equal(await readFile(join(f.directory, 'boot/supervisor.mjs'), 'utf8'), 'retained supervisor')
+      assert.ok(await readFile(join(f.checkout, 'package.json'), 'utf8'))
+      const attempts = (await readFile(trace, 'utf8'))
+        .trim()
+        .split('\n')
+        .map(line => JSON.parse(line))
+        .filter(event => event.event === 'start' && event.argv.includes('worktree') && event.argv.includes('remove'))
+      assert.equal(attempts.length, 1, 'failed removal is not retried by finally')
+      assert.equal(process.listenerCount('SIGTERM'), signals)
+      return
+    }
     await assert.rejects(readFile(join(f.checkout, 'package.json')), { code: 'ENOENT' })
     assert.equal((await f.git('worktree', 'list', '--porcelain')).split('worktree ').length - 1, 1)
     assert.equal(process.listenerCount('SIGTERM'), signals)
   })
 }
+
+test('preparation and cleanup failures retain both causes and the modified source', async t => {
+  const f = await fixture(t)
+  const buildFailure = new Error('build failed before cleanup')
+  let disposed = false
+  const runner = {
+    async dispose() {
+      disposed = true
+    },
+    async run(command: string, args: string[]) {
+      if (command === 'git') return exec(command, args)
+      await writeFile(join(f.checkout, 'personal.txt'), 'unexpected work must survive')
+      throw buildFailure
+    },
+  }
+  await assert.rejects(prepareUpdate({ ...f, state: f.root }, runner), error => {
+    assert.ok(error instanceof AggregateError)
+    assert.equal(error.cause, buildFailure)
+    assert.equal(error.errors[0], buildFailure)
+    assert.match(error.errors[1].message, /unexpected changes/)
+    assert.match(error.message, /build failed before cleanup/)
+    return true
+  })
+  assert.equal(disposed, true)
+  assert.equal(await readFile(join(f.checkout, 'personal.txt'), 'utf8'), 'unexpected work must survive')
+})
+
+test('owned worktree removal handles deep dependency paths without changing repository configuration', async t => {
+  const f = await fixture(t)
+  await f.git('config', 'core.longpaths', 'false')
+  await f.git('worktree', 'add', '--detach', f.checkout, f.commit)
+  const nested = join(
+    f.checkout,
+    'node_modules',
+    ...Array.from({ length: 12 }, (_, i) => `dependency-${i}-nested-package`),
+  )
+  await mkdir(nested, { recursive: true })
+  await writeFile(join(nested, 'installed.js'), 'export default 1')
+  await removeUpdateWorktree(f.repo, f.checkout, f.commit)
+  await assert.rejects(readFile(join(nested, 'installed.js')), { code: 'ENOENT' })
+  assert.equal((await f.git('worktree', 'list', '--porcelain')).split('worktree ').length - 1, 1)
+  assert.equal(await f.git('config', 'core.longpaths'), 'false')
+})
 
 test('pre-existing and modified checkouts are retained', async t => {
   const f = await fixture(t)
