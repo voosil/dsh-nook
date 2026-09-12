@@ -10,6 +10,7 @@
 - Extend official UI through verified additive Slots before keyed override or replacement. Never monkey-patch the DOM or import private official React components.
 - Every listener, timer, subscription, socket, Tool, service contribution, and UI Slot contribution requires a cleanup/disposer. Avoid module-scope runtime effects.
 - Every meaningful change must be typechecked, built, tested, integration-verified, and package-verified in proportion to its risk.
+- Static checks that apply to a package family must discover matching packages automatically; adding a package must not require updating a separate checker allowlist.
 - Preserve the Host/Client boundary. Cross it only with Nook-owned JSON-safe DTOs; never transfer Cordis contexts, services, React elements, Sessions, or arbitrary runtime objects.
 - Follow [docs/AGENTS.md](docs/AGENTS.md) for documentation: current state lives in `docs/`, decisions as Agent Notes under `.notes/` per [.notes/AGENTS.md](.notes/AGENTS.md); every non-trivial change adds or updates one note in the same change.
 - Follow `.agents/skills/dsh-plugin-development/SKILL.md` for DSH work.

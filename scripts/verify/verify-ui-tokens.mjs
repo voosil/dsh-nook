@@ -4,7 +4,11 @@ import { ROOT } from '../profile/profile-lib.mjs'
 
 // tsx/内联样式硬编码色值门禁：扫描所有 ui-* 包的 ts/tsx/css，
 // tokens.css（Nook 色卡）是唯一豁免文件。
-const SCOPES = ['ui-notes', 'ui-knowledge', 'ui-project', 'ui-sidebar', 'ui-kit']
+const SCOPES = (await readdir(resolve(ROOT, 'packages'), { withFileTypes: true }))
+  .filter(entry => entry.isDirectory() && entry.name.startsWith('ui-'))
+  .map(entry => entry.name)
+  .sort()
+if (SCOPES.length === 0) throw new Error('No UI packages found; refusing an empty token verification.')
 const EXEMPT = new Set([resolve(ROOT, 'packages/ui-kit/styles/tokens.css')])
 
 // 注意正则校准：`\bcolor\(` 用负向前瞻排除 `color:` 属性与 `color-mix` 之外的误报，
